@@ -1,0 +1,8 @@
+{
+  "name": "@smartgrid/react",
+  "version": "0.0.1",
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19"
+  }
+}
