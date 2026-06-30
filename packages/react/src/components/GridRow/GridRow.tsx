@@ -4,7 +4,7 @@ import { GridCell } from "../GridCell/GridCell";
 
 import "./GridRow.css";
 
-import { buildColumnLayout } from "@smartgrid/core";
+import { ColumnLayoutEngine } from "@smartgrid/core";
 
 interface Props<T> {
   row: T;
@@ -13,7 +13,9 @@ interface Props<T> {
 
 export function GridRow<T>({ row, columns }: Props<T>) {
   const { columnTemplate } = useGridContext<T>();
-  const template = buildColumnLayout(columns);
+  const layoutEngine = new ColumnLayoutEngine<T>();
+
+  const columnStates = layoutEngine.build(columns);
 
   return (
     <div
