@@ -1,0 +1,6 @@
+.sg-body {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  flex: 1;
+}

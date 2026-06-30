@@ -1,10 +1,29 @@
 {
   "name": "@smartgrid/core",
   "version": "0.0.1",
+  "description": "SmartGrid Core Engine",
   "type": "module",
   "main": "./dist/index.js",
+  "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "build": "tsc"
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "dev": "tsup src/index.ts --watch",
+    "clean": "rimraf dist"
+  },
+  "keywords": [
+    "grid",
+    "excel",
+    "table"
+  ],
+  "author": "Sachin M",
+  "license": "MIT",
+  "devDependencies": {
+    "rimraf": "^6.1.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
   }
 }

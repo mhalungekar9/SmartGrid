@@ -1,8 +1,31 @@
 {
   "name": "@smartgrid/react",
   "version": "0.0.1",
+  "description": "React wrapper for SmartGrid",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "dev": "tsup src/index.ts --watch",
+    "clean": "rimraf dist"
+  },
   "peerDependencies": {
     "react": ">=19",
     "react-dom": ">=19"
+  },
+  "dependencies": {
+    "@smartgrid/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "typescript": "^5.9.0",
+    "tsup": "^8.5.1",
+    "rimraf": "^6.0.1"
   }
 }
