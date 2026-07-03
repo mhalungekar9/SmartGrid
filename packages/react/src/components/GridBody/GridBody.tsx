@@ -8,17 +8,29 @@ type DataRow<T> = {
   row: T;
   rowIndex: number;
   groupKey: string;
+  depth?: number;
+  treeKey?: string;
+  hasChildren?: boolean;
+  expanded?: boolean;
+  hasDetail?: boolean;
 };
 
 type GroupRow<T> = {
-  kind: "group";
+  kind: "group" | "pivot";
   key: string;
   label: string;
   count: number;
   summaries: string;
 };
 
-type DisplayRow<T> = DataRow<T> | GroupRow<T>;
+type DetailRow<T> = {
+  kind: "detail";
+  key: string;
+  row: T;
+  content: unknown;
+};
+
+type DisplayRow<T> = DataRow<T> | GroupRow<T> | DetailRow<T>;
 
 const ROW_HEIGHT = 42;
 const OVERSCAN_ROWS = 8;
@@ -27,6 +39,8 @@ interface Props<T> {
   rows: DisplayRow<T>[];
   columns: Column<T>[];
   onToggleGroup: (groupKey: string) => void;
+  onToggleTreeNode: (treeKey: string) => void;
+  onToggleDetailRow: (rowIndex: number) => void;
   onReorderRow: (sourceRowIndex: number, targetRowIndex: number) => void;
   onResetRowDragState: () => void;
   onSetDraggedRowIndex: (rowIndex: number | null) => void;
@@ -37,6 +51,8 @@ export function GridBody<T>({
   rows,
   columns,
   onToggleGroup,
+  onToggleTreeNode,
+  onToggleDetailRow,
   onReorderRow,
   onResetRowDragState,
   onSetDraggedRowIndex,
@@ -93,6 +109,15 @@ export function GridBody<T>({
     }, [rows.length, scrollTop, viewportHeight]);
 
   const visibleRows = rows.slice(startIndex, endIndex);
+  const getRowKey = (row: DisplayRow<T>) => {
+    if (row.kind === "group" || row.kind === "pivot" || row.kind === "detail") {
+      return `${row.kind}-${row.key}`;
+    }
+
+    const dataRow = row as DataRow<T>;
+
+    return `row-${dataRow.rowIndex}-${dataRow.groupKey}`;
+  };
 
   return (
     <div
@@ -103,14 +128,12 @@ export function GridBody<T>({
       <div style={{ height: topSpacerHeight }} />
       {visibleRows.map((row) => (
         <GridRow
-          key={
-            row.kind === "group"
-              ? `group-${row.key}`
-              : `row-${row.rowIndex}-${row.groupKey}`
-          }
+          key={getRowKey(row)}
           item={row}
           columns={columns}
           onToggleGroup={onToggleGroup}
+          onToggleTreeNode={onToggleTreeNode}
+          onToggleDetailRow={onToggleDetailRow}
           onReorderRow={onReorderRow}
           onResetRowDragState={onResetRowDragState}
           onSetDraggedRowIndex={onSetDraggedRowIndex}

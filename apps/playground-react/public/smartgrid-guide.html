@@ -1,29 +1,35 @@
 <!doctype html>
+
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta content="width=device-width, initial-scale=1" name="viewport" />
     <meta
+      content="SmartGrid feature index, usage guide, and React examples"
       name="description"
-      content="SmartGrid usage guide and feature overview"
     />
     <title>SmartGrid Guide</title>
     <style>
       :root {
         color-scheme: dark;
-        --bg: #050816;
-        --panel: rgba(8, 12, 24, 0.86);
-        --panel-strong: rgba(15, 23, 42, 0.98);
-        --border: rgba(255, 255, 255, 0.08);
-        --text: #e2e8f0;
-        --muted: rgba(226, 232, 240, 0.72);
-        --accent: #60a5fa;
-        --accent-soft: rgba(96, 165, 250, 0.16);
-        --good: #34d399;
+        --bg: #071016;
+        --surface: #0d1820;
+        --surface-strong: #13232d;
+        --surface-soft: rgba(255, 255, 255, 0.035);
+        --border: rgba(255, 255, 255, 0.1);
+        --text: #edf7f5;
+        --muted: #a8bbb7;
+        --accent: #5eead4;
+        --accent-strong: #f8d66d;
+        --code: #0a141b;
       }
 
       * {
         box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
       }
 
       body {
@@ -37,51 +43,111 @@
           "Segoe UI",
           sans-serif;
         background:
-          radial-gradient(
-            circle at top,
-            rgba(59, 130, 246, 0.22),
-            transparent 28%
-          ),
-          radial-gradient(
-            circle at 80% 0%,
-            rgba(16, 185, 129, 0.12),
-            transparent 24%
-          ),
-          linear-gradient(180deg, #050816 0%, #09111f 55%, #0f172a 100%);
+          linear-gradient(180deg, rgba(94, 234, 212, 0.08), transparent 280px),
+          var(--bg);
         color: var(--text);
         line-height: 1.6;
       }
 
-      main {
-        max-width: 1180px;
+      a {
+        color: inherit;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 300px minmax(0, 1fr);
+        gap: 28px;
+        width: min(1440px, 100%);
         margin: 0 auto;
-        padding: 40px 20px 56px;
+        padding: 28px;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 20px;
+        align-self: start;
+        max-height: calc(100vh - 40px);
+        overflow: auto;
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: rgba(13, 24, 32, 0.94);
+      }
+
+      .brand {
+        display: grid;
+        gap: 4px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .brand-title {
+        font-size: 1.25rem;
+        font-weight: 800;
+        letter-spacing: 0;
+      }
+
+      .brand-subtitle {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      .nav-group {
+        margin-top: 18px;
+      }
+
+      .nav-label {
+        margin: 0 0 8px;
+        color: var(--accent-strong);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .nav-list {
+        display: grid;
+        gap: 2px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+
+      .nav-list a {
+        display: block;
+        padding: 7px 9px;
+        border-radius: 6px;
+        color: var(--muted);
+        font-size: 0.92rem;
+        text-decoration: none;
+      }
+
+      .nav-list a:hover,
+      .nav-list a:focus {
+        background: var(--surface-soft);
+        color: var(--text);
+        outline: none;
+      }
+
+      .content {
+        min-width: 0;
       }
 
       .hero {
         display: grid;
-        gap: 18px;
-        padding: 28px;
+        gap: 16px;
+        padding: 30px;
         border: 1px solid var(--border);
-        border-radius: 24px;
-        background: linear-gradient(
-          180deg,
-          rgba(8, 12, 24, 0.94),
-          rgba(8, 12, 24, 0.72)
-        );
-        box-shadow: 0 24px 80px rgba(4, 8, 20, 0.34);
+        border-radius: 8px;
+        background: linear-gradient(135deg, #10232c, #0d1820 58%, #121a18);
       }
 
       .kicker {
-        display: inline-flex;
-        width: fit-content;
-        padding: 6px 12px;
-        border-radius: 999px;
-        background: var(--accent-soft);
-        color: #93c5fd;
-        font-size: 0.76rem;
-        font-weight: 700;
-        letter-spacing: 0.18em;
+        color: var(--accent);
+        font-size: 0.78rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
       }
 
@@ -89,108 +155,102 @@
       h2,
       h3 {
         margin: 0;
-        line-height: 1.05;
+        line-height: 1.15;
+        letter-spacing: 0;
       }
 
       h1 {
-        font-size: clamp(2.4rem, 6vw, 5.2rem);
-        letter-spacing: -0.05em;
-        max-width: 12ch;
+        max-width: 780px;
+        font-size: clamp(2.2rem, 5vw, 4.6rem);
+      }
+
+      h2 {
+        font-size: 1.7rem;
+      }
+
+      h3 {
+        font-size: 1.08rem;
+      }
+
+      p {
+        margin: 0;
+        color: var(--muted);
       }
 
       .lead {
-        max-width: 72ch;
-        margin: 0;
-        color: var(--muted);
-        font-size: 1.05rem;
+        max-width: 860px;
+        font-size: 1.04rem;
       }
 
-      .meta {
+      .chips {
         display: flex;
         flex-wrap: wrap;
-        gap: 10px;
-      }
-
-      .pill {
-        padding: 8px 12px;
-        border-radius: 999px;
-        background: rgba(255, 255, 255, 0.04);
-        border: 1px solid var(--border);
-        color: #cbd5e1;
-        font-size: 0.82rem;
-      }
-
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(12, minmax(0, 1fr));
-        gap: 18px;
-        margin-top: 22px;
-      }
-
-      .card {
-        grid-column: span 12;
-        padding: 22px;
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        background: var(--panel);
-        backdrop-filter: blur(16px);
-        box-shadow: 0 16px 48px rgba(4, 8, 20, 0.2);
-      }
-
-      .card h2 {
-        margin-bottom: 14px;
-        font-size: 1.18rem;
-        letter-spacing: -0.02em;
-      }
-
-      .card p,
-      .card li {
-        color: var(--muted);
-      }
-
-      .two-up {
-        grid-column: span 12;
-      }
-
-      .list {
-        margin: 0;
-        padding-left: 18px;
-        display: grid;
         gap: 8px;
       }
 
-      .feature-list {
+      .chip {
+        padding: 6px 10px;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        color: #d8e8e5;
+        font-size: 0.82rem;
+      }
+
+      .section {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 12px;
-        padding: 0;
+        gap: 16px;
+        margin-top: 20px;
+        padding: 24px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: rgba(13, 24, 32, 0.9);
+        scroll-margin-top: 24px;
+      }
+
+      .section-header {
+        display: grid;
+        gap: 8px;
+        max-width: 880px;
+      }
+
+      .example-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+        gap: 16px;
+        align-items: start;
+      }
+
+      .notes {
+        display: grid;
+        gap: 10px;
         margin: 0;
+        padding: 0;
         list-style: none;
       }
 
-      .feature-list li {
-        padding: 14px 14px 14px 16px;
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.03);
-        border: 1px solid rgba(255, 255, 255, 0.06);
+      .notes li {
+        padding: 12px 14px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface-soft);
+        color: var(--muted);
       }
 
-      .feature-title {
-        display: block;
-        margin-bottom: 4px;
-        color: #eff6ff;
-        font-weight: 700;
+      .notes strong {
+        color: var(--text);
       }
 
       pre {
         margin: 0;
-        padding: 18px;
+        padding: 16px;
         overflow: auto;
-        border-radius: 16px;
-        background: var(--panel-strong);
-        border: 1px solid rgba(96, 165, 250, 0.18);
-        color: #dbeafe;
+        border: 1px solid rgba(94, 234, 212, 0.18);
+        border-radius: 8px;
+        background: var(--code);
+        color: #d8fff7;
         font-size: 0.9rem;
+        line-height: 1.55;
       }
 
       code {
@@ -203,60 +263,39 @@
           monospace;
       }
 
-      .callout {
-        display: grid;
-        gap: 10px;
-        padding: 16px 18px;
-        border-left: 4px solid var(--good);
-        background: rgba(52, 211, 153, 0.08);
-        border-radius: 14px;
-      }
-
-      .callout strong {
-        color: #d1fae5;
-      }
-
-      .shortcut {
-        display: grid;
-        grid-template-columns: 180px 1fr;
-        gap: 10px 18px;
-      }
-
-      .shortcut dt {
-        color: #eff6ff;
-        font-weight: 700;
-      }
-
-      .shortcut dd {
-        margin: 0;
-        color: var(--muted);
+      p code,
+      li code,
+      td code {
+        padding: 2px 5px;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.07);
+        color: #effffd;
       }
 
       .table-wrap {
         overflow-x: auto;
-        border-radius: 16px;
-        border: 1px solid rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--border);
+        border-radius: 8px;
       }
 
       table {
         width: 100%;
+        min-width: 760px;
         border-collapse: collapse;
-        min-width: 780px;
       }
 
       th,
       td {
         padding: 12px 14px;
+        border-bottom: 1px solid var(--border);
         text-align: left;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        vertical-align: top;
       }
 
       th {
-        position: sticky;
-        top: 0;
-        background: rgba(15, 23, 42, 0.98);
-        color: #eff6ff;
-        font-size: 0.82rem;
+        background: var(--surface-strong);
+        color: var(--text);
+        font-size: 0.78rem;
         letter-spacing: 0.08em;
         text-transform: uppercase;
       }
@@ -265,241 +304,2008 @@
         color: var(--muted);
       }
 
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .compact-list {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+      }
+
+      .compact-list li + li {
+        margin-top: 6px;
+      }
+
+      .preview {
+        display: grid;
+        gap: 10px;
+        padding: 14px;
+        border: 1px solid rgba(94, 234, 212, 0.18);
+        border-radius: 8px;
+        background:
+          linear-gradient(180deg, rgba(94, 234, 212, 0.045), transparent),
+          #09141b;
+      }
+
+      .preview-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        color: var(--text);
+        font-size: 0.84rem;
+        font-weight: 800;
+      }
+
+      .preview-caption {
+        color: var(--muted);
+        font-size: 0.78rem;
+        font-weight: 600;
+      }
+
+      .mini-grid {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: #0d1820;
+      }
+
+      .mini-toolbar,
+      .mini-status {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 8px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .mini-status {
+        border-top: 1px solid var(--border);
+        border-bottom: 0;
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
+      .mini-button,
+      .mini-input,
+      .mini-pill {
+        min-height: 26px;
+        padding: 4px 8px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.055);
+        color: #d8e8e5;
+        font-size: 0.76rem;
+      }
+
+      .mini-input {
+        min-width: 116px;
+        color: var(--muted);
+      }
+
+      .mini-table {
+        display: grid;
+        min-width: 420px;
+      }
+
+      .mini-row {
+        display: grid;
+        grid-template-columns: 1.25fr 1fr 0.8fr;
+      }
+
+      .mini-row--four {
+        grid-template-columns: 0.9fr 0.9fr 0.9fr 0.9fr;
+      }
+
+      .mini-row--five {
+        grid-template-columns: 0.9fr 0.8fr 0.8fr 0.8fr 0.8fr;
+      }
+
+      .mini-row--numbers {
+        grid-template-columns: 42px 1.2fr 1fr 0.8fr;
+      }
+
+      .mini-cell {
+        min-width: 0;
+        padding: 8px 10px;
+        border-right: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.78rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .mini-cell:last-child {
+        border-right: 0;
+      }
+
+      .mini-head .mini-cell {
+        background: var(--surface-strong);
+        color: var(--text);
+        font-weight: 800;
+      }
+
+      .mini-head-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .mini-menu-button {
+        display: inline-grid;
+        place-items: center;
+        width: 22px;
+        height: 22px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.07);
+        color: var(--text);
+        font-weight: 900;
+        line-height: 1;
+      }
+
+      .mini-cell--active {
+        outline: 2px solid var(--accent);
+        outline-offset: -2px;
+        background: rgba(94, 234, 212, 0.09);
+        color: var(--text);
+      }
+
+      .mini-cell--range {
+        background: rgba(94, 234, 212, 0.12);
+      }
+
+      .mini-cell--pinned {
+        background: rgba(248, 214, 109, 0.08);
+        color: #fff2ba;
+      }
+
+      .mini-cell--muted {
+        color: rgba(168, 187, 183, 0.55);
+      }
+
+      .mini-group,
+      .mini-detail {
+        padding: 9px 10px;
+        border-bottom: 1px solid var(--border);
+        background: rgba(94, 234, 212, 0.08);
+        color: var(--text);
+        font-size: 0.78rem;
+        font-weight: 800;
+      }
+
+      .mini-detail {
+        margin: 0;
+        background: rgba(255, 255, 255, 0.045);
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .mini-context {
+        justify-self: end;
+        width: 132px;
+        margin-top: -4px;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: #14232c;
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.26);
+      }
+
+      .mini-context div {
+        padding: 7px 9px;
+        border-bottom: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
+      .mini-context div:last-child {
+        border-bottom: 0;
+      }
+
+      .mini-popover {
+        width: min(240px, 100%);
+        padding: 10px;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: #14232c;
+      }
+
+      .mini-column-menu {
+        justify-self: end;
+        width: min(280px, 100%);
+        margin-top: -2px;
+        border: 1px solid rgba(94, 234, 212, 0.2);
+        border-radius: 7px;
+        background: #14232c;
+        box-shadow: 0 14px 34px rgba(0, 0, 0, 0.28);
+      }
+
+      .mini-menu-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--border);
+        color: var(--muted);
+        font-size: 0.76rem;
+      }
+
+      .mini-menu-item strong {
+        color: var(--text);
+      }
+
+      .mini-menu-filter {
+        display: grid;
+        gap: 8px;
+        padding: 10px;
+      }
+
+      .mini-menu-filter label {
+        display: grid;
+        gap: 4px;
+        color: var(--muted);
+        font-size: 0.74rem;
+      }
+
+      .mini-menu-filter input,
+      .mini-menu-filter select {
+        width: 100%;
+        min-height: 28px;
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        background: rgba(255, 255, 255, 0.055);
+        color: var(--text);
+        padding: 4px 7px;
+      }
+
+      .mini-check {
+        display: flex;
+        justify-content: space-between;
+        padding: 5px 0;
+        color: var(--muted);
+        font-size: 0.78rem;
+      }
+
       .footer-note {
-        margin-top: 18px;
-        color: rgba(148, 163, 184, 0.9);
-        font-size: 0.9rem;
+        margin-top: 20px;
+        padding: 18px;
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        background: var(--surface-soft);
+        color: var(--muted);
       }
 
-      @media (min-width: 860px) {
-        .two-up {
-          grid-column: span 6;
-        }
-      }
-
-      @media (max-width: 720px) {
-        main {
-          padding: 20px 14px 40px;
+      @media (max-width: 980px) {
+        .shell {
+          grid-template-columns: 1fr;
+          padding: 18px;
         }
 
-        .hero,
-        .card {
-          border-radius: 18px;
+        .sidebar {
+          position: relative;
+          top: auto;
+          max-height: none;
         }
 
-        .feature-list,
-        .shortcut {
+        .example-grid {
           grid-template-columns: 1fr;
         }
+      }
+
+      @media (max-width: 640px) {
+        .hero,
+        .section {
+          padding: 18px;
+        }
+
+        .shell {
+          padding: 12px;
+        }
+      }
+
+      .mini-head-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+      .mini-sort-icon {
+        font-size: 12px;
+        color: #b8c3ce;
+      }
+      .mini-filter-button,
+      .mini-menu-button {
+        display: grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 6px;
+        background: #111b24;
+        color: #dce7ef;
+        font-size: 12px;
       }
     </style>
   </head>
   <body>
-    <main>
-      <section class="hero">
-        <span class="kicker">SmartGrid Guide</span>
-        <h1>How to use the grid and its features</h1>
-        <p class="lead">
-          This page is a quick reference for the React SmartGrid implementation
-          in this workspace. It covers the basic data setup, the major
-          interactive features, and the keyboard/mouse behavior that the
-          playground demo supports.
-        </p>
-        <div class="meta">
-          <span class="pill">Sort</span>
-          <span class="pill">Filter</span>
-          <span class="pill">Resize</span>
-          <span class="pill">Pin</span>
-          <span class="pill">Edit</span>
-          <span class="pill">Group</span>
-          <span class="pill">Reorder</span>
-          <span class="pill">Export CSV</span>
-          <span class="pill">Pagination</span>
-          <span class="pill">Column chooser</span>
-        </div>
-      </section>
-
-      <section class="grid">
-        <article class="card two-up">
-          <h2>1. Minimal setup</h2>
-          <p>
-            Import the React wrapper, define a typed column list, pass your
-            rows, and render the grid. Hidden, pinned, sortable, and editable
-            behavior all come from the column config.
+    <main class="shell">
+      <aside aria-label="SmartGrid feature index" class="sidebar">
+        <div class="brand">
+          <div class="brand-title">SmartGrid Guide</div>
+          <p class="brand-subtitle">
+            Feature index and examples for the React grid.
           </p>
-          <pre><code>import { SmartGrid, type Column } from "@smartgrid/react";
-
-interface Employee {
+        </div>
+        <nav>
+          <div class="nav-group">
+            <p class="nav-label">Start</p>
+            <ul class="nav-list">
+              <li><a href="#install">Install and Import</a></li>
+              <li><a href="#basic-grid">Basic Grid</a></li>
+              <li><a href="#columns">Column Options</a></li>
+            </ul>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Data Features</p>
+            <ul class="nav-list">
+              <li><a href="#sorting">Sorting</a></li>
+              <li><a href="#filtering">Filtering</a></li>
+              <li><a href="#quick-find">Quick Filter and Find</a></li>
+              <li><a href="#grouping">Grouping</a></li>
+              <li><a href="#pivoting">Pivoting</a></li>
+              <li><a href="#tree-data">Tree Data</a></li>
+              <li><a href="#pagination">Pagination</a></li>
+            </ul>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Interaction</p>
+            <ul class="nav-list">
+              <li><a href="#editing">Editing</a></li>
+              <li><a href="#selection">Selection</a></li>
+              <li><a href="#clipboard">Clipboard and Fill</a></li>
+              <li><a href="#context-menu">Context Menu</a></li>
+              <li><a href="#row-reorder">Row Reordering</a></li>
+              <li><a href="#master-detail">Master Detail</a></li>
+            </ul>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Layout</p>
+            <ul class="nav-list">
+              <li><a href="#resize">Resize and Autosize</a></li>
+              <li><a href="#pinning">Pinning</a></li>
+              <li><a href="#column-chooser">Column Chooser</a></li>
+              <li><a href="#row-numbers">Row Numbers</a></li>
+            </ul>
+          </div>
+          <div class="nav-group">
+            <p class="nav-label">Integration</p>
+            <ul class="nav-list">
+              <li><a href="#export">Export</a></li>
+              <li><a href="#transactions">Transactions</a></li>
+              <li><a href="#server-side">Server Side State</a></li>
+              <li><a href="#locale">Locale Text</a></li>
+              <li><a href="#feature-table">Feature Table</a></li>
+            </ul>
+          </div>
+        </nav>
+      </aside>
+      <div class="content">
+        <section class="hero">
+          <span class="kicker">React SmartGrid</span>
+          <h1>Feature guide with usage examples</h1>
+          <p class="lead">
+            Use the left index to jump to a feature. Each section explains what
+            the feature does, where it appears in the grid, and the props or
+            column options needed to turn it on. The example output panels show
+            the UI shape users should expect after implementation.
+          </p>
+          <div class="chips">
+            <span class="chip">Sorting</span>
+            <span class="chip">Filters</span>
+            <span class="chip">Pivoting</span>
+            <span class="chip">Grouping</span>
+            <span class="chip">Editing</span>
+            <span class="chip">Selection</span>
+            <span class="chip">Export</span>
+            <span class="chip">Tree data</span>
+            <span class="chip">Master detail</span>
+          </div>
+        </section>
+        <section class="section" id="install">
+          <div class="section-header">
+            <h2>Install and Import</h2>
+            <p>
+              In the workspace playground, import the React package directly.
+              The package re-exports core types like <code>Column</code>.
+            </p>
+          </div>
+          <pre><code>import { SmartGrid, type Column } from "@smartgrid/react";</code></pre>
+        </section>
+        <section class="section" id="basic-grid">
+          <div class="section-header">
+            <h2>Basic Grid</h2>
+            <p>
+              Define rows and typed columns, then pass them to
+              <code>SmartGrid</code>. The grid renders immediately with header,
+              body, toolbar, and status bar behavior.
+            </p>
+          </div>
+          <div class="example-grid">
+            <pre><code>interface Employee {
   id: number;
   name: string;
-  age: number;
   city: string;
   department: string;
   score: number;
 }
 
-const columns: Column&lt;Employee&gt;[] = [
-  { id: "name", field: "name", headerName: "Name", width: 250, sortable: true, pinned: "left", editable: true },
-  { id: "age", field: "age", headerName: "Age", width: 120, sortable: true, editable: true },
-  { id: "city", field: "city", headerName: "City", width: 250, sortable: true, editable: true },
-  { id: "department", field: "department", headerName: "Department", width: 220, sortable: true, editable: true },
-  { id: "score", field: "score", headerName: "Score", width: 130, sortable: true, pinned: "right", editable: true },
+const rows: Employee[] = [
+  { id: 1, name: "John", city: "London", department: "Ops", score: 92 },
+  { id: 2, name: "Alice", city: "Paris", department: "Product", score: 87 },
 ];
+
+const columns: Column&lt;Employee&gt;[] = [
+  { id: "name", field: "name", headerName: "Name", width: 220 },
+  { id: "city", field: "city", headerName: "City", width: 180 },
+  { id: "score", field: "score", headerName: "Score", width: 120 },
+];
+
+&lt;SmartGrid columns={columns} rows={rows} /&gt;</code></pre>
+            <ul class="notes">
+              <li>
+                <strong>Required props:</strong> <code>columns</code> and
+                <code>rows</code>.
+              </li>
+              <li>
+                <strong>Typing:</strong>
+                <code>Column&lt;Employee&gt;</code> keeps fields aligned with
+                row data.
+              </li>
+              <li>
+                <strong>Rendering:</strong> <code>valueGetter</code>,
+                <code>valueFormatter</code>, and
+                <code>cellRenderer</code> customize cell output.
+              </li>
+            </ul>
+          </div>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >A basic SmartGrid with toolbar, rows, and status</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-toolbar">
+                <span class="mini-button">SmartGrid</span>
+                <span class="mini-input">Quick filter</span>
+                <span class="mini-button">Columns</span>
+                <span class="mini-button">Export CSV</span>
+              </div>
+              <div class="mini-table">
+                <div class="mini-row mini-head">
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Name</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>City</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Score</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell">John</div>
+                  <div class="mini-cell">London</div>
+                  <div class="mini-cell">92</div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell">Alice</div>
+                  <div class="mini-cell">Paris</div>
+                  <div class="mini-cell">87</div>
+                </div>
+              </div>
+              <div class="mini-status">
+                2 of 2 rows shown · No cell · Unsorted
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="columns">
+          <div class="section-header">
+            <h2>Column Options</h2>
+            <p>
+              Most SmartGrid behavior is switched on from the column definition.
+              Use stable <code>id</code> values because sorting, filtering,
+              pinning, and width state all refer to column ids.
+            </p>
+          </div>
+          <pre><code>const columns: Column&lt;Employee&gt;[] = [
+  {
+    id: "score",
+    field: "score",
+    headerName: "Score",
+    width: 130,
+    minWidth: 90,
+    maxWidth: 220,
+    sortable: true,
+    filter: "number",
+    editable: true,
+    editor: "number",
+    pinned: "right",
+    valueFormatter: (value) =&gt;
+      typeof value === "number" ? value.toFixed(1) : String(value ?? ""),
+  },
+];</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Column config changes width, pinning, formatting, and
+                editing</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div class="mini-row mini-head">
+                  <div class="mini-cell mini-cell--pinned">
+                    <div class="mini-head-content">
+                      <span>Name pinned</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Department</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell mini-cell--pinned">
+                    <div class="mini-head-content">
+                      <span>Score 92.0</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell mini-cell--pinned">John</div>
+                  <div class="mini-cell">Operations</div>
+                  <div class="mini-cell mini-cell--pinned">92.0</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="sorting">
+          <div class="section-header">
+            <h2>Sorting</h2>
+            <p>
+              Set <code>sortable: true</code> on a column. Users can click the
+              header or use the header menu to choose ascending, descending, or
+              no sort.
+            </p>
+          </div>
+          <pre><code>{ id: "name", field: "name", headerName: "Name", sortable: true }
+{ id: "score", field: "score", headerName: "Score", sortable: true }</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Header shows sort direction and rows reorder</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div class="mini-row mini-head">
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Name</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>City</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Score ↓</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell">John</div>
+                  <div class="mini-cell">London</div>
+                  <div class="mini-cell">92</div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell">Alice</div>
+                  <div class="mini-cell">Paris</div>
+                  <div class="mini-cell">87</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="filtering">
+          <div class="section-header">
+            <h2>Filtering</h2>
+            <p>
+              SmartGrid supports text, number, date, set, and multi-condition
+              filter models. Add <code>filter</code> to columns, or pass a
+              controlled <code>columnFilters</code> object.
+            </p>
+          </div>
+          <div class="example-grid">
+            <pre><code>const columns = [
+  { id: "name", field: "name", headerName: "Name", filter: "text" },
+  { id: "age", field: "age", headerName: "Age", filter: "number" },
+  { id: "city", field: "city", headerName: "City", filter: "set" },
+  { id: "hired", field: "hired", headerName: "Hired", filter: "date" },
+] satisfies Column&lt;Employee&gt;[];
 
 &lt;SmartGrid
   columns={columns}
   rows={rows}
-  groupBy="department"
-  pageSize={3}
+  columnFilters={{
+    city: { type: "set", operator: "in", values: ["London"] },
+    score: { type: "number", operator: "gte", value: 80 },
+  }}
 /&gt;</code></pre>
-        </article>
-
-        <article class="card two-up">
-          <h2>2. Core interaction model</h2>
-          <p>
-            The grid is designed around direct manipulation and
-            spreadsheet-style navigation.
-          </p>
-          <ul class="feature-list">
-            <li>
-              <span class="feature-title">Sorting</span>Click a header to sort
-              ascending or descending. Unsort by clicking again.
-            </li>
-            <li>
-              <span class="feature-title">Resizing</span>Drag the header edge to
-              resize. Double-click to autosize to content.
-            </li>
-            <li>
-              <span class="feature-title">Pinned columns</span>Mark columns as
-              pinned left or right to keep them anchored.
-            </li>
-            <li>
-              <span class="feature-title">Quick filter</span>Search across
-              visible columns using the toolbar input.
-            </li>
-          </ul>
-        </article>
-
-        <article class="card two-up">
-          <h2>3. Editing and selection</h2>
-          <dl class="shortcut">
-            <dt>Click a cell</dt>
-            <dd>Moves the active cell and selects the row.</dd>
-            <dt>Double-click a cell</dt>
-            <dd>Starts inline editing when the column is editable.</dd>
-            <dt>Enter or F2</dt>
-            <dd>Begins editing from the keyboard.</dd>
-            <dt>Escape</dt>
-            <dd>Cancels edit mode or clears the current selection anchor.</dd>
-            <dt>Arrow keys</dt>
-            <dd>
-              Navigates between cells; hold Shift to extend range selection.
-            </dd>
-          </dl>
-        </article>
-
-        <article class="card two-up">
-          <h2>4. Clipboard behavior</h2>
-          <p>
-            Use Ctrl/Cmd+C to copy the active cell or selected range. Use
-            Ctrl/Cmd+V to paste tab- separated text back into the grid. Numeric
-            cells are parsed as numbers when possible.
-          </p>
-          <div class="callout">
-            <strong>Tip:</strong> You can paste a single value into a selected
-            range and the value will fill the whole range.
+            <ul class="notes">
+              <li>
+                <strong>Toolbar Filters:</strong> opens the full filter panel.
+              </li>
+              <li>
+                <strong>Header menu:</strong> can open or clear a column filter.
+              </li>
+              <li>
+                <strong>Custom predicate:</strong> pass
+                <code>filter: { predicate: customPredicate }</code> for custom
+                matching.
+              </li>
+            </ul>
           </div>
-        </article>
-
-        <article class="card two-up">
-          <h2>5. Grouping, pagination, and reordering</h2>
-          <ul class="list">
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Filtered rows remain and filter count updates</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-toolbar">
+                <span class="mini-button">Filters</span>
+                <span class="mini-pill">City: London</span>
+                <span class="mini-pill">Score ≥ 80</span>
+              </div>
+              <div class="mini-table">
+                <div class="mini-row mini-head">
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Name</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>City</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Score</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell">John</div>
+                  <div class="mini-cell">London</div>
+                  <div class="mini-cell">92</div>
+                </div>
+              </div>
+              <div class="mini-status">1 of 7 rows shown · 2 filters</div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="quick-find">
+          <div class="section-header">
+            <h2>Quick Filter and Find</h2>
+            <p>
+              Quick filter narrows rows across visible columns. Find highlights
+              matching cells and moves the active cell through matches.
+            </p>
+          </div>
+          <pre><code>&lt;SmartGrid
+  columns={columns}
+  rows={rows}
+  quickFilterText="engineering"
+/&gt;</code></pre>
+          <ul class="compact-list">
             <li>
-              Set <code>groupBy</code> to group rows by a field and collapse or
-              expand groups.
+              Use the Quick filter toolbar input for uncontrolled searching.
             </li>
             <li>
-              Set <code>pageSize</code> to paginate the visible rows in the
-              toolbar.
+              Pass <code>quickFilterText</code> when a parent component owns the
+              query.
             </li>
             <li>
-              Drag a row by its handle to reorder rows within the current view.
+              Use the Find input and Next button to jump between matching cells.
             </li>
-            <li>Export the current visible rows to CSV from the toolbar.</li>
           </ul>
-        </article>
-
-        <article class="card two-up">
-          <h2>6. Column chooser</h2>
-          <p>
-            Open the Columns button in the toolbar to hide or show fields at
-            runtime. This uses the existing column metadata, so pinned state and
-            widths remain part of the same config.
-          </p>
-          <p class="footer-note">
-            If a column is hidden in the chooser, it is removed from the visible
-            layout, filter scope, and export surface for the current grid
-            session.
-          </p>
-        </article>
-
-        <article class="card">
-          <h2>Feature matrix</h2>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Search narrows rows; find highlights a matching cell</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-toolbar">
+                <span class="mini-input">engineering</span>
+                <span class="mini-input">Find: Maya</span>
+                <span class="mini-button">Next</span>
+              </div>
+              <div class="mini-table">
+                <div class="mini-row mini-head">
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Name</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Department</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Score</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell mini-cell--active">Maya</div>
+                  <div class="mini-cell">Engineering</div>
+                  <div class="mini-cell">96</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="grouping">
+          <div class="section-header">
+            <h2>Grouping</h2>
+            <p>
+              Pass <code>groupBy</code> with a row field. SmartGrid creates
+              group header rows, summary text, and collapse or expand behavior.
+            </p>
+          </div>
+          <pre><code>&lt;SmartGrid
+  columns={columns}
+  rows={rows}
+  groupBy="department"
+/&gt;</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Rows are grouped under collapsible group headers</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-group">
+                v Engineering · 2 rows · Score avg 92.0
+              </div>
+              <div class="mini-table">
+                <div class="mini-row">
+                  <div class="mini-cell">Maya</div>
+                  <div class="mini-cell">Berlin</div>
+                  <div class="mini-cell">96</div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell">Omar</div>
+                  <div class="mini-cell">London</div>
+                  <div class="mini-cell">88</div>
+                </div>
+              </div>
+              <div class="mini-group">&gt; Product · 2 rows</div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="pivoting">
+          <div class="section-header">
+            <h2>Pivoting</h2>
+            <p>
+              Pivoting turns unique values from <code>pivotBy</code> into
+              generated columns and aggregates value columns inside each
+              <code>groupBy</code> bucket. If no value columns are provided, it
+              falls back to counts.
+            </p>
+          </div>
+          <div class="example-grid">
+            <pre><code>&lt;SmartGrid
+  columns={columns}
+  rows={rows}
+  groupBy="department"
+  pivotBy="city"
+  pivotValueColumns={["score"]}
+  pivotAggregation="avg"
+  pageSize={10}
+/&gt;</code></pre>
+            <ul class="notes">
+              <li>
+                <strong>Pivot columns:</strong> unique city values become
+                columns.
+              </li>
+              <li>
+                <strong>Rows:</strong> each department becomes one pivot row.
+              </li>
+              <li>
+                <strong>Aggregations:</strong> <code>sum</code>,
+                <code>avg</code>, <code>count</code>, <code>min</code>, and
+                <code>max</code>.
+              </li>
+              <li>
+                <strong>Sorting:</strong> generated pivot columns can be sorted
+                and resized.
+              </li>
+            </ul>
+          </div>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Cities become columns; departments become summary rows</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div class="mini-row mini-row--five mini-head">
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Department</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Berlin</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>London</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Paris</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Toronto</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row mini-row--five">
+                  <div class="mini-cell">Engineering</div>
+                  <div class="mini-cell">96</div>
+                  <div class="mini-cell">88</div>
+                  <div class="mini-cell">0</div>
+                  <div class="mini-cell">0</div>
+                </div>
+                <div class="mini-row mini-row--five">
+                  <div class="mini-cell">Product</div>
+                  <div class="mini-cell">0</div>
+                  <div class="mini-cell">0</div>
+                  <div class="mini-cell">84.5</div>
+                  <div class="mini-cell">0</div>
+                </div>
+              </div>
+              <div class="mini-status">5 pivot rows from 7 rows</div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="tree-data">
+          <div class="section-header">
+            <h2>Tree Data</h2>
+            <p>
+              Use <code>getTreeDataPath</code> when rows represent a hierarchy.
+              The grid renders indentation and expand or collapse controls from
+              the returned path.
+            </p>
+          </div>
+          <pre><code>&lt;SmartGrid
+  columns={columns}
+  rows={rows}
+  getTreeDataPath={(row) =&gt; [row.department, row.city, row.name]}
+/&gt;</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Hierarchical rows show indentation and expand controls</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div class="mini-row mini-head">
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Name</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>City</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Score</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell">v Engineering</div>
+                  <div class="mini-cell mini-cell--muted">group</div>
+                  <div class="mini-cell mini-cell--muted"></div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell">v Berlin</div>
+                  <div class="mini-cell">Berlin</div>
+                  <div class="mini-cell"></div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell">Maya</div>
+                  <div class="mini-cell">Berlin</div>
+                  <div class="mini-cell">96</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="pagination">
+          <div class="section-header">
+            <h2>Pagination</h2>
+            <p>
+              Set <code>pageSize</code> to show paging controls in the toolbar.
+              In pivot mode, paging applies to pivot rows. Otherwise it applies
+              to filtered data rows before grouping and tree rendering.
+            </p>
+          </div>
+          <pre><code>&lt;SmartGrid columns={columns} rows={rows} pageSize={25} /&gt;</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Paging controls appear in the toolbar and status updates</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-toolbar">
+                <span class="mini-button">Previous</span>
+                <span class="mini-pill">Page 2 of 4</span>
+                <span class="mini-button">Next</span>
+              </div>
+              <div class="mini-status">25 of 87 rows shown</div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="editing">
+          <div class="section-header">
+            <h2>Editing</h2>
+            <p>
+              Mark a column as editable and choose an editor. Users can
+              double-click, press Enter, or press F2 to edit cells.
+            </p>
+          </div>
+          <div class="example-grid">
+            <pre><code>const columns: Column&lt;Employee&gt;[] = [
+  { id: "name", field: "name", headerName: "Name", editable: true, editor: "text" },
+  { id: "age", field: "age", headerName: "Age", editable: true, editor: "number" },
+  { id: "hired", field: "hired", headerName: "Hired", editable: true, editor: "date" },
+  { id: "active", field: "active", headerName: "Active", editable: true, editor: "checkbox" },
+  {
+    id: "department",
+    field: "department",
+    headerName: "Department",
+    editable: true,
+    editor: {
+      type: "advancedSelect",
+      values: ["Operations", "Product", "Engineering"],
+      allowCustomValue: false,
+    },
+  },
+];</code></pre>
+            <ul class="notes">
+              <li>
+                <strong>Supported editors:</strong> text, number, date,
+                checkbox, largeText, select, and advancedSelect.
+              </li>
+              <li><strong>Commit:</strong> Enter or blur commits the edit.</li>
+              <li>
+                <strong>Cancel:</strong> Escape leaves the value unchanged.
+              </li>
+              <li>
+                <strong>Callback:</strong> use <code>onCellValueChange</code> to
+                react to edits.
+              </li>
+            </ul>
+          </div>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Editable cells switch into inputs, selects, dates, or
+                checkboxes</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div class="mini-row mini-row--four mini-head">
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Name</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Age</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Active</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Department</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row mini-row--four">
+                  <div class="mini-cell mini-cell--active">Maya</div>
+                  <div class="mini-cell">33</div>
+                  <div class="mini-cell">☑</div>
+                  <div class="mini-cell">Engineering ▾</div>
+                </div>
+              </div>
+              <div class="mini-status">
+                Editing Name R1 · Enter commits · Escape cancels
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="selection">
+          <div class="section-header">
+            <h2>Selection</h2>
+            <p>
+              Row selection and active cell state are built in. Range selection
+              is enabled by default and can be disabled with
+              <code>enableRangeSelection</code>.
+            </p>
+          </div>
+          <pre><code>&lt;SmartGrid
+  columns={columns}
+  rows={rows}
+  enableRangeSelection
+/&gt;</code></pre>
+          <ul class="compact-list">
+            <li>Click a cell to move the active cell.</li>
+            <li>Use Shift with arrow keys or cell clicks to extend a range.</li>
+            <li>
+              The status bar shows active cell, selected row, and range size.
+            </li>
+          </ul>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Selected ranges are tinted and active cell has a stronger
+                outline</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div class="mini-row mini-head">
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Name</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>City</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Score</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell mini-cell--range">John</div>
+                  <div class="mini-cell mini-cell--range">London</div>
+                  <div class="mini-cell">92</div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell mini-cell--active">Alice</div>
+                  <div class="mini-cell mini-cell--range">Paris</div>
+                  <div class="mini-cell">87</div>
+                </div>
+              </div>
+              <div class="mini-status">4 cells selected · Name R2</div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="clipboard">
+          <div class="section-header">
+            <h2>Clipboard and Fill</h2>
+            <p>
+              Copy and paste work with the active cell or selected range. The
+              Fill toolbar action repeats the starting cell value across a
+              selected range.
+            </p>
+          </div>
+          <pre><code>&lt;SmartGrid
+  columns={columns}
+  rows={rows}
+  enableFillHandle
+/&gt;</code></pre>
+          <ul class="compact-list">
+            <li>Ctrl or Cmd + C copies the current cell or range.</li>
+            <li>Ctrl or Cmd + V pastes tab-separated values.</li>
+            <li>Pasting into numeric cells parses numbers when possible.</li>
+          </ul>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >A pasted value fills the selected range when Fill is
+                clicked</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-toolbar">
+                <span class="mini-button">Copy</span>
+                <span class="mini-button">Paste</span>
+                <span class="mini-button">Fill</span>
+              </div>
+              <div class="mini-table">
+                <div class="mini-row mini-head">
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Q1</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Q2</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Q3</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell mini-cell--active">92</div>
+                  <div class="mini-cell mini-cell--range">92</div>
+                  <div class="mini-cell mini-cell--range">92</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="context-menu">
+          <div class="section-header">
+            <h2>Context Menu</h2>
+            <p>
+              Right-click a cell to open actions for copy, paste, edit, and
+              clear. Edit and clear are disabled for read-only columns and
+              generated pivot values.
+            </p>
+          </div>
+          <pre><code>// No prop is required.
+// Right-click any body cell to open the cell context menu.
+&lt;SmartGrid columns={columns} rows={rows} /&gt;</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Right-click opens a small action menu beside the cell</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div class="mini-row">
+                  <div class="mini-cell">Alice</div>
+                  <div class="mini-cell mini-cell--active">Paris</div>
+                  <div class="mini-cell">87</div>
+                </div>
+              </div>
+              <div class="mini-context">
+                <div>Copy</div>
+                <div>Paste</div>
+                <div>Edit cell</div>
+                <div>Clear cell</div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="row-reorder">
+          <div class="section-header">
+            <h2>Row Reordering</h2>
+            <p>
+              Drag rows to reorder the underlying row array in the current
+              visible order. Reordering is disabled while pivot mode is active
+              because pivot rows are generated summaries.
+            </p>
+          </div>
+          <pre><code>&lt;SmartGrid columns={columns} rows={rows} /&gt;</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Drop target row is highlighted while dragging</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div class="mini-row">
+                  <div class="mini-cell">Alice</div>
+                  <div class="mini-cell">Paris</div>
+                  <div class="mini-cell">87</div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell mini-cell--active">Drop here</div>
+                  <div class="mini-cell mini-cell--active">Engineering</div>
+                  <div class="mini-cell mini-cell--active">96</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="master-detail">
+          <div class="section-header">
+            <h2>Master Detail</h2>
+            <p>
+              Pass <code>masterDetailRenderer</code> to render expandable detail
+              rows under each data row.
+            </p>
+          </div>
+          <pre><code>&lt;SmartGrid
+  columns={columns}
+  rows={rows}
+  getRowId={(row) =&gt; row.id}
+  masterDetailRenderer={(row) =&gt; (
+    `Hired in ${row.hired} with score ${row.score}`
+  )}
+/&gt;</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Expanded master row reveals a full-width detail area</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div class="mini-row">
+                  <div class="mini-cell">+ Maya</div>
+                  <div class="mini-cell">Berlin</div>
+                  <div class="mini-cell">96</div>
+                </div>
+              </div>
+              <p class="mini-detail">Hired in 2019-11-18 with score 96</p>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="resize">
+          <div class="section-header">
+            <h2>Resize and Autosize</h2>
+            <p>
+              Header resize handles update widths at runtime. Double-clicking a
+              resize handle autosizes a column to the larger of header text and
+              visible cell content.
+            </p>
+          </div>
+          <pre><code>{
+  id: "name",
+  field: "name",
+  headerName: "Name",
+  width: 240,
+  minWidth: 160,
+  maxWidth: 420,
+  resizable: true,
+}</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Resize handles adjust column width; autosize fits content</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div
+                  class="mini-row mini-head"
+                  style="grid-template-columns: 1.8fr 0.8fr 0.7fr"
+                >
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Name ⇔</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>City</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Score</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div
+                  class="mini-row"
+                  style="grid-template-columns: 1.8fr 0.8fr 0.7fr"
+                >
+                  <div class="mini-cell">Alexandra Morgan</div>
+                  <div class="mini-cell">London</div>
+                  <div class="mini-cell">92</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="pinning">
+          <div class="section-header">
+            <h2>Pinning</h2>
+            <p>
+              Pin important columns to the left or right edge. Users can also
+              change pin state from the header menu.
+            </p>
+          </div>
+          <pre><code>const columns = [
+  { id: "name", field: "name", headerName: "Name", pinned: "left" },
+  { id: "score", field: "score", headerName: "Score", pinned: "right" },
+] satisfies Column&lt;Employee&gt;[];</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Pinned columns stay visually anchored at the edges</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div class="mini-row mini-head">
+                  <div class="mini-cell mini-cell--pinned">
+                    <div class="mini-head-content">
+                      <span>Name</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Department</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell mini-cell--pinned">
+                    <div class="mini-head-content">
+                      <span>Score</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell mini-cell--pinned">John</div>
+                  <div class="mini-cell">Operations</div>
+                  <div class="mini-cell mini-cell--pinned">92</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="column-chooser">
+          <div class="section-header">
+            <h2>Column Chooser</h2>
+            <p>
+              The Columns toolbar menu lets users hide and show fields during a
+              session. Hidden columns are removed from visible layout, quick
+              filter scope, and export output.
+            </p>
+          </div>
+          <pre><code>const columns = [
+  { id: "name", field: "name", headerName: "Name" },
+  { id: "internalNotes", field: "internalNotes", headerName: "Notes", hidden: true },
+] satisfies Column&lt;Employee&gt;[];</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >The Columns menu toggles visible fields</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-toolbar">
+                <span class="mini-button">Columns</span>
+              </div>
+              <div class="mini-popover">
+                <div class="mini-check">
+                  <span>Name</span><span>shown</span>
+                </div>
+                <div class="mini-check">
+                  <span>City</span><span>shown</span>
+                </div>
+                <div class="mini-check">
+                  <span>Internal Notes</span><span>hidden</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="row-numbers">
+          <div class="section-header">
+            <h2>Row Numbers</h2>
+            <p>
+              Add a leading row number column with <code>rowNumbers</code>.
+              Numbers reflect the current rendered row positions.
+            </p>
+          </div>
+          <pre><code>&lt;SmartGrid columns={columns} rows={rows} rowNumbers /&gt;</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >A fixed leading number column appears before data columns</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div class="mini-row mini-row--numbers mini-head">
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>#</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Name</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>City</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Score</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row mini-row--numbers">
+                  <div class="mini-cell">1</div>
+                  <div class="mini-cell">John</div>
+                  <div class="mini-cell">London</div>
+                  <div class="mini-cell">92</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="export">
+          <div class="section-header">
+            <h2>Export</h2>
+            <p>
+              Toolbar buttons export the current visible table surface. CSV
+              exports plain comma-separated values. Excel exports an HTML table
+              with an <code>.xls</code> extension.
+            </p>
+          </div>
+          <pre><code>// No extra prop is required.
+// Use Export CSV or Export Excel from the toolbar.
+&lt;SmartGrid columns={columns} rows={rows} /&gt;</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Export actions live in the toolbar</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-toolbar">
+                <span class="mini-button">Export CSV</span>
+                <span class="mini-button">Export Excel</span>
+              </div>
+              <div class="mini-status">
+                Exports current visible columns and rows
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="transactions">
+          <div class="section-header">
+            <h2>Transactions</h2>
+            <p>
+              Use <code>transaction</code> to add, update, or remove rows from
+              the grid state. Provide <code>getRowId</code> for stable matching.
+            </p>
+          </div>
+          <pre><code>&lt;SmartGrid
+  columns={columns}
+  rows={rows}
+  getRowId={(row) =&gt; row.id}
+  transaction={{
+    add: [{ id: 9, name: "Rhea", city: "Berlin", department: "Finance", score: 89 }],
+    update: [{ id: 2, name: "Alice", city: "Paris", department: "Product", score: 91 }],
+    remove: [{ id: 3, name: "Bob", city: "New York", department: "Support", score: 79 }],
+  }}
+/&gt;</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Added and updated rows appear in the grid state</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-table">
+                <div class="mini-row mini-head">
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Name</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>City</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                  <div class="mini-cell">
+                    <div class="mini-head-content">
+                      <span>Score</span
+                      ><span class="mini-head-actions"
+                        ><span class="mini-sort-icon">⇅</span
+                        ><span class="mini-filter-button">⏷</span
+                        ><span class="mini-menu-button">⋮</span></span
+                      >
+                    </div>
+                  </div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell">Rhea</div>
+                  <div class="mini-cell">Berlin</div>
+                  <div class="mini-cell">89</div>
+                </div>
+                <div class="mini-row">
+                  <div class="mini-cell">Alice</div>
+                  <div class="mini-cell">Paris</div>
+                  <div class="mini-cell mini-cell--active">91</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="server-side">
+          <div class="section-header">
+            <h2>Server Side State</h2>
+            <p>
+              <code>onServerSideOperation</code> reports sort, filter,
+              selection, page, group, pivot, tree, detail, and transaction
+              state. Use it to mirror grid operations to a backend.
+            </p>
+          </div>
+          <pre><code>&lt;SmartGrid
+  columns={columns}
+  rows={rows}
+  getRowId={(row) =&gt; row.id}
+  onServerSideOperation={(state) =&gt; {
+    console.log(state.sortModel);
+    console.log(state.filterModel);
+    console.log(state.pivotBy, state.pivotValueColumns);
+  }}
+/&gt;</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Grid operations are reported as structured state</span
+              >
+            </div>
+            <pre><code>{
+  sortModel: [{ columnId: "score", direction: "desc" }],
+  filterModel: { city: { type: "set", values: ["London"] } },
+  pageIndex: 0,
+  groupBy: "department",
+  pivotBy: "city"
+}</code></pre>
+          </div>
+        </section>
+        <section class="section" id="locale">
+          <div class="section-header">
+            <h2>Locale Text</h2>
+            <p>
+              Pass <code>localeText</code> to replace supported toolbar labels.
+              Missing keys fall back to built-in English labels.
+            </p>
+          </div>
+          <pre><code>&lt;SmartGrid
+  columns={columns}
+  rows={rows}
+  localeText={{
+    quickFilter: "Search rows",
+    find: "Find cell",
+  }}
+/&gt;</code></pre>
+          <div class="preview">
+            <div class="preview-title">
+              <span>Example output</span>
+              <span class="preview-caption"
+                >Toolbar labels reflect your custom locale text</span
+              >
+            </div>
+            <div class="mini-grid">
+              <div class="mini-toolbar">
+                <span class="mini-input">Search rows</span>
+                <span class="mini-input">Find cell</span>
+                <span class="mini-button">Next</span>
+              </div>
+            </div>
+          </div>
+        </section>
+        <section class="section" id="feature-table">
+          <div class="section-header">
+            <h2>Feature Table</h2>
+            <p>
+              A compact map of feature, configuration, and user interaction.
+            </p>
+          </div>
           <div class="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>Feature</th>
-                  <th>Where it lives</th>
-                  <th>How to use it</th>
+                  <th>Configure with</th>
+                  <th>User action</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
                   <td>Sorting</td>
-                  <td>Header</td>
-                  <td>Click the column header</td>
+                  <td><code>column.sortable</code></td>
+                  <td>Click header or use header menu</td>
                 </tr>
                 <tr>
-                  <td>Resizing</td>
-                  <td>Header edge</td>
-                  <td>Drag the resize handle or double-click for autosize</td>
+                  <td>Column filters</td>
+                  <td>
+                    <code>column.filter</code>, <code>columnFilters</code>
+                  </td>
+                  <td>Open Filters toolbar or header menu</td>
                 </tr>
                 <tr>
-                  <td>Editing</td>
-                  <td>Cell body</td>
-                  <td>Double-click or press Enter/F2</td>
+                  <td>Quick filter</td>
+                  <td><code>quickFilterText</code></td>
+                  <td>Type in Quick filter</td>
                 </tr>
                 <tr>
-                  <td>Filtering</td>
-                  <td>Toolbar</td>
-                  <td>Type into Quick filter</td>
+                  <td>Find</td>
+                  <td>Built in</td>
+                  <td>Type in Find, click Next</td>
                 </tr>
                 <tr>
                   <td>Grouping</td>
-                  <td>Row body</td>
-                  <td>Pass <code>groupBy</code></td>
+                  <td><code>groupBy</code></td>
+                  <td>Click group row to collapse or expand</td>
                 </tr>
                 <tr>
-                  <td>Pagination</td>
-                  <td>Toolbar</td>
-                  <td>Pass <code>pageSize</code></td>
+                  <td>Pivoting</td>
+                  <td>
+                    <code>pivotBy</code>, <code>pivotValueColumns</code>,
+                    <code>pivotAggregation</code>
+                  </td>
+                  <td>Sort and resize generated pivot columns</td>
                 </tr>
                 <tr>
-                  <td>Export</td>
-                  <td>Toolbar</td>
-                  <td>Click Export CSV</td>
+                  <td>Tree data</td>
+                  <td><code>getTreeDataPath</code></td>
+                  <td>Use tree expand controls</td>
+                </tr>
+                <tr>
+                  <td>Editing</td>
+                  <td><code>editable</code>, <code>editor</code></td>
+                  <td>Double-click, Enter, or F2</td>
+                </tr>
+                <tr>
+                  <td>Selection</td>
+                  <td><code>enableRangeSelection</code></td>
+                  <td>Click cells, Shift-click, Shift-arrow</td>
+                </tr>
+                <tr>
+                  <td>Clipboard</td>
+                  <td>Built in</td>
+                  <td>Ctrl/Cmd+C and Ctrl/Cmd+V</td>
+                </tr>
+                <tr>
+                  <td>Fill</td>
+                  <td><code>enableFillHandle</code></td>
+                  <td>Select a range and click Fill</td>
+                </tr>
+                <tr>
+                  <td>Pinning</td>
+                  <td><code>column.pinned</code></td>
+                  <td>Use header menu pin actions</td>
                 </tr>
                 <tr>
                   <td>Column chooser</td>
-                  <td>Toolbar</td>
-                  <td>Click Columns and toggle visibility</td>
+                  <td><code>column.hidden</code></td>
+                  <td>Open Columns toolbar menu</td>
+                </tr>
+                <tr>
+                  <td>Pagination</td>
+                  <td><code>pageSize</code></td>
+                  <td>Use Previous and Next page buttons</td>
+                </tr>
+                <tr>
+                  <td>Export</td>
+                  <td>Built in</td>
+                  <td>Click Export CSV or Export Excel</td>
+                </tr>
+                <tr>
+                  <td>Server state</td>
+                  <td><code>onServerSideOperation</code></td>
+                  <td>Receive grid state changes in a callback</td>
                 </tr>
               </tbody>
             </table>
           </div>
-        </article>
-      </section>
+        </section>
+        <p class="footer-note">
+          This guide matches the SmartGrid implementation in this workspace.
+          When adding a new prop or toolbar action, add it to the left index,
+          create a matching section, and include a small React example.
+        </p>
+      </div>
     </main>
   </body>
 </html>

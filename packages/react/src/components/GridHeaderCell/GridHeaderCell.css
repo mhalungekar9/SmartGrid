@@ -26,13 +26,213 @@
 }
 
 .sg-header-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sg-header-actions {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 4px;
+}
+
+.sg-header-icon-button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(203, 213, 225, 0.86);
+  cursor: pointer;
+}
+
+.sg-header-icon-button:hover,
+.sg-header-icon-button[aria-expanded="true"],
+.sg-header-icon-button[data-state="open"] {
+  border-color: rgba(96, 165, 250, 0.28);
+  background: rgba(96, 165, 250, 0.14);
+  color: #eff6ff;
+}
+
+.sg-header-icon-button:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+}
+
+.sg-header-icon-button--active {
+  color: #93c5fd;
+}
+
+.sg-header-menu {
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  width: 210px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(8, 12, 24, 0.98);
+  box-shadow: 0 18px 50px rgba(4, 8, 20, 0.45);
+  backdrop-filter: blur(18px);
+  transform-origin: var(--radix-dropdown-menu-content-transform-origin);
+  animation: sg-menu-in 120ms ease-out;
+}
+
+.sg-header-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.92);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.sg-header-menu-item:hover {
+  background: rgba(96, 165, 250, 0.13);
+  color: #f8fafc;
+}
+
+.sg-header-menu-item:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.sg-header-menu-item[data-disabled] {
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+.sg-header-menu-item[data-highlighted] {
+  background: rgba(96, 165, 250, 0.13);
+  color: #f8fafc;
+  outline: none;
+}
+
+.sg-header-menu-divider {
+  display: block;
+  height: 1px;
+  margin: 6px 4px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sg-column-filter-popover {
+  width: 260px;
   gap: 8px;
 }
 
-.sg-sort-indicator {
-  color: rgba(96, 165, 250, 0.95);
+.sg-column-filter-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 30px;
+  padding: 0 4px 2px;
+  color: rgba(241, 245, 249, 0.94);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.sg-column-filter-input {
+  width: 100%;
+  min-height: 34px;
+  box-sizing: border-box;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.88);
+  color: rgba(248, 250, 252, 0.94);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+  outline: none;
+}
+
+.sg-column-filter-input:not(select) {
+  padding: 0 10px;
+}
+
+.sg-column-filter-input:focus {
+  border-color: rgba(96, 165, 250, 0.62);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.14);
+}
+
+select.sg-column-filter-input {
+  padding: 0 8px;
+}
+
+select.sg-column-filter-input[multiple] {
+  min-height: 120px;
+  padding: 6px 8px;
+}
+
+.sg-column-filter-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.sg-column-filter-button {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 7px;
+  background: rgba(15, 23, 42, 0.78);
+  color: rgba(226, 232, 240, 0.94);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  cursor: pointer;
+}
+
+.sg-column-filter-button:hover:not(:disabled) {
+  border-color: rgba(96, 165, 250, 0.34);
+  background: rgba(96, 165, 250, 0.16);
+  color: #f8fafc;
+}
+
+.sg-column-filter-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+@keyframes sg-menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98) translateY(-2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.sg-row-number-header {
+  justify-content: center;
+  color: rgba(148, 163, 184, 0.9);
+  cursor: default;
 }
 
 .sg-resize-handle {

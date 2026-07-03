@@ -5,3 +5,68 @@
 .sg-cell {
   box-sizing: border-box;
 }
+
+.sg-context-menu {
+  position: fixed;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  width: 180px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: rgba(8, 12, 24, 0.98);
+  box-shadow: 0 18px 50px rgba(4, 8, 20, 0.45);
+  backdrop-filter: blur(18px);
+}
+
+.sg-context-menu-item {
+  display: flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(226, 232, 240, 0.92);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sg-context-menu-item:hover:not(:disabled) {
+  background: rgba(96, 165, 250, 0.13);
+  color: #f8fafc;
+}
+
+.sg-context-menu-item:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.sg-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(8, 12, 24, 0.76);
+  color: rgba(226, 232, 240, 0.74);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.sg-status-bar span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+}
+
+.sg-status-bar span + span {
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+}

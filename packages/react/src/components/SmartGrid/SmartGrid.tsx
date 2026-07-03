@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import type { GridOptions } from "@smartgrid/core";
+import type { ColumnFilterModel, GridOptions, PivotAggregation } from "@smartgrid/core";
 
 import { GridRoot } from "../GridRoot/GridRoot";
 import { GridHeader } from "../GridHeader/GridHeader";
@@ -9,6 +9,7 @@ import { GridBody } from "../GridBody/GridBody";
 import { GridRenderer } from "../../rendering";
 
 import GridContext from "../../context/GridContext";
+import { getColumnValue, getRawColumnValue } from "../../utils/cellValue";
 import type { Column } from "@smartgrid/core";
 
 export interface SmartGridProps<T> extends GridOptions<T> {}
@@ -36,6 +37,11 @@ interface CellPosition {
   columnIndex: number;
 }
 
+interface CellContextMenuState extends CellPosition {
+  x: number;
+  y: number;
+}
+
 interface GroupBucket<T> {
   key: string;
   label: string;
@@ -43,29 +49,40 @@ interface GroupBucket<T> {
   summaries: string;
 }
 
+interface PivotResult<T> {
+  active: boolean;
+  columns: Column<T>[];
+  rows: T[];
+}
+
 type DataRow<T> = {
   kind: "data";
   row: T;
   rowIndex: number;
   groupKey: string;
+  depth?: number;
+  treeKey?: string;
+  hasChildren?: boolean;
+  expanded?: boolean;
+  hasDetail?: boolean;
 };
 
 type GroupRow<T> = {
-  kind: "group";
+  kind: "group" | "pivot";
   key: string;
   label: string;
   count: number;
   summaries: string;
 };
 
-type DisplayRow<T> = DataRow<T> | GroupRow<T>;
+type DetailRow<T> = {
+  kind: "detail";
+  key: string;
+  row: T;
+  content: unknown;
+};
 
-function getColumnValue<T>(
-  row: T,
-  column: GridOptions<T>["columns"][number],
-): unknown {
-  return column.valueGetter?.(row) ?? row[column.field];
-}
+type DisplayRow<T> = DataRow<T> | GroupRow<T> | DetailRow<T>;
 
 function compareValues(left: unknown, right: unknown): number {
   if (left == null && right == null) {
@@ -117,6 +134,152 @@ function sortRows<T>(
 
     return sortModel.direction === "asc" ? comparison : -comparison;
   });
+}
+
+function getFilterType(filter: ColumnFilterModel): ColumnFilterModel["type"] {
+  return filter.type ?? "text";
+}
+
+function isFilterActive(filter: ColumnFilterModel): boolean {
+  if (getFilterType(filter) === "multi") {
+    return Boolean(filter.conditions?.some(isFilterActive));
+  }
+
+  if (filter.operator === "blank" || filter.operator === "notBlank") {
+    return true;
+  }
+
+  if (getFilterType(filter) === "set") {
+    return Boolean(filter.values?.length);
+  }
+
+  return filter.value != null && String(filter.value).trim() !== "";
+}
+
+function isBlank(value: unknown): boolean {
+  return value == null || String(value).trim() === "";
+}
+
+function parseDateValue(value: unknown): number | null {
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+
+  const parsed = Date.parse(String(value ?? ""));
+
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function matchesColumnFilter<T>(
+  row: T,
+  column: Column<T>,
+  filter: ColumnFilterModel,
+): boolean {
+  if (getFilterType(filter) === "multi") {
+    const conditions = filter.conditions ?? [];
+
+    if (!conditions.length) {
+      return true;
+    }
+
+    return filter.joinOperator === "or"
+      ? conditions.some((condition) => matchesColumnFilter(row, column, condition))
+      : conditions.every((condition) => matchesColumnFilter(row, column, condition));
+  }
+
+  const value = getColumnValue(row, column);
+  const configuredFilter =
+    typeof column.filter === "object" ? column.filter : undefined;
+
+  if (configuredFilter?.predicate) {
+    return configuredFilter.predicate(value, row, filter.value);
+  }
+
+  if (filter.operator === "blank") {
+    return isBlank(value);
+  }
+
+  if (filter.operator === "notBlank") {
+    return !isBlank(value);
+  }
+
+  if (getFilterType(filter) === "set") {
+    const values = filter.values ?? [];
+
+    return values.map(String).includes(String(value ?? ""));
+  }
+
+  if (getFilterType(filter) === "number") {
+    const numericValue = Number(value);
+    const filterValue = Number(filter.value);
+    const filterValueTo = Number(filter.valueTo);
+
+    if (Number.isNaN(numericValue) || Number.isNaN(filterValue)) {
+      return false;
+    }
+
+    if (filter.operator === "gt") return numericValue > filterValue;
+    if (filter.operator === "gte") return numericValue >= filterValue;
+    if (filter.operator === "lt") return numericValue < filterValue;
+    if (filter.operator === "lte") return numericValue <= filterValue;
+    if (filter.operator === "between") {
+      return (
+        !Number.isNaN(filterValueTo) &&
+        numericValue >= filterValue &&
+        numericValue <= filterValueTo
+      );
+    }
+
+    return numericValue === filterValue;
+  }
+
+  if (getFilterType(filter) === "date") {
+    const dateValue = parseDateValue(value);
+    const filterValue = parseDateValue(filter.value);
+    const filterValueTo = parseDateValue(filter.valueTo);
+
+    if (dateValue == null || filterValue == null) {
+      return false;
+    }
+
+    if (filter.operator === "before") return dateValue < filterValue;
+    if (filter.operator === "after") return dateValue > filterValue;
+    if (filter.operator === "between") {
+      return (
+        filterValueTo != null &&
+        dateValue >= filterValue &&
+        dateValue <= filterValueTo
+      );
+    }
+
+    return new Date(dateValue).toDateString() ===
+      new Date(filterValue).toDateString();
+  }
+
+  const text = String(value ?? "").toLowerCase();
+  const filterText = String(filter.value ?? "").toLowerCase();
+
+  if (!filterText) {
+    return true;
+  }
+
+  if (filter.operator === "equals") return text === filterText;
+  if (filter.operator === "startsWith") return text.startsWith(filterText);
+  if (filter.operator === "endsWith") return text.endsWith(filterText);
+
+  return text.includes(filterText);
+}
+
+function getColumnFilterType<T>(column: Column<T>): ColumnFilterModel["type"] {
+  if (typeof column.filter === "string") {
+    return column.filter === "multi" ? "text" : column.filter;
+  }
+
+  if (column.filter?.type) {
+    return column.filter.type === "multi" ? "text" : column.filter.type;
+  }
+
+  return "text";
 }
 
 function formatNumber(value: number): string {
@@ -178,10 +341,253 @@ function buildGroupBuckets<T>(
   }));
 }
 
+function makePivotColumnId(...parts: string[]): string {
+  return `__pivot_${parts
+    .join("_")
+    .replace(/[^a-zA-Z0-9_]+/g, "_")
+    .replace(/^_+|_+$/g, "")}`;
+}
+
+function aggregatePivotValues(
+  values: unknown[],
+  aggregation: PivotAggregation,
+): number {
+  if (aggregation === "count") {
+    return values.length;
+  }
+
+  const numbers = values
+    .map((value) => Number(value))
+    .filter((value) => !Number.isNaN(value));
+
+  if (!numbers.length) {
+    return 0;
+  }
+
+  if (aggregation === "avg") {
+    return numbers.reduce((sum, value) => sum + value, 0) / numbers.length;
+  }
+
+  if (aggregation === "min") {
+    return Math.min(...numbers);
+  }
+
+  if (aggregation === "max") {
+    return Math.max(...numbers);
+  }
+
+  return numbers.reduce((sum, value) => sum + value, 0);
+}
+
+function buildPivotResult<T>(
+  rows: T[],
+  columns: Column<T>[],
+  groupBy: (keyof T & string) | undefined,
+  pivotBy: (keyof T & string) | undefined,
+  pivotValueColumns: Array<keyof T & string> | undefined,
+  pivotAggregation: PivotAggregation,
+): PivotResult<T> {
+  if (!pivotBy) {
+    return { active: false, columns, rows };
+  }
+
+  const groupColumn = groupBy
+    ? columns.find((column) => column.field === groupBy || column.id === groupBy)
+    : undefined;
+  const configuredValueColumns = (pivotValueColumns ?? [])
+    .map((columnId) =>
+      columns.find((column) => column.field === columnId || column.id === columnId),
+    )
+    .filter((column): column is Column<T> => Boolean(column));
+  const inferredValueColumns = columns.filter((column) => {
+    if (column.hidden || column.field === groupBy || column.field === pivotBy) {
+      return false;
+    }
+
+    return rows.some((row) => typeof getColumnValue(row, column) === "number");
+  });
+  const valueColumns =
+    configuredValueColumns.length > 0 ? configuredValueColumns : inferredValueColumns;
+  const pivotLabels = Array.from(
+    new Set(rows.map((row) => String(row[pivotBy] ?? "Blank"))),
+  ).sort((left, right) =>
+    left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" }),
+  );
+  const groupBuckets = new Map<string, { label: string; items: T[] }>();
+
+  rows.forEach((row) => {
+    const groupLabel = groupBy ? String(row[groupBy] ?? "Ungrouped") : "Total";
+    const bucket = groupBuckets.get(groupLabel) ?? { label: groupLabel, items: [] };
+
+    bucket.items.push(row);
+    groupBuckets.set(groupLabel, bucket);
+  });
+
+  const labelField = "__pivotGroupLabel";
+  const labelColumn: Column<T> = groupColumn
+    ? {
+        ...groupColumn,
+        id: makePivotColumnId("group", groupColumn.id),
+        field: labelField as Extract<keyof T, string>,
+        headerName: groupColumn.headerName,
+        editable: false,
+        filterable: false,
+        valueGetter: (row) => String((row as Record<string, unknown>)[labelField] ?? ""),
+      } as Column<T>
+    : {
+        id: makePivotColumnId("group"),
+        field: labelField as Extract<keyof T, string>,
+        headerName: "Pivot",
+        width: 180,
+        sortable: true,
+        editable: false,
+        filterable: false,
+        valueGetter: (row) => String((row as Record<string, unknown>)[labelField] ?? ""),
+      } as Column<T>;
+  const hasValueColumns = valueColumns.length > 0;
+  const measureColumns = hasValueColumns
+    ? valueColumns
+    : [
+        {
+          id: "__count",
+          field: "__count" as Extract<keyof T, string>,
+          headerName: "Count",
+        } as Column<T>,
+      ];
+  const dynamicColumns = pivotLabels.flatMap((pivotLabel) =>
+    measureColumns.map((valueColumn) => {
+      const columnId = makePivotColumnId(String(pivotBy), pivotLabel, valueColumn.id);
+      const headerName =
+        measureColumns.length === 1
+          ? pivotLabel
+          : `${pivotLabel} ${valueColumn.headerName}`;
+
+      return {
+        id: columnId,
+        field: columnId as Extract<keyof T, string>,
+        headerName,
+        width: Math.max(120, Math.min(220, headerName.length * 10 + 36)),
+        sortable: true,
+        filterable: false,
+        editable: false,
+        valueGetter: (row: T) => (row as Record<string, unknown>)[columnId],
+        valueFormatter: (value: unknown) =>
+          typeof value === "number" ? formatNumber(value) : String(value ?? ""),
+      } as Column<T>;
+    }),
+  );
+  const pivotRows = Array.from(groupBuckets.values()).map((bucket) => {
+    const pivotRow: Record<string, unknown> = {
+      [labelField]: bucket.label,
+    };
+
+    pivotLabels.forEach((pivotLabel) => {
+      const pivotItems = bucket.items.filter(
+        (row) => String(row[pivotBy] ?? "Blank") === pivotLabel,
+      );
+
+      measureColumns.forEach((valueColumn) => {
+        const columnId = makePivotColumnId(String(pivotBy), pivotLabel, valueColumn.id);
+        const values = hasValueColumns
+          ? pivotItems.map((row) => getColumnValue(row, valueColumn))
+          : pivotItems;
+
+        pivotRow[columnId] = aggregatePivotValues(values, pivotAggregation);
+      });
+    });
+
+    return pivotRow as T;
+  });
+
+  return {
+    active: true,
+    columns: [labelColumn, ...dynamicColumns],
+    rows: pivotRows,
+  };
+}
+
+function buildTreeRows<T>(
+  rows: T[],
+  getTreeDataPath: ((row: T) => string[]) | undefined,
+  collapsedKeys: Set<string>,
+): Array<DataRow<T>> {
+  if (!getTreeDataPath) {
+    return rows.map((row, rowIndex) => ({
+      kind: "data",
+      row,
+      rowIndex,
+      groupKey: "",
+    }));
+  }
+
+  const keyedRows = rows
+    .map((row, sourceIndex) => {
+      const path = getTreeDataPath(row).filter(Boolean);
+
+      return {
+        row,
+        sourceIndex,
+        path,
+        key: path.join("/"),
+      };
+    })
+    .sort((left, right) => left.key.localeCompare(right.key));
+  const parentKeys = new Set<string>();
+
+  keyedRows.forEach((entry) => {
+    entry.path.slice(0, -1).forEach((_, index) => {
+      parentKeys.add(entry.path.slice(0, index + 1).join("/"));
+    });
+  });
+
+  const visibleRows: Array<DataRow<T>> = [];
+
+  keyedRows.forEach((entry) => {
+    const isHidden = entry.path.slice(0, -1).some((_, index) =>
+      collapsedKeys.has(entry.path.slice(0, index + 1).join("/")),
+    );
+
+    if (isHidden) {
+      return;
+    }
+
+    visibleRows.push({
+      kind: "data",
+      row: entry.row,
+      rowIndex: visibleRows.length,
+      groupKey: "",
+      depth: Math.max(0, entry.path.length - 1),
+      treeKey: entry.key,
+      hasChildren: parentKeys.has(entry.key),
+      expanded: !collapsedKeys.has(entry.key),
+    });
+  });
+
+  return visibleRows;
+}
+
 export function SmartGrid<T>({
   rows,
   columns,
+  columnFilters,
+  quickFilterText: quickFilterTextProp,
+  externalFilter,
+  advancedFilter,
+  rowNumbers = false,
+  enableRangeSelection = true,
+  enableFillHandle = true,
+  enableUndoRedo = true,
+  localeText,
+  getRowId,
+  onCellValueChange,
+  onServerSideOperation,
   groupBy,
+  pivotBy,
+  pivotValueColumns,
+  pivotAggregation = "sum",
+  getTreeDataPath,
+  masterDetailRenderer,
+  transaction,
   pageSize,
 }: SmartGridExtendedProps<T>) {
   const [gridRows, setGridRows] = useState(rows);
@@ -194,8 +600,25 @@ export function SmartGrid<T>({
   const [selectionAnchor, setSelectionAnchorState] =
     useState<CellPosition | null>(null);
   const [quickFilterText, setQuickFilterText] = useState("");
+  const [findText, setFindText] = useState("");
+  const [findMatchIndex, setFindMatchIndex] = useState(0);
+  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [columnMenuColumnId, setColumnMenuColumnId] = useState<string | null>(
+    null,
+  );
+  const [filterModel, setFilterModel] = useState<Record<string, ColumnFilterModel>>(
+    () => columnFilters ?? {},
+  );
+  const [undoStack, setUndoStack] = useState<T[][]>([]);
+  const [redoStack, setRedoStack] = useState<T[][]>([]);
   const [editingCell, setEditingCell] = useState<EditingCellState | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [collapsedTreeKeys, setCollapsedTreeKeys] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [expandedDetailKeys, setExpandedDetailKeys] = useState<Set<string>>(
     () => new Set(),
   );
   const [pageIndex, setPageIndex] = useState(0);
@@ -203,13 +626,27 @@ export function SmartGrid<T>({
   const [dropTargetRowIndex, setDropTargetRowIndex] = useState<number | null>(
     null,
   );
+  const [cellContextMenu, setCellContextMenu] =
+    useState<CellContextMenuState | null>(null);
   const [hiddenColumnIds, setHiddenColumnIds] = useState<Set<string>>(
     () =>
       new Set(
         columns.filter((column) => column.hidden).map((column) => column.id),
       ),
   );
+  const [pinnedColumnIds, setPinnedColumnIds] = useState<
+    Record<string, "left" | "right" | null | undefined>
+  >(() =>
+    Object.fromEntries(
+      columns
+        .filter((column) => column.pinned)
+        .map((column) => [column.id, column.pinned]),
+    ),
+  );
   const [columnChooserOpen, setColumnChooserOpen] = useState(false);
+  const [dynamicColumnWidths, setDynamicColumnWidths] = useState<
+    Record<string, number>
+  >({});
   const chooserRef = useRef<HTMLDivElement | null>(null);
   const resizeSession = useRef<{
     columnId: string;
@@ -219,7 +656,37 @@ export function SmartGrid<T>({
 
   useEffect(() => {
     setGridRows(rows);
+    setUndoStack([]);
+    setRedoStack([]);
   }, [rows]);
+
+  useEffect(() => {
+    if (!transaction) {
+      return;
+    }
+
+    const getId = (row: T, index: number) => getRowId?.(row, index) ?? index;
+
+    replaceGridRows((currentRows) => {
+      const removeIds = new Set(
+        (transaction.remove ?? []).map((row, index) => getId(row, index)),
+      );
+      const updateRows = new Map(
+        (transaction.update ?? []).map((row, index) => [getId(row, index), row]),
+      );
+      const nextRows = currentRows
+        .filter((row, index) => !removeIds.has(getId(row, index)))
+        .map((row, index) => updateRows.get(getId(row, index)) ?? row);
+
+      return [...nextRows, ...(transaction.add ?? [])];
+    });
+  }, [getRowId, transaction]);
+
+  useEffect(() => {
+    if (columnFilters) {
+      setFilterModel(columnFilters);
+    }
+  }, [columnFilters]);
 
   const columnSignature = columns
     .map(
@@ -235,6 +702,8 @@ export function SmartGrid<T>({
     setActiveCellState(null);
     setSelectionAnchorState(null);
     setCollapsedGroups(new Set());
+    setCollapsedTreeKeys(new Set());
+    setExpandedDetailKeys(new Set());
     setPageIndex(0);
     setDraggedRowIndex(null);
     setDropTargetRowIndex(null);
@@ -243,12 +712,32 @@ export function SmartGrid<T>({
         columns.filter((column) => column.hidden).map((column) => column.id),
       ),
     );
+    setPinnedColumnIds(
+      Object.fromEntries(
+        columns
+          .filter((column) => column.pinned)
+          .map((column) => [column.id, column.pinned]),
+      ),
+    );
     setColumnChooserOpen(false);
+    setColumnMenuColumnId(null);
+    setDynamicColumnWidths({});
   }, [columnSignature]);
 
+  const effectiveColumns = useMemo(
+    () =>
+      columns.map((column) => ({
+        ...column,
+        pinned: Object.prototype.hasOwnProperty.call(pinnedColumnIds, column.id)
+          ? (pinnedColumnIds[column.id] ?? undefined)
+          : column.pinned,
+      })),
+    [columns, pinnedColumnIds],
+  );
+
   const visibleColumns = useMemo(
-    () => columns.filter((column) => !hiddenColumnIds.has(column.id)),
-    [columns, hiddenColumnIds],
+    () => effectiveColumns.filter((column) => !hiddenColumnIds.has(column.id)),
+    [effectiveColumns, hiddenColumnIds],
   );
 
   const orderedColumns = useMemo(() => {
@@ -322,12 +811,21 @@ export function SmartGrid<T>({
 
       const { columnId, startX, startWidth } = resizeSession.current;
       const nextWidth = Math.max(60, startWidth + (event.clientX - startX));
+      const sourceColumnIndex = columns.findIndex((column) => column.id === columnId);
 
-      setColumnWidths((currentWidths) =>
-        currentWidths.map((width, index) =>
-          columns[index]?.id === columnId ? nextWidth : width,
-        ),
-      );
+      if (sourceColumnIndex >= 0) {
+        setColumnWidths((currentWidths) =>
+          currentWidths.map((width, index) =>
+            index === sourceColumnIndex ? nextWidth : width,
+          ),
+        );
+        return;
+      }
+
+      setDynamicColumnWidths((currentWidths) => ({
+        ...currentWidths,
+        [columnId]: nextWidth,
+      }));
     };
 
     const handlePointerUp = () => {
@@ -343,29 +841,132 @@ export function SmartGrid<T>({
     };
   }, [columns]);
 
+  const replaceGridRows = (updater: (currentRows: T[]) => T[]) => {
+    setGridRows((currentRows) => {
+      const nextRows = updater(currentRows);
+
+      if (nextRows === currentRows) {
+        return currentRows;
+      }
+
+      if (enableUndoRedo) {
+        setUndoStack((currentStack) => [...currentStack.slice(-19), currentRows]);
+        setRedoStack([]);
+      }
+
+      return nextRows;
+    });
+  };
+
+  const undo = () => {
+    setUndoStack((currentStack) => {
+      const previousRows = currentStack.at(-1);
+
+      if (!previousRows) {
+        return currentStack;
+      }
+
+      setRedoStack((currentRedo) => [gridRows, ...currentRedo.slice(0, 19)]);
+      setGridRows(previousRows);
+
+      return currentStack.slice(0, -1);
+    });
+  };
+
+  const redo = () => {
+    setRedoStack((currentStack) => {
+      const nextRows = currentStack[0];
+
+      if (!nextRows) {
+        return currentStack;
+      }
+
+      setUndoStack((currentUndo) => [...currentUndo.slice(-19), gridRows]);
+      setGridRows(nextRows);
+
+      return currentStack.slice(1);
+    });
+  };
+
   const resolvedRows = useMemo(
     () => sortRows(gridRows, columns, sortModel),
     [gridRows, columns, sortModel],
   );
 
   const filteredRows = useMemo(() => {
-    const query = quickFilterText.trim().toLowerCase();
-
-    if (!query) {
-      return resolvedRows;
-    }
-
-    return resolvedRows.filter((row) =>
-      orderedColumns.some((column) => {
-        const value = getColumnValue(row, column);
-
-        return String(value ?? "")
-          .toLowerCase()
-          .includes(query);
-      }),
+    const query = (quickFilterTextProp ?? quickFilterText).trim().toLowerCase();
+    const activeFilterEntries = Object.entries(filterModel).filter(([, filter]) =>
+      isFilterActive(filter),
     );
-  }, [resolvedRows, orderedColumns, quickFilterText]);
 
+    return resolvedRows.filter((row) => {
+      if (externalFilter && !externalFilter(row)) {
+        return false;
+      }
+
+      if (advancedFilter && !advancedFilter(row)) {
+        return false;
+      }
+
+      const columnFiltersMatch = activeFilterEntries.every(
+        ([columnId, filter]) => {
+          const column = columns.find((entry) => entry.id === columnId);
+
+          return column ? matchesColumnFilter(row, column, filter) : true;
+        },
+      );
+
+      if (!columnFiltersMatch) {
+        return false;
+      }
+
+      if (!query) {
+        return true;
+      }
+
+      return orderedColumns.some((column) =>
+        String(getColumnValue(row, column) ?? "")
+          .toLowerCase()
+          .includes(query),
+      );
+    });
+  }, [
+    resolvedRows,
+    quickFilterTextProp,
+    quickFilterText,
+    filterModel,
+    externalFilter,
+    advancedFilter,
+    columns,
+    orderedColumns,
+  ]);
+
+  const pivotResult = useMemo(
+    () =>
+      buildPivotResult(
+        filteredRows,
+        orderedColumns,
+        groupBy,
+        pivotBy,
+        pivotValueColumns,
+        pivotAggregation,
+      ),
+    [filteredRows, groupBy, orderedColumns, pivotAggregation, pivotBy, pivotValueColumns],
+  );
+  const sortedPivotRows = useMemo(
+    () =>
+      pivotResult.active
+        ? sortRows(pivotResult.rows, pivotResult.columns, sortModel)
+        : [],
+    [pivotResult.active, pivotResult.columns, pivotResult.rows, sortModel],
+  );
+  const rowCountForPaging = pivotResult.active
+    ? sortedPivotRows.length
+    : filteredRows.length;
+  const pageCount =
+    pageSize && pageSize > 0
+      ? Math.max(1, Math.ceil(rowCountForPaging / pageSize))
+      : 1;
   const pagedRows = useMemo(() => {
     if (!pageSize || pageSize <= 0) {
       return filteredRows;
@@ -375,20 +976,33 @@ export function SmartGrid<T>({
 
     return filteredRows.slice(start, start + pageSize);
   }, [filteredRows, pageIndex, pageSize]);
+  const pagedPivotRows = useMemo(() => {
+    if (!pivotResult.active) {
+      return [];
+    }
 
-  const pageCount =
-    pageSize && pageSize > 0
-      ? Math.max(1, Math.ceil(filteredRows.length / pageSize))
-      : 1;
+    if (!pageSize || pageSize <= 0) {
+      return sortedPivotRows;
+    }
+
+    const start = pageIndex * pageSize;
+
+    return sortedPivotRows.slice(start, start + pageSize);
+  }, [pageIndex, pageSize, pivotResult.active, sortedPivotRows]);
 
   const groupBuckets = useMemo(
     () => buildGroupBuckets(pagedRows, orderedColumns, groupBy),
     [pagedRows, orderedColumns, groupBy],
   );
 
+  const treeDataRows = useMemo(
+    () => buildTreeRows(pagedRows, getTreeDataPath, collapsedTreeKeys),
+    [collapsedTreeKeys, getTreeDataPath, pagedRows],
+  );
+
   const visibleDataRows = useMemo(() => {
     if (!groupBy) {
-      return pagedRows;
+      return treeDataRows.map((entry) => entry.row);
     }
 
     const dataRows: T[] = [];
@@ -402,16 +1016,191 @@ export function SmartGrid<T>({
     });
 
     return dataRows;
-  }, [pagedRows, groupBuckets, groupBy, collapsedGroups]);
+  }, [treeDataRows, groupBuckets, groupBy, collapsedGroups]);
+
+  const tableColumns = pivotResult.active ? pivotResult.columns : orderedColumns;
+  const tableRows = pivotResult.active ? pagedPivotRows : visibleDataRows;
+  const tableWidths = tableColumns.map((column, index) => {
+    const orderedIndex = orderedColumns.findIndex((entry) => entry.id === column.id);
+    const originalIndex = columns.findIndex((entry) => entry.id === column.id);
+
+    return (
+      dynamicColumnWidths[column.id] ??
+      (orderedIndex >= 0 ? orderedWidths[orderedIndex] : undefined) ??
+      (originalIndex >= 0 ? columnWidths[originalIndex] : undefined) ??
+      column.width ??
+      (index === 0 ? 180 : 140)
+    );
+  });
+  const tableColumnStyles = useMemo(() => {
+    const styles: Record<string, CSSProperties> = {};
+    let leftOffset = 0;
+
+    tableColumns.forEach((column, index) => {
+      const width = tableWidths[index] ?? 150;
+
+      if (column.pinned === "left") {
+        styles[column.id] = {
+          position: "sticky",
+          left: leftOffset,
+          zIndex: 3,
+          background: "rgba(8, 12, 24, 0.98)",
+          boxShadow: "inset -1px 0 0 rgba(255, 255, 255, 0.08)",
+        };
+
+        leftOffset += width;
+      }
+    });
+
+    let rightOffset = 0;
+
+    for (let index = tableColumns.length - 1; index >= 0; index -= 1) {
+      const column = tableColumns[index];
+      const width = tableWidths[index] ?? 150;
+
+      if (column.pinned === "right") {
+        styles[column.id] = {
+          ...styles[column.id],
+          position: "sticky",
+          right: rightOffset,
+          zIndex: 3,
+          background: "rgba(8, 12, 24, 0.98)",
+          boxShadow: "inset 1px 0 0 rgba(255, 255, 255, 0.08)",
+        };
+
+        rightOffset += width;
+      }
+    }
+
+    return styles;
+  }, [tableColumns, tableWidths]);
+
+  useEffect(() => {
+    const selectedIndex = selectedRowIndex ?? -1;
+    const selectedRow = selectedIndex >= 0 ? tableRows[selectedIndex] : null;
+
+    onServerSideOperation?.({
+      sortModel: sortModel ? [sortModel] : [],
+      filterModel,
+      selectedRowIds: selectedRow
+        ? [
+            pivotResult.active || !getRowId
+              ? selectedIndex
+              : getRowId(selectedRow, selectedIndex),
+          ]
+        : [],
+      pageIndex,
+      pageSize,
+      groupBy,
+      pivotBy,
+      pivotValueColumns,
+      pivotAggregation,
+      treeData: Boolean(getTreeDataPath),
+      masterDetail: Boolean(masterDetailRenderer),
+      transaction,
+    });
+  }, [
+    filterModel,
+    getRowId,
+    getTreeDataPath,
+    groupBy,
+    masterDetailRenderer,
+    onServerSideOperation,
+    pageIndex,
+    pageSize,
+    pivotAggregation,
+    pivotBy,
+    pivotValueColumns,
+    pivotResult.active,
+    selectedRowIndex,
+    sortModel,
+    tableRows,
+    transaction,
+  ]);
+
+  const findMatches = useMemo(() => {
+    const query = findText.trim().toLowerCase();
+
+    if (!query) {
+      return [];
+    }
+
+    const matches: CellPosition[] = [];
+
+    tableRows.forEach((row, rowIndex) => {
+      tableColumns.forEach((column, columnIndex) => {
+        const value = getColumnValue(row, column);
+
+        if (String(value ?? "").toLowerCase().includes(query)) {
+          matches.push({ rowIndex, columnIndex });
+        }
+      });
+    });
+
+    return matches;
+  }, [findText, tableColumns, tableRows]);
+
+  const findMatch = findMatches.length
+    ? findMatches[findMatchIndex % findMatches.length]
+    : null;
+
+  useEffect(() => {
+    setFindMatchIndex(0);
+  }, [findText, tableRows.length]);
+
+  useEffect(() => {
+    if (!findMatch) {
+      return;
+    }
+
+    setActiveCellState(findMatch);
+    setSelectedRowIndex(findMatch.rowIndex);
+    setSelectionAnchorState(findMatch);
+  }, [findMatch]);
 
   const displayRows = useMemo<DisplayRow<T>[]>(() => {
-    if (!groupBy) {
-      return visibleDataRows.map((row, rowIndex) => ({
+    const appendDetailRow = (rowsToAppend: DisplayRow<T>[], row: T, rowIndex: number) => {
+      if (!masterDetailRenderer) {
+        return;
+      }
+
+      const rowKey = String(getRowId ? getRowId(row, rowIndex) : rowIndex);
+
+      if (expandedDetailKeys.has(rowKey)) {
+        rowsToAppend.push({
+          kind: "detail",
+          key: rowKey,
+          row,
+          content: masterDetailRenderer(row),
+        });
+      }
+    };
+
+    if (pivotResult.active) {
+      return tableRows.map((row, rowIndex) => ({
         kind: "data",
         row,
         rowIndex,
-        groupKey: "",
+        groupKey: "__pivot",
       }));
+    }
+
+    if (!groupBy) {
+      const sourceRows = getTreeDataPath ? treeDataRows : visibleDataRows.map((row, rowIndex) => ({
+        kind: "data" as const,
+        row,
+        rowIndex,
+        groupKey: "",
+        hasDetail: Boolean(masterDetailRenderer),
+      }));
+      const nextRows: DisplayRow<T>[] = [];
+
+      sourceRows.forEach((entry) => {
+        nextRows.push({ ...entry, hasDetail: Boolean(masterDetailRenderer) });
+        appendDetailRow(nextRows, entry.row, entry.rowIndex);
+      });
+
+      return nextRows;
     }
 
     const nextRows: DisplayRow<T>[] = [];
@@ -436,14 +1225,29 @@ export function SmartGrid<T>({
           row,
           rowIndex: dataRowIndex,
           groupKey: bucket.key,
+          hasDetail: Boolean(masterDetailRenderer),
         });
 
+        appendDetailRow(nextRows, row, dataRowIndex);
         dataRowIndex += 1;
       });
     });
 
     return nextRows;
-  }, [collapsedGroups, groupBy, groupBuckets, visibleDataRows]);
+  }, [
+    collapsedGroups,
+    expandedDetailKeys,
+    getRowId,
+    getTreeDataPath,
+    groupBy,
+    groupBuckets,
+    masterDetailRenderer,
+    orderedColumns,
+    pivotResult.active,
+    tableRows,
+    treeDataRows,
+    visibleDataRows,
+  ]);
 
   const toggleGroup = (groupKey: string) => {
     setCollapsedGroups((current) => {
@@ -453,6 +1257,42 @@ export function SmartGrid<T>({
         next.delete(groupKey);
       } else {
         next.add(groupKey);
+      }
+
+      return next;
+    });
+  };
+
+  const toggleTreeNode = (treeKey: string) => {
+    setCollapsedTreeKeys((current) => {
+      const next = new Set(current);
+
+      if (next.has(treeKey)) {
+        next.delete(treeKey);
+      } else {
+        next.add(treeKey);
+      }
+
+      return next;
+    });
+  };
+
+  const toggleDetailRow = (rowIndex: number) => {
+    const row = visibleDataRows[rowIndex];
+
+    if (!row) {
+      return;
+    }
+
+    const rowKey = String(getRowId ? getRowId(row, rowIndex) : rowIndex);
+
+    setExpandedDetailKeys((current) => {
+      const next = new Set(current);
+
+      if (next.has(rowKey)) {
+        next.delete(rowKey);
+      } else {
+        next.add(rowKey);
       }
 
       return next;
@@ -470,6 +1310,10 @@ export function SmartGrid<T>({
     sourceRowIndex: number,
     targetRowIndex: number,
   ) => {
+    if (pivotResult.active) {
+      return;
+    }
+
     if (sourceRowIndex === targetRowIndex) {
       return;
     }
@@ -488,7 +1332,7 @@ export function SmartGrid<T>({
       return;
     }
 
-    setGridRows((currentRows) => {
+    replaceGridRows((currentRows) => {
       const nextRows = [...currentRows];
       const [movedRow] = nextRows.splice(sourceOriginalIndex, 1);
 
@@ -509,15 +1353,15 @@ export function SmartGrid<T>({
       return;
     }
 
-    if (visibleDataRows.length === 0) {
+    if (tableRows.length === 0) {
       setSelectedRowIndex(null);
       return;
     }
 
-    if (selectedRowIndex >= visibleDataRows.length) {
-      setSelectedRowIndex(visibleDataRows.length - 1);
+    if (selectedRowIndex >= tableRows.length) {
+      setSelectedRowIndex(tableRows.length - 1);
     }
-  }, [selectedRowIndex, visibleDataRows.length]);
+  }, [selectedRowIndex, tableRows.length]);
 
   useEffect(() => {
     if (!pageSize || pageSize <= 0) {
@@ -535,30 +1379,32 @@ export function SmartGrid<T>({
     }
 
     if (
-      activeCell.rowIndex >= visibleDataRows.length ||
-      orderedColumns.length === 0
+      activeCell.rowIndex >= tableRows.length ||
+      tableColumns.length === 0
     ) {
       setActiveCellState(null);
       setSelectionAnchorState(null);
       return;
     }
 
-    if (activeCell.columnIndex >= orderedColumns.length) {
+    if (activeCell.columnIndex >= tableColumns.length) {
       setActiveCellState({
         rowIndex: activeCell.rowIndex,
-        columnIndex: orderedColumns.length - 1,
+        columnIndex: tableColumns.length - 1,
       });
     }
-  }, [activeCell, orderedColumns.length, visibleDataRows.length]);
+  }, [activeCell, tableColumns.length, tableRows.length]);
 
   const renderer = useMemo(
-    () => new GridRenderer(orderedColumns, orderedWidths),
-    [orderedColumns, orderedWidths],
+    () => new GridRenderer(tableColumns, tableWidths),
+    [tableColumns, tableWidths],
   );
-  const template = renderer.getTemplate();
+  const template = rowNumbers
+    ? `52px ${renderer.getTemplate()}`
+    : renderer.getTemplate();
 
   const getCellRange = () => {
-    if (!activeCell || !selectionAnchor) {
+    if (!enableRangeSelection || !activeCell || !selectionAnchor) {
       return null;
     }
 
@@ -587,8 +1433,8 @@ export function SmartGrid<T>({
 
   const copySelection = async () => {
     const cellToText = (rowIndex: number, columnIndex: number) => {
-      const row = visibleDataRows[rowIndex];
-      const column = orderedColumns[columnIndex];
+      const row = tableRows[rowIndex];
+      const column = tableColumns[columnIndex];
 
       if (!row || !column) {
         return "";
@@ -643,11 +1489,11 @@ export function SmartGrid<T>({
       return `"${text.replace(/"/g, '""')}"`;
     };
 
-    const headerLine = orderedColumns
+    const headerLine = tableColumns
       .map((column) => escapeCsv(column.headerName))
       .join(",");
-    const dataLines = visibleDataRows.map((row) =>
-      orderedColumns
+    const dataLines = tableRows.map((row) =>
+      tableColumns
         .map((column) => escapeCsv(getColumnValue(row, column)))
         .join(","),
     );
@@ -710,13 +1556,13 @@ export function SmartGrid<T>({
       });
     }
 
-    setGridRows((currentRows) => {
+    replaceGridRows((currentRows) => {
       const nextRows = [...currentRows];
       const updates = new Map<number, Record<string, unknown>>();
 
       for (const [viewRowIndex, viewColumnIndex, rawValue] of targetRows) {
-        const row = visibleDataRows[viewRowIndex];
-        const column = orderedColumns[viewColumnIndex];
+        const row = tableRows[viewRowIndex];
+        const column = tableColumns[viewColumnIndex];
 
         if (!row || !column || column.editable === false) {
           continue;
@@ -746,6 +1592,74 @@ export function SmartGrid<T>({
     });
   };
 
+  const openCellContextMenu = (
+    rowIndex: number,
+    columnIndex: number,
+    x: number,
+    y: number,
+  ) => {
+    setCellContextMenu({ rowIndex, columnIndex, x, y });
+  };
+
+  const closeCellContextMenu = () => {
+    setCellContextMenu(null);
+  };
+
+  const startContextCellEdit = () => {
+    if (!cellContextMenu) {
+      return;
+    }
+
+    const row = tableRows[cellContextMenu.rowIndex];
+    const column = tableColumns[cellContextMenu.columnIndex];
+
+    if (row && column) {
+      startCellEdit(
+        cellContextMenu.rowIndex,
+        column.id,
+        String(getRawColumnValue(row, column) ?? ""),
+      );
+    }
+
+    closeCellContextMenu();
+  };
+
+  const clearContextCell = () => {
+    if (!cellContextMenu) {
+      return;
+    }
+
+    const row = tableRows[cellContextMenu.rowIndex];
+    const column = tableColumns[cellContextMenu.columnIndex];
+
+    if (!row || !column || column.editable === false) {
+      closeCellContextMenu();
+      return;
+    }
+
+    const originalIndex = findRowIndex(row);
+
+    if (originalIndex >= 0) {
+      replaceGridRows((currentRows) =>
+        currentRows.map((entry, index) =>
+          index === originalIndex ? { ...entry, [column.field]: "" } : entry,
+        ),
+      );
+    }
+
+    closeCellContextMenu();
+  };
+
+  const pasteFromClipboard = async () => {
+    const text = await navigator.clipboard.readText();
+
+    if (text) {
+      pasteSelection(text);
+    }
+
+    closeCellContextMenu();
+  };
+
   const commitCellEdit = () => {
     if (!editingCell) {
       return;
@@ -758,7 +1672,7 @@ export function SmartGrid<T>({
       return;
     }
 
-    const row = visibleDataRows[editingCell.rowIndex];
+    const row = tableRows[editingCell.rowIndex];
 
     if (!row) {
       setEditingCell(null);
@@ -772,12 +1686,35 @@ export function SmartGrid<T>({
       return;
     }
 
-    const parsedValue =
-      typeof row[column.field] === "number"
-        ? Number(editingCell.draftValue)
-        : editingCell.draftValue;
+    const editor =
+      typeof column.editor === "string"
+        ? { type: column.editor }
+        : (column.editor ?? {});
+    const editorOptions = editor.values ?? [];
+    const editorValueExists = (value: string) =>
+      editorOptions.some((option) =>
+        typeof option === "object"
+          ? String(option.value) === value
+          : String(option) === value,
+      );
 
-    setGridRows((currentRows) =>
+    if (
+      editor.type === "advancedSelect" &&
+      editor.allowCustomValue === false &&
+      !editorValueExists(editingCell.draftValue)
+    ) {
+      return;
+    }
+
+    const parsedValue = editor.parseValue
+      ? editor.parseValue(editingCell.draftValue, row)
+      : editor.type === "checkbox"
+        ? editingCell.draftValue === "true"
+        : typeof row[column.field] === "number" || editor.type === "number"
+          ? Number(editingCell.draftValue)
+          : editingCell.draftValue;
+
+    replaceGridRows((currentRows) =>
       currentRows.map((entry, index) => {
         if (index !== originalIndex) {
           return entry;
@@ -789,6 +1726,14 @@ export function SmartGrid<T>({
         };
       }),
     );
+
+    onCellValueChange?.({
+      row,
+      rowIndex: editingCell.rowIndex,
+      column,
+      oldValue: row[column.field],
+      newValue: parsedValue,
+    });
 
     setEditingCell(null);
   };
@@ -808,7 +1753,7 @@ export function SmartGrid<T>({
   };
 
   const handleSort = (columnId: string) => {
-    const column = columns.find((entry) => entry.id === columnId);
+    const column = tableColumns.find((entry) => entry.id === columnId);
 
     if (!column || column.sortable === false) {
       return;
@@ -836,14 +1781,14 @@ export function SmartGrid<T>({
   };
 
   const autoSizeColumn = (columnId: string) => {
-    const column = columns.find((entry) => entry.id === columnId);
+    const column = tableColumns.find((entry) => entry.id === columnId);
 
     if (!column) {
       return;
     }
 
     const headerWidth = column.headerName.length * 10 + 40;
-    const contentWidth = filteredRows.reduce((maxWidth, row) => {
+    const contentWidth = tableRows.reduce((maxWidth, row) => {
       const value = getColumnValue(row, column);
       const cellWidth =
         String(
@@ -862,6 +1807,10 @@ export function SmartGrid<T>({
     const originalIndex = columns.findIndex((entry) => entry.id === columnId);
 
     if (originalIndex < 0) {
+      setDynamicColumnWidths((currentWidths) => ({
+        ...currentWidths,
+        [columnId]: nextWidth,
+      }));
       return;
     }
 
@@ -878,6 +1827,11 @@ export function SmartGrid<T>({
   };
 
   const setSelectionAnchor = (rowIndex: number, columnIndex: number) => {
+    if (!enableRangeSelection) {
+      setActiveCell(rowIndex, columnIndex);
+      return;
+    }
+
     setSelectionAnchorState({ rowIndex, columnIndex });
     setActiveCellState({ rowIndex, columnIndex });
     setSelectedRowIndex(rowIndex);
@@ -892,7 +1846,7 @@ export function SmartGrid<T>({
     columnDelta: number,
     extend = false,
   ) => {
-    if (!orderedColumns.length || !filteredRows.length) {
+    if (!tableColumns.length || !tableRows.length) {
       return;
     }
 
@@ -903,11 +1857,11 @@ export function SmartGrid<T>({
 
     const nextRowIndex = Math.max(
       0,
-      Math.min(filteredRows.length - 1, current.rowIndex + rowDelta),
+      Math.min(tableRows.length - 1, current.rowIndex + rowDelta),
     );
     const nextColumnIndex = Math.max(
       0,
-      Math.min(orderedColumns.length - 1, current.columnIndex + columnDelta),
+      Math.min(tableColumns.length - 1, current.columnIndex + columnDelta),
     );
     const nextCell = { rowIndex: nextRowIndex, columnIndex: nextColumnIndex };
 
@@ -920,6 +1874,71 @@ export function SmartGrid<T>({
     }
 
     setSelectionAnchorState(nextCell);
+  };
+
+  const fillSelection = () => {
+    if (!enableFillHandle || !cellRange) {
+      return;
+    }
+
+    const sourceRow = tableRows[cellRange.startRow];
+    const sourceColumn = tableColumns[cellRange.startColumn];
+
+    if (!sourceRow || !sourceColumn || sourceColumn.editable === false) {
+      return;
+    }
+
+    const sourceValue = getColumnValue(sourceRow, sourceColumn);
+
+    replaceGridRows((currentRows) => {
+      const nextRows = [...currentRows];
+
+      for (
+        let rowIndex = cellRange.startRow;
+        rowIndex <= cellRange.endRow;
+        rowIndex += 1
+      ) {
+        for (
+          let columnIndex = cellRange.startColumn;
+          columnIndex <= cellRange.endColumn;
+          columnIndex += 1
+        ) {
+          const row = tableRows[rowIndex];
+          const column = tableColumns[columnIndex];
+
+          if (!row || !column || column.editable === false) {
+            continue;
+          }
+
+          const originalIndex = findRowIndex(row);
+
+          if (originalIndex < 0) {
+            continue;
+          }
+
+          nextRows[originalIndex] = {
+            ...nextRows[originalIndex],
+            [column.field]: sourceValue,
+          };
+        }
+      }
+
+      return nextRows;
+    });
+  };
+
+  const handleSortDirection = (
+    columnId: string,
+    direction: SortDirection | null,
+  ) => {
+    const column = tableColumns.find((entry) => entry.id === columnId);
+
+    if (!column || column.sortable === false) {
+      return;
+    }
+
+    setSortModel(direction ? { columnId, direction } : null);
+    setColumnMenuColumnId(null);
   };
 
   const goToPreviousPage = () => {
@@ -936,7 +1955,117 @@ export function SmartGrid<T>({
     setSelectionAnchorState(null);
   };
 
-  const rowCountLabel = `${visibleDataRows.length} of ${filteredRows.length} rows shown`;
+  const rowCountLabel = pivotResult.active
+    ? `${tableRows.length} pivot rows from ${filteredRows.length} rows`
+    : `${tableRows.length} of ${filteredRows.length} rows shown`;
+  const t = (key: string, fallback: string) => localeText?.[key] ?? fallback;
+  const activeColumn = activeCell ? tableColumns[activeCell.columnIndex] : null;
+  const activeCellLabel =
+    activeCell && activeColumn
+      ? `${activeColumn.headerName} R${activeCell.rowIndex + 1}`
+      : "No cell";
+  const selectedRowsLabel =
+    selectedRowIndex == null ? "No row selected" : `Row ${selectedRowIndex + 1}`;
+  const rangeSize = cellRange
+    ? (cellRange.endRow - cellRange.startRow + 1) *
+      (cellRange.endColumn - cellRange.startColumn + 1)
+    : 0;
+  const activeFilterCount = Object.values(filterModel).filter(isFilterActive).length;
+  const contextColumn = cellContextMenu
+    ? tableColumns[cellContextMenu.columnIndex]
+    : null;
+
+  const setColumnFilter = (columnId: string, filter: ColumnFilterModel | null) => {
+    setFilterModel((current) => {
+      const next = { ...current };
+
+      if (!filter) {
+        delete next[columnId];
+      } else {
+        next[columnId] = filter;
+      }
+
+      return next;
+    });
+    setPageIndex(0);
+  };
+
+  const openColumnFilters = (columnId: string) => {
+    setFilterPanelOpen(true);
+    setColumnMenuColumnId(null);
+
+    if (!filterModel[columnId]) {
+      const column = columns.find((entry) => entry.id === columnId);
+
+      if (!column || column.filterable === false) {
+        return;
+      }
+
+      const filterType = getColumnFilterType(column);
+
+      setColumnFilter(columnId, {
+        type: filterType,
+        operator:
+          filterType === "set"
+            ? "in"
+            : filterType === "number" || filterType === "date"
+              ? "equals"
+              : "contains",
+        value: "",
+        values: filterType === "set" ? [] : undefined,
+      });
+    }
+  };
+
+  const clearColumnFilter = (columnId: string) => {
+    setColumnFilter(columnId, null);
+    setColumnMenuColumnId(null);
+  };
+
+  const getColumnFilterValuesForColumn = (column: Column<T>) =>
+    Array.from(
+      new Set(gridRows.map((row) => String(getColumnValue(row, column) ?? ""))),
+    ).filter(Boolean);
+
+  const pinColumn = (columnId: string, pinned: "left" | "right" | null) => {
+    setPinnedColumnIds((current) => ({
+      ...current,
+      [columnId]: pinned,
+    }));
+    setColumnMenuColumnId(null);
+  };
+
+  const exportVisibleRowsToExcel = () => {
+    const escapeHtml = (value: unknown) =>
+      String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    const headerCells = tableColumns
+      .map((column) => `<th>${escapeHtml(column.headerName)}</th>`)
+      .join("");
+    const rowCells = tableRows
+      .map(
+        (row) =>
+          `<tr>${tableColumns
+            .map((column) => `<td>${escapeHtml(getColumnValue(row, column))}</td>`)
+            .join("")}</tr>`,
+      )
+      .join("");
+    const html = `<table><thead><tr>${headerCells}</tr></thead><tbody>${rowCells}</tbody></table>`;
+    const blob = new Blob([html], {
+      type: "application/vnd.ms-excel;charset=utf-8;",
+    });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = downloadUrl;
+    link.download = "smartgrid-export.xls";
+    link.click();
+
+    URL.revokeObjectURL(downloadUrl);
+  };
+
   const toggleColumnVisibility = (columnId: string) => {
     setHiddenColumnIds((current) => {
       const next = new Set(current);
@@ -959,12 +2088,13 @@ export function SmartGrid<T>({
   return (
     <GridContext.Provider
       value={{
-        rows: visibleDataRows,
-        columns: orderedColumns,
+        rows: tableRows,
+        columns: tableColumns,
         columnTemplate: template,
         selectedRowIndex,
         onRowSelect: setSelectedRowIndex,
-        getColumnStyle: (columnId: string) => columnStyles[columnId] ?? {},
+        rowNumbers,
+        getColumnStyle: (columnId: string) => tableColumnStyles[columnId] ?? {},
         activeCell,
         selectionAnchor,
         setActiveCell,
@@ -973,6 +2103,9 @@ export function SmartGrid<T>({
         clearSelectionAnchor,
         copySelection,
         pasteSelection,
+        fillSelection,
+        findMatch,
+        openCellContextMenu,
         draggedRowIndex,
         dropTargetRowIndex,
         editingCell,
@@ -986,7 +2119,7 @@ export function SmartGrid<T>({
         cancelCellEdit: () => setEditingCell(null),
       }}
     >
-      <div className="sg-shell">
+      <div className="sg-shell" onClick={closeCellContextMenu}>
         <div className="sg-toolbar">
           <div className="sg-toolbar-copy">
             <div className="sg-toolbar-title">SmartGrid</div>
@@ -1019,15 +2152,220 @@ export function SmartGrid<T>({
             ) : null}
 
             <label className="sg-filter">
-              <span className="sg-filter-label">Quick filter</span>
+              <span className="sg-filter-label">
+                {t("quickFilter", "Quick filter")}
+              </span>
               <input
                 className="sg-filter-input"
                 type="search"
                 value={quickFilterText}
                 onChange={(event) => setQuickFilterText(event.target.value)}
                 placeholder="Search across visible columns"
+                disabled={quickFilterTextProp != null}
               />
             </label>
+
+            <label className="sg-filter">
+              <span className="sg-filter-label">{t("find", "Find")}</span>
+              <input
+                className="sg-filter-input sg-filter-input--short"
+                type="search"
+                value={findText}
+                onChange={(event) => setFindText(event.target.value)}
+                placeholder="Find cell"
+              />
+            </label>
+
+            <button
+              className="sg-toolbar-button sg-toolbar-button--ghost"
+              type="button"
+              onClick={() =>
+                setFindMatchIndex((current) =>
+                  findMatches.length ? current + 1 : current,
+                )
+              }
+              disabled={!findMatches.length}
+            >
+              Next
+            </button>
+
+            {enableUndoRedo ? (
+              <>
+                <button
+                  className="sg-toolbar-button sg-toolbar-button--ghost"
+                  type="button"
+                  onClick={undo}
+                  disabled={!undoStack.length}
+                >
+                  Undo
+                </button>
+                <button
+                  className="sg-toolbar-button sg-toolbar-button--ghost"
+                  type="button"
+                  onClick={redo}
+                  disabled={!redoStack.length}
+                >
+                  Redo
+                </button>
+              </>
+            ) : null}
+
+            {enableFillHandle ? (
+              <button
+                className="sg-toolbar-button sg-toolbar-button--ghost"
+                type="button"
+                onClick={fillSelection}
+                disabled={!cellRange}
+              >
+                Fill
+              </button>
+            ) : null}
+
+            <div className="sg-column-chooser">
+              <button
+                className="sg-toolbar-button sg-toolbar-button--ghost"
+                type="button"
+                onClick={() => setFilterPanelOpen((current) => !current)}
+                aria-expanded={filterPanelOpen}
+                aria-haspopup="menu"
+              >
+                Filters
+              </button>
+
+              {filterPanelOpen ? (
+                <div
+                  className="sg-column-chooser-panel sg-filter-panel"
+                  role="menu"
+                  aria-label="Column filters"
+                >
+                  {columns
+                    .filter((column) => column.filterable !== false)
+                    .map((column) => {
+                      const filterType = getColumnFilterType(column);
+                      const filter = filterModel[column.id] ?? {
+                        type: filterType,
+                        operator:
+                          filterType === "set"
+                            ? "in"
+                            : filterType === "number" || filterType === "date"
+                              ? "equals"
+                              : "contains",
+                        value: "",
+                      };
+                      const uniqueValues = Array.from(
+                        new Set(
+                          gridRows.map((row) =>
+                            String(getColumnValue(row, column) ?? ""),
+                          ),
+                        ),
+                      ).filter(Boolean);
+
+                      return (
+                        <div className="sg-filter-panel-row" key={column.id}>
+                          <span className="sg-filter-panel-label">
+                            {column.headerName}
+                          </span>
+                          {filterType === "set" ? (
+                            <select
+                              className="sg-filter-input"
+                              multiple
+                              value={(filter.values ?? []).map(String)}
+                              onChange={(event) => {
+                                const values = Array.from(
+                                  event.currentTarget.selectedOptions,
+                                ).map((option) => option.value);
+
+                                setColumnFilter(
+                                  column.id,
+                                  values.length
+                                    ? { type: "set", operator: "in", values }
+                                    : null,
+                                );
+                              }}
+                            >
+                              {uniqueValues.map((value) => (
+                                <option key={value} value={value}>
+                                  {value}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <>
+                              <select
+                                className="sg-filter-operator"
+                                value={filter.operator}
+                                onChange={(event) =>
+                                  setColumnFilter(column.id, {
+                                    ...filter,
+                                    type: filterType,
+                                    operator: event.target
+                                      .value as ColumnFilterModel["operator"],
+                                  })
+                                }
+                              >
+                                {(filterType === "number"
+                                  ? ["equals", "gt", "gte", "lt", "lte", "between"]
+                                  : filterType === "date"
+                                    ? ["equals", "before", "after", "between"]
+                                    : [
+                                        "contains",
+                                        "equals",
+                                        "startsWith",
+                                        "endsWith",
+                                      ]
+                                ).map((operator) => (
+                                  <option key={operator} value={operator}>
+                                    {operator}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                className="sg-filter-input"
+                                type={
+                                  filterType === "number"
+                                    ? "number"
+                                    : filterType === "date"
+                                      ? "date"
+                                      : "search"
+                                }
+                                value={String(filter.value ?? "")}
+                                onChange={(event) =>
+                                  setColumnFilter(column.id, {
+                                    ...filter,
+                                    type: filterType,
+                                    value: event.target.value,
+                                  })
+                                }
+                              />
+                              {filter.operator === "between" ? (
+                                <input
+                                  className="sg-filter-input"
+                                  type={filterType === "date" ? "date" : "number"}
+                                  value={String(filter.valueTo ?? "")}
+                                  onChange={(event) =>
+                                    setColumnFilter(column.id, {
+                                      ...filter,
+                                      type: filterType,
+                                      valueTo: event.target.value,
+                                    })
+                                  }
+                                />
+                              ) : null}
+                            </>
+                          )}
+                          <button
+                            className="sg-toolbar-button sg-toolbar-button--ghost"
+                            type="button"
+                            onClick={() => setColumnFilter(column.id, null)}
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      );
+                    })}
+                </div>
+              ) : null}
+            </div>
 
             <div className="sg-column-chooser" ref={chooserRef}>
               <button
@@ -1078,28 +2416,113 @@ export function SmartGrid<T>({
             >
               Export CSV
             </button>
+
+            <button
+              className="sg-toolbar-button"
+              type="button"
+              onClick={exportVisibleRowsToExcel}
+            >
+              Export Excel
+            </button>
           </div>
         </div>
 
         <GridRoot>
           <GridHeader
-            columns={orderedColumns}
-            widths={orderedWidths}
+            columns={tableColumns}
+            widths={tableWidths}
             sortModel={sortModel}
             onSort={handleSort}
+            onSortDirection={handleSortDirection}
             onResizeStart={handleResizeStart}
             onAutoSize={autoSizeColumn}
+            filterModel={filterModel}
+            getColumnFilterType={getColumnFilterType}
+            getColumnFilterValues={getColumnFilterValuesForColumn}
+            onSetColumnFilter={setColumnFilter}
+            columnMenuColumnId={columnMenuColumnId}
+            onColumnMenuOpenChange={(columnId, open) =>
+              setColumnMenuColumnId(open ? columnId : null)
+            }
+            onOpenFilters={openColumnFilters}
+            onClearColumnFilter={clearColumnFilter}
+            onPinColumn={pinColumn}
+            onHideColumn={(columnId) => {
+              toggleColumnVisibility(columnId);
+              setColumnMenuColumnId(null);
+            }}
           />
           <GridBody
             rows={displayRows}
-            columns={orderedColumns}
+            columns={tableColumns}
             onToggleGroup={toggleGroup}
+            onToggleTreeNode={toggleTreeNode}
+            onToggleDetailRow={toggleDetailRow}
             onReorderRow={reorderVisibleRows}
             onResetRowDragState={resetRowDragState}
             onSetDraggedRowIndex={setDraggedRowIndex}
             onSetDropTargetRowIndex={setDropTargetRowIndex}
           />
         </GridRoot>
+
+        {cellContextMenu ? (
+          <div
+            className="sg-context-menu"
+            role="menu"
+            style={{
+              left: cellContextMenu.x,
+              top: cellContextMenu.y,
+            }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="sg-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                void copySelection();
+                closeCellContextMenu();
+              }}
+            >
+              Copy
+            </button>
+            <button
+              className="sg-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={() => void pasteFromClipboard()}
+            >
+              Paste
+            </button>
+            <button
+              className="sg-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={startContextCellEdit}
+              disabled={!contextColumn || contextColumn.editable === false}
+            >
+              Edit cell
+            </button>
+            <button
+              className="sg-context-menu-item"
+              type="button"
+              role="menuitem"
+              onClick={clearContextCell}
+              disabled={!contextColumn || contextColumn.editable === false}
+            >
+              Clear cell
+            </button>
+          </div>
+        ) : null}
+
+        <div className="sg-status-bar" role="status">
+          <span>{rowCountLabel}</span>
+          <span>{selectedRowsLabel}</span>
+          <span>{activeCellLabel}</span>
+          <span>{rangeSize ? `${rangeSize} cells selected` : "No range"}</span>
+          <span>{activeFilterCount} filters</span>
+          <span>{sortModel ? `Sorted ${sortModel.direction}` : "Unsorted"}</span>
+        </div>
       </div>
     </GridContext.Provider>
   );

@@ -1,4 +1,20 @@
 import type { Column } from "@smartgrid/core";
+import type { ColumnFilterModel } from "@smartgrid/core";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import * as Popover from "@radix-ui/react-popover";
+import {
+  ArrowDownAZ,
+  ArrowUpAZ,
+  ChevronsLeft,
+  ChevronsRight,
+  EyeOff,
+  Filter,
+  Maximize2,
+  MoreVertical,
+  PinOff,
+  SlidersHorizontal,
+  X,
+} from "lucide-react";
 import "./GridHeaderCell.css";
 import { useGridContext } from "../../context/GridContext";
 
@@ -7,8 +23,20 @@ interface Props<T> {
   width: number;
   sortDirection: "asc" | "desc" | null;
   onSort: (columnId: string) => void;
+  onSortDirection: (columnId: string, direction: "asc" | "desc" | null) => void;
   onResizeStart: (columnId: string, startWidth: number, startX: number) => void;
   onAutoSize: (columnId: string) => void;
+  hasFilter: boolean;
+  filter: ColumnFilterModel | undefined;
+  filterType: ColumnFilterModel["type"];
+  filterValues: string[];
+  onSetFilter: (columnId: string, filter: ColumnFilterModel | null) => void;
+  menuOpen: boolean;
+  onMenuOpenChange: (columnId: string, open: boolean) => void;
+  onOpenFilters: (columnId: string) => void;
+  onClearFilter: (columnId: string) => void;
+  onPinColumn: (columnId: string, pinned: "left" | "right" | null) => void;
+  onHideColumn: (columnId: string) => void;
 }
 
 export function GridHeaderCell<T>({
@@ -16,10 +44,28 @@ export function GridHeaderCell<T>({
   width,
   sortDirection,
   onSort,
+  onSortDirection,
   onResizeStart,
   onAutoSize,
+  hasFilter,
+  filter,
+  filterType,
+  filterValues,
+  onSetFilter,
+  menuOpen,
+  onMenuOpenChange,
+  onOpenFilters,
+  onClearFilter,
+  onPinColumn,
+  onHideColumn,
 }: Props<T>) {
   const { getColumnStyle } = useGridContext<T>();
+  const sortLabel =
+    sortDirection === "asc"
+      ? "Sort descending"
+      : sortDirection === "desc"
+        ? "Clear sort"
+        : "Sort ascending";
 
   return (
     <div
@@ -33,16 +79,285 @@ export function GridHeaderCell<T>({
           : "none"
       }
       style={{ width, ...getColumnStyle(column.id) }}
-      onClick={() => onSort(column.id)}
     >
-      <span className="sg-header-label">
-        {column.headerName}
-        {sortDirection ? (
-          <span className="sg-sort-indicator">
-            {sortDirection === "asc" ? "▲" : "▼"}
-          </span>
-        ) : null}
-      </span>
+      <span className="sg-header-label">{column.headerName}</span>
+
+      <div className="sg-header-actions">
+        <button
+          className="sg-header-icon-button"
+          type="button"
+          title={sortLabel}
+          aria-label={`${sortLabel}: ${column.headerName}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onSort(column.id);
+          }}
+          disabled={column.sortable === false}
+        >
+          {sortDirection === "desc" ? (
+            <ArrowDownAZ size={15} strokeWidth={2} />
+          ) : (
+            <ArrowUpAZ size={15} strokeWidth={2} />
+          )}
+        </button>
+
+        <Popover.Root
+          onOpenChange={(open) => {
+            if (open) {
+              onMenuOpenChange(column.id, false);
+            }
+          }}
+        >
+          <Popover.Trigger asChild>
+            <button
+              className={`sg-header-icon-button${hasFilter ? " sg-header-icon-button--active" : ""}`}
+              type="button"
+              title={hasFilter ? "Edit filter" : "Add filter"}
+              aria-label={`${hasFilter ? "Edit filter" : "Add filter"}: ${column.headerName}`}
+              onClick={(event) => event.stopPropagation()}
+              disabled={column.filterable === false}
+            >
+              <Filter size={15} strokeWidth={2} />
+            </button>
+          </Popover.Trigger>
+
+          <Popover.Portal>
+            <Popover.Content
+              className="sg-header-menu sg-column-filter-popover"
+              align="end"
+              side="bottom"
+              sideOffset={8}
+              collisionPadding={12}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <div className="sg-column-filter-title">
+                <SlidersHorizontal size={15} />
+                <span>{column.headerName}</span>
+              </div>
+
+              {filterType === "set" ? (
+                <select
+                  className="sg-column-filter-input"
+                  multiple
+                  value={(filter?.values ?? []).map(String)}
+                  onChange={(event) => {
+                    const values = Array.from(
+                      event.currentTarget.selectedOptions,
+                    ).map((option) => option.value);
+
+                    onSetFilter(
+                      column.id,
+                      values.length
+                        ? { type: "set", operator: "in", values }
+                        : null,
+                    );
+                  }}
+                >
+                  {filterValues.map((value) => (
+                    <option key={value} value={value}>
+                      {value}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <>
+                  <select
+                    className="sg-column-filter-input"
+                    value={filter?.operator ?? "contains"}
+                    onChange={(event) =>
+                      onSetFilter(column.id, {
+                        ...(filter ?? {}),
+                        type: filterType,
+                        operator: event.target
+                          .value as ColumnFilterModel["operator"],
+                      })
+                    }
+                  >
+                    {(filterType === "number"
+                      ? ["equals", "gt", "gte", "lt", "lte", "between"]
+                      : filterType === "date"
+                        ? ["equals", "before", "after", "between"]
+                        : ["contains", "equals", "startsWith", "endsWith"]
+                    ).map((operator) => (
+                      <option key={operator} value={operator}>
+                        {operator}
+                      </option>
+                    ))}
+                  </select>
+                  <input
+                    className="sg-column-filter-input"
+                    type={
+                      filterType === "number"
+                        ? "number"
+                        : filterType === "date"
+                          ? "date"
+                          : "search"
+                    }
+                    value={String(filter?.value ?? "")}
+                    onChange={(event) =>
+                      onSetFilter(column.id, {
+                        ...(filter ?? { operator: "contains" }),
+                        type: filterType,
+                        value: event.target.value,
+                      })
+                    }
+                    placeholder="Filter value"
+                  />
+                  {filter?.operator === "between" ? (
+                    <input
+                      className="sg-column-filter-input"
+                      type={filterType === "date" ? "date" : "number"}
+                      value={String(filter.valueTo ?? "")}
+                      onChange={(event) =>
+                        onSetFilter(column.id, {
+                          ...filter,
+                          type: filterType,
+                          valueTo: event.target.value,
+                        })
+                      }
+                      placeholder="To"
+                    />
+                  ) : null}
+                </>
+              )}
+
+              <div className="sg-column-filter-actions">
+                <button
+                  className="sg-column-filter-button"
+                  type="button"
+                  onClick={() => onSetFilter(column.id, null)}
+                  disabled={!hasFilter}
+                >
+                  Clear
+                </button>
+                <Popover.Close asChild>
+                  <button className="sg-column-filter-button" type="button">
+                    Done
+                  </button>
+                </Popover.Close>
+              </div>
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+
+        <button
+          className="sg-header-icon-button"
+          type="button"
+          title="Open filters panel"
+          aria-label={`Open filters panel: ${column.headerName}`}
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpenFilters(column.id);
+          }}
+          disabled={column.filterable === false}
+        >
+          <SlidersHorizontal size={15} strokeWidth={2} />
+        </button>
+
+        <DropdownMenu.Root
+          open={menuOpen}
+          onOpenChange={(open) => onMenuOpenChange(column.id, open)}
+        >
+          <DropdownMenu.Trigger asChild>
+            <button
+              className="sg-header-icon-button"
+              type="button"
+              title="Column menu"
+              aria-label={`Column menu: ${column.headerName}`}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <MoreVertical size={15} strokeWidth={2.2} />
+            </button>
+          </DropdownMenu.Trigger>
+
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              className="sg-header-menu"
+              align="end"
+              side="bottom"
+              sideOffset={8}
+              collisionPadding={12}
+              onClick={(event) => event.stopPropagation()}
+            >
+              <DropdownMenu.Item
+                className="sg-header-menu-item"
+                onSelect={() => onSortDirection(column.id, "asc")}
+              >
+                <ArrowUpAZ size={15} />
+                <span>Sort ascending</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className="sg-header-menu-item"
+                onSelect={() => onSortDirection(column.id, "desc")}
+              >
+                <ArrowDownAZ size={15} />
+                <span>Sort descending</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className="sg-header-menu-item"
+                onSelect={() => onSortDirection(column.id, null)}
+              >
+                <X size={15} />
+                <span>Clear sort</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator className="sg-header-menu-divider" />
+              <DropdownMenu.Item
+                className="sg-header-menu-item"
+                onSelect={() => onOpenFilters(column.id)}
+              >
+                <SlidersHorizontal size={15} />
+                <span>{hasFilter ? "Edit filter" : "Filter column"}</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className="sg-header-menu-item"
+                disabled={!hasFilter}
+                onSelect={() => onClearFilter(column.id)}
+              >
+                <Filter size={15} />
+                <span>Clear filter</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator className="sg-header-menu-divider" />
+              <DropdownMenu.Item
+                className="sg-header-menu-item"
+                onSelect={() => onPinColumn(column.id, "left")}
+              >
+                <ChevronsLeft size={15} />
+                <span>Pin left</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className="sg-header-menu-item"
+                onSelect={() => onPinColumn(column.id, "right")}
+              >
+                <ChevronsRight size={15} />
+                <span>Pin right</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className="sg-header-menu-item"
+                onSelect={() => onPinColumn(column.id, null)}
+              >
+                <PinOff size={15} />
+                <span>Unpin</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Separator className="sg-header-menu-divider" />
+              <DropdownMenu.Item
+                className="sg-header-menu-item"
+                onSelect={() => onAutoSize(column.id)}
+              >
+                <Maximize2 size={15} />
+                <span>Auto-size</span>
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                className="sg-header-menu-item"
+                onSelect={() => onHideColumn(column.id)}
+              >
+                <EyeOff size={15} />
+                <span>Hide column</span>
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
+      </div>
+
       <div
         className="sg-resize-handle"
         onPointerDown={(event) => {

@@ -12,6 +12,7 @@ export interface GridContextValue<T> {
   columnTemplate: string;
   selectedRowIndex: number | null;
   onRowSelect: (rowIndex: number) => void;
+  rowNumbers: boolean;
   getColumnStyle: (columnId: string) => CSSProperties;
   activeCell: { rowIndex: number; columnIndex: number } | null;
   selectionAnchor: { rowIndex: number; columnIndex: number } | null;
@@ -25,6 +26,14 @@ export interface GridContextValue<T> {
   clearSelectionAnchor: () => void;
   copySelection: () => Promise<void> | void;
   pasteSelection: (text: string) => void;
+  fillSelection: () => void;
+  findMatch: { rowIndex: number; columnIndex: number } | null;
+  openCellContextMenu: (
+    rowIndex: number,
+    columnIndex: number,
+    x: number,
+    y: number,
+  ) => void;
   draggedRowIndex: number | null;
   dropTargetRowIndex: number | null;
   editingCell: {
