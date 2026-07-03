@@ -1,6 +1,10 @@
 .sg-header {
-  background: red;
   display: grid;
-  grid-template-columns: 150px 150px 150px;
-  height: 50px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  min-height: 48px;
+  background: rgba(8, 12, 24, 0.96);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }

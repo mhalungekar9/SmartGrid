@@ -3,4 +3,7 @@
   flex-direction: column;
   overflow: auto;
   flex: 1;
+  background: rgba(7, 11, 24, 0.72);
+  position: relative;
+  contain: layout paint;
 }

@@ -5,22 +5,27 @@ export class ColumnLayoutEngine<T> {
   build(columns: Column<T>[]): ColumnState<T>[] {
     let left = 0;
 
-    return columns.map((column) => {
-      const width = column.width ?? 150;
+    return columns
+      .filter((column) => !column.hidden)
+      .map((column) => {
+        const width = Math.max(
+          column.minWidth ?? 60,
+          Math.min(column.maxWidth ?? 1000, column.width ?? 150),
+        );
 
-      const state: ColumnState<T> = {
-        column,
+        const state: ColumnState<T> = {
+          column,
 
-        actualWidth: width,
+          actualWidth: width,
 
-        left,
+          left,
 
-        visible: !column.hidden,
-      };
+          visible: true,
+        };
 
-      left += width;
+        left += width;
 
-      return state;
-    });
+        return state;
+      });
   }
 }

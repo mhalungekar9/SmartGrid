@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="SmartGrid usage guide and feature overview"
+    />
+    <title>SmartGrid Guide</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #050816;
+        --panel: rgba(8, 12, 24, 0.86);
+        --panel-strong: rgba(15, 23, 42, 0.98);
+        --border: rgba(255, 255, 255, 0.08);
+        --text: #e2e8f0;
+        --muted: rgba(226, 232, 240, 0.72);
+        --accent: #60a5fa;
+        --accent-soft: rgba(96, 165, 250, 0.16);
+        --good: #34d399;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        background:
+          radial-gradient(
+            circle at top,
+            rgba(59, 130, 246, 0.22),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at 80% 0%,
+            rgba(16, 185, 129, 0.12),
+            transparent 24%
+          ),
+          linear-gradient(180deg, #050816 0%, #09111f 55%, #0f172a 100%);
+        color: var(--text);
+        line-height: 1.6;
+      }
+
+      main {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 40px 20px 56px;
+      }
+
+      .hero {
+        display: grid;
+        gap: 18px;
+        padding: 28px;
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        background: linear-gradient(
+          180deg,
+          rgba(8, 12, 24, 0.94),
+          rgba(8, 12, 24, 0.72)
+        );
+        box-shadow: 0 24px 80px rgba(4, 8, 20, 0.34);
+      }
+
+      .kicker {
+        display: inline-flex;
+        width: fit-content;
+        padding: 6px 12px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+        color: #93c5fd;
+        font-size: 0.76rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.05;
+      }
+
+      h1 {
+        font-size: clamp(2.4rem, 6vw, 5.2rem);
+        letter-spacing: -0.05em;
+        max-width: 12ch;
+      }
+
+      .lead {
+        max-width: 72ch;
+        margin: 0;
+        color: var(--muted);
+        font-size: 1.05rem;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+
+      .pill {
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid var(--border);
+        color: #cbd5e1;
+        font-size: 0.82rem;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(12, minmax(0, 1fr));
+        gap: 18px;
+        margin-top: 22px;
+      }
+
+      .card {
+        grid-column: span 12;
+        padding: 22px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: var(--panel);
+        backdrop-filter: blur(16px);
+        box-shadow: 0 16px 48px rgba(4, 8, 20, 0.2);
+      }
+
+      .card h2 {
+        margin-bottom: 14px;
+        font-size: 1.18rem;
+        letter-spacing: -0.02em;
+      }
+
+      .card p,
+      .card li {
+        color: var(--muted);
+      }
+
+      .two-up {
+        grid-column: span 12;
+      }
+
+      .list {
+        margin: 0;
+        padding-left: 18px;
+        display: grid;
+        gap: 8px;
+      }
+
+      .feature-list {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+      }
+
+      .feature-list li {
+        padding: 14px 14px 14px 16px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      .feature-title {
+        display: block;
+        margin-bottom: 4px;
+        color: #eff6ff;
+        font-weight: 700;
+      }
+
+      pre {
+        margin: 0;
+        padding: 18px;
+        overflow: auto;
+        border-radius: 16px;
+        background: var(--panel-strong);
+        border: 1px solid rgba(96, 165, 250, 0.18);
+        color: #dbeafe;
+        font-size: 0.9rem;
+      }
+
+      code {
+        font-family:
+          ui-monospace,
+          SFMono-Regular,
+          SF Mono,
+          Consolas,
+          Menlo,
+          monospace;
+      }
+
+      .callout {
+        display: grid;
+        gap: 10px;
+        padding: 16px 18px;
+        border-left: 4px solid var(--good);
+        background: rgba(52, 211, 153, 0.08);
+        border-radius: 14px;
+      }
+
+      .callout strong {
+        color: #d1fae5;
+      }
+
+      .shortcut {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 10px 18px;
+      }
+
+      .shortcut dt {
+        color: #eff6ff;
+        font-weight: 700;
+      }
+
+      .shortcut dd {
+        margin: 0;
+        color: var(--muted);
+      }
+
+      .table-wrap {
+        overflow-x: auto;
+        border-radius: 16px;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        min-width: 780px;
+      }
+
+      th,
+      td {
+        padding: 12px 14px;
+        text-align: left;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      }
+
+      th {
+        position: sticky;
+        top: 0;
+        background: rgba(15, 23, 42, 0.98);
+        color: #eff6ff;
+        font-size: 0.82rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      td {
+        color: var(--muted);
+      }
+
+      .footer-note {
+        margin-top: 18px;
+        color: rgba(148, 163, 184, 0.9);
+        font-size: 0.9rem;
+      }
+
+      @media (min-width: 860px) {
+        .two-up {
+          grid-column: span 6;
+        }
+      }
+
+      @media (max-width: 720px) {
+        main {
+          padding: 20px 14px 40px;
+        }
+
+        .hero,
+        .card {
+          border-radius: 18px;
+        }
+
+        .feature-list,
+        .shortcut {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <span class="kicker">SmartGrid Guide</span>
+        <h1>How to use the grid and its features</h1>
+        <p class="lead">
+          This page is a quick reference for the React SmartGrid implementation
+          in this workspace. It covers the basic data setup, the major
+          interactive features, and the keyboard/mouse behavior that the
+          playground demo supports.
+        </p>
+        <div class="meta">
+          <span class="pill">Sort</span>
+          <span class="pill">Filter</span>
+          <span class="pill">Resize</span>
+          <span class="pill">Pin</span>
+          <span class="pill">Edit</span>
+          <span class="pill">Group</span>
+          <span class="pill">Reorder</span>
+          <span class="pill">Export CSV</span>
+          <span class="pill">Pagination</span>
+          <span class="pill">Column chooser</span>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="card two-up">
+          <h2>1. Minimal setup</h2>
+          <p>
+            Import the React wrapper, define a typed column list, pass your
+            rows, and render the grid. Hidden, pinned, sortable, and editable
+            behavior all come from the column config.
+          </p>
+          <pre><code>import { SmartGrid, type Column } from "@smartgrid/react";
+
+interface Employee {
+  id: number;
+  name: string;
+  age: number;
+  city: string;
+  department: string;
+  score: number;
+}
+
+const columns: Column&lt;Employee&gt;[] = [
+  { id: "name", field: "name", headerName: "Name", width: 250, sortable: true, pinned: "left", editable: true },
+  { id: "age", field: "age", headerName: "Age", width: 120, sortable: true, editable: true },
+  { id: "city", field: "city", headerName: "City", width: 250, sortable: true, editable: true },
+  { id: "department", field: "department", headerName: "Department", width: 220, sortable: true, editable: true },
+  { id: "score", field: "score", headerName: "Score", width: 130, sortable: true, pinned: "right", editable: true },
+];
+
+&lt;SmartGrid
+  columns={columns}
+  rows={rows}
+  groupBy="department"
+  pageSize={3}
+/&gt;</code></pre>
+        </article>
+
+        <article class="card two-up">
+          <h2>2. Core interaction model</h2>
+          <p>
+            The grid is designed around direct manipulation and
+            spreadsheet-style navigation.
+          </p>
+          <ul class="feature-list">
+            <li>
+              <span class="feature-title">Sorting</span>Click a header to sort
+              ascending or descending. Unsort by clicking again.
+            </li>
+            <li>
+              <span class="feature-title">Resizing</span>Drag the header edge to
+              resize. Double-click to autosize to content.
+            </li>
+            <li>
+              <span class="feature-title">Pinned columns</span>Mark columns as
+              pinned left or right to keep them anchored.
+            </li>
+            <li>
+              <span class="feature-title">Quick filter</span>Search across
+              visible columns using the toolbar input.
+            </li>
+          </ul>
+        </article>
+
+        <article class="card two-up">
+          <h2>3. Editing and selection</h2>
+          <dl class="shortcut">
+            <dt>Click a cell</dt>
+            <dd>Moves the active cell and selects the row.</dd>
+            <dt>Double-click a cell</dt>
+            <dd>Starts inline editing when the column is editable.</dd>
+            <dt>Enter or F2</dt>
+            <dd>Begins editing from the keyboard.</dd>
+            <dt>Escape</dt>
+            <dd>Cancels edit mode or clears the current selection anchor.</dd>
+            <dt>Arrow keys</dt>
+            <dd>
+              Navigates between cells; hold Shift to extend range selection.
+            </dd>
+          </dl>
+        </article>
+
+        <article class="card two-up">
+          <h2>4. Clipboard behavior</h2>
+          <p>
+            Use Ctrl/Cmd+C to copy the active cell or selected range. Use
+            Ctrl/Cmd+V to paste tab- separated text back into the grid. Numeric
+            cells are parsed as numbers when possible.
+          </p>
+          <div class="callout">
+            <strong>Tip:</strong> You can paste a single value into a selected
+            range and the value will fill the whole range.
+          </div>
+        </article>
+
+        <article class="card two-up">
+          <h2>5. Grouping, pagination, and reordering</h2>
+          <ul class="list">
+            <li>
+              Set <code>groupBy</code> to group rows by a field and collapse or
+              expand groups.
+            </li>
+            <li>
+              Set <code>pageSize</code> to paginate the visible rows in the
+              toolbar.
+            </li>
+            <li>
+              Drag a row by its handle to reorder rows within the current view.
+            </li>
+            <li>Export the current visible rows to CSV from the toolbar.</li>
+          </ul>
+        </article>
+
+        <article class="card two-up">
+          <h2>6. Column chooser</h2>
+          <p>
+            Open the Columns button in the toolbar to hide or show fields at
+            runtime. This uses the existing column metadata, so pinned state and
+            widths remain part of the same config.
+          </p>
+          <p class="footer-note">
+            If a column is hidden in the chooser, it is removed from the visible
+            layout, filter scope, and export surface for the current grid
+            session.
+          </p>
+        </article>
+
+        <article class="card">
+          <h2>Feature matrix</h2>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Feature</th>
+                  <th>Where it lives</th>
+                  <th>How to use it</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Sorting</td>
+                  <td>Header</td>
+                  <td>Click the column header</td>
+                </tr>
+                <tr>
+                  <td>Resizing</td>
+                  <td>Header edge</td>
+                  <td>Drag the resize handle or double-click for autosize</td>
+                </tr>
+                <tr>
+                  <td>Editing</td>
+                  <td>Cell body</td>
+                  <td>Double-click or press Enter/F2</td>
+                </tr>
+                <tr>
+                  <td>Filtering</td>
+                  <td>Toolbar</td>
+                  <td>Type into Quick filter</td>
+                </tr>
+                <tr>
+                  <td>Grouping</td>
+                  <td>Row body</td>
+                  <td>Pass <code>groupBy</code></td>
+                </tr>
+                <tr>
+                  <td>Pagination</td>
+                  <td>Toolbar</td>
+                  <td>Pass <code>pageSize</code></td>
+                </tr>
+                <tr>
+                  <td>Export</td>
+                  <td>Toolbar</td>
+                  <td>Click Export CSV</td>
+                </tr>
+                <tr>
+                  <td>Column chooser</td>
+                  <td>Toolbar</td>
+                  <td>Click Columns and toggle visibility</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>

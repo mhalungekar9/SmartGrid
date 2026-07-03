@@ -7,6 +7,8 @@ export * from "./core/state/GridState";
 // Add this
 export * from "./core/layout";
 
+export * from "./core/resize";
+
 // Models
 export * from "./models/Column";
 export * from "./models/Cell";

@@ -1,11 +1,46 @@
 .sg-header-cell {
   display: flex;
-
   align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 
-  padding: 0 12px;
+  box-sizing: border-box;
 
-  font-weight: 600;
+  height: 100%;
 
-  border-right: 1px solid #e6e6e6;
+  padding: 0 14px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(241, 245, 249, 0.9);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  overflow: hidden;
+
+  white-space: nowrap;
+
+  user-select: none;
+  cursor: pointer;
+  position: relative;
+}
+
+.sg-header-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sg-sort-indicator {
+  color: rgba(96, 165, 250, 0.95);
+}
+
+.sg-resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
 }
