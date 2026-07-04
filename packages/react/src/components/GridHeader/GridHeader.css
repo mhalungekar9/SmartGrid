@@ -1,5 +1,4 @@
 .sg-header {
-  display: grid;
   position: sticky;
   top: 0;
   z-index: 2;
@@ -7,4 +6,47 @@
   background: rgba(8, 12, 24, 0.96);
   backdrop-filter: blur(16px);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sg-column-header-row,
+.sg-merged-header-row {
+  display: grid;
+}
+
+.sg-column-header-row {
+  min-height: 48px;
+}
+
+.sg-merged-header-row {
+  min-height: 34px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.86);
+}
+
+.sg-merged-header-cell {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  padding: 0 14px;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(219, 234, 254, 0.96);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sg-merged-header-cell[data-align="left"] {
+  justify-content: flex-start;
+}
+
+.sg-merged-header-cell[data-align="center"] {
+  justify-content: center;
+}
+
+.sg-merged-header-cell[data-align="right"] {
+  justify-content: flex-end;
 }

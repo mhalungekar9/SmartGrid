@@ -1,4 +1,4 @@
-import type { Column } from "@smartgrid/core";
+import type { Column } from "@gridnexa/core";
 import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
 import "./GridCell.css";
 import { useGridContext } from "../../context/GridContext";

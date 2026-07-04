@@ -1,5 +1,5 @@
 // Existing exports...
-export * from "./core/engine/SmartGridEngine";
+export * from "./core/engine/GridNexaEngine";
 export * from "./core/api/GridApi";
 export * from "./core/events/EventBus";
 export * from "./core/state/GridState";

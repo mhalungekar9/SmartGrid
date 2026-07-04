@@ -1,7 +1,7 @@
 {
-  "name": "@smartgrid/react",
+  "name": "@gridnexa/react",
   "version": "0.0.1",
-  "description": "React wrapper for SmartGrid",
+  "description": "React wrapper for GridNexa",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
@@ -21,7 +21,7 @@
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.19",
     "@radix-ui/react-popover": "^1.1.18",
-    "@smartgrid/core": "workspace:*",
+    "@gridnexa/core": "workspace:*",
     "lucide-react": "^1.23.0"
   },
   "devDependencies": {

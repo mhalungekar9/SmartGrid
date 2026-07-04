@@ -1,0 +1,566 @@
+import type { ColumnFilterModel, Column, MergedHeader, PivotAggregation } from "@gridnexa/react";
+import { compactEmployeeColumns, employeeColumns, employees, formulaEmployeeColumns, readonlyEmployeeColumns, type Employee } from "../data/employees";
+import { treeColumns, treeRows } from "../data/treeData";
+
+export interface FeatureConfig {
+  title: string;
+  subtitle: string;
+  overview: string;
+  notes: string[];
+  details?: string[];
+  code: string;
+  columns?: Column<Employee>[];
+  rows?: Employee[];
+  mergedHeaders?: MergedHeader[];
+  checkboxSelection?: boolean;
+  rowNumbers?: boolean;
+  pageSize?: number;
+  quickFilterText?: string;
+  columnFilters?: Record<string, ColumnFilterModel>;
+  groupBy?: keyof Employee & string;
+  pivotBy?: keyof Employee & string;
+  pivotValueColumns?: Array<keyof Employee & string>;
+  pivotAggregation?: PivotAggregation;
+  treeData?: boolean;
+  masterDetail?: boolean;
+  transaction?: boolean;
+  serverEvents?: boolean;
+  cellEvents?: boolean;
+}
+
+export const featureConfigs = {
+  basicGrid: {
+    title: "Basic Grid",
+    subtitle: "Foundation",
+    overview: "Render typed rows and columns with sorting, filtering metadata, pinned columns, and value formatting.",
+    notes: ["typed columns", "value formatter", "pinned score"],
+    columns: compactEmployeeColumns,
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+  getRowId={(row) => row.id}
+/>`,
+  },
+  sorting: {
+    title: "Sorting",
+    subtitle: "Column interactions",
+    overview: "Click the header sort controls or open a column menu to sort ascending, descending, or clear sorting.",
+    notes: ["header sort", "column menu", "numeric sorting"],
+    columns: employeeColumns,
+    code: `<GridNexa
+  columns={columns.map((column) => ({
+    ...column,
+    sortable: true
+  }))}
+  rows={rows}
+/>`,
+  },
+  filtering: {
+    title: "Filtering",
+    subtitle: "Search and filters",
+    overview: "Combine quick filtering with per-column text, set, number, and date filters.",
+    notes: ["quick filter", "set filters", "number operators"],
+    quickFilterText: "engineering",
+    columnFilters: {
+      score: { type: "number", operator: "gte", value: 85 },
+    },
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+  quickFilterText="engineering"
+  columnFilters={{
+    score: { type: "number", operator: "gte", value: 85 }
+  }}
+/>`,
+  },
+  pagination: {
+    title: "Pagination",
+    subtitle: "Rows per page",
+    overview: "Use pageSize to show a pager in the grid toolbar and keep larger datasets easier to scan.",
+    notes: ["pageSize", "toolbar pager", "row numbers"],
+    pageSize: 4,
+    rowNumbers: true,
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+  pageSize={4}
+  rowNumbers
+/>`,
+  },
+  selection: {
+    title: "Selection",
+    subtitle: "Checkbox column",
+    overview: "Enable a first-column checkbox with row selection, select all, and stable ids through getRowId.",
+    notes: ["checkboxSelection", "select all", "getRowId"],
+    checkboxSelection: true,
+    rowNumbers: true,
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+  checkboxSelection
+  rowNumbers
+  getRowId={(row) => row.id}
+  onRowSelectionChange={(rows) => setSelectedRows(rows)}
+/>`,
+  },
+  rowReorder: {
+    title: "Row Reorder",
+    subtitle: "Drag or click",
+    overview: "Let users rearrange rows by dragging a row or by using the up/down controls that appear on hover.",
+    notes: ["drag rows", "hover controls", "order updates"],
+    details: [
+      "Drag any data row and drop it onto another visible row to reorder the underlying rows.",
+      "Hover a row to reveal up and down buttons for precise keyboard-friendly movement.",
+      "Pinned columns, selection, filters, and exports follow the updated row order.",
+    ],
+    checkboxSelection: true,
+    rowNumbers: true,
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+  rowNumbers
+  checkboxSelection
+  getRowId={(row) => row.id}
+/>
+
+// Users can drag rows, or hover a row and use the up/down buttons.`,
+  },
+  columnResize: {
+    title: "Column Resize",
+    subtitle: "Layout control",
+    overview: "Drag header resize handles or double-click them to auto-size columns based on visible content.",
+    notes: ["drag resize", "auto-size", "width props"],
+    code: `<GridNexa
+  columns={[
+    { id: "name", field: "name", headerName: "Name", width: 240 },
+    { id: "department", field: "department", headerName: "Department", width: 210 }
+  ]}
+  rows={rows}
+/>`,
+  },
+  columnReorder: {
+    title: "Column Reorder",
+    subtitle: "Drag and drop",
+    overview: "Drag a column header and drop it on another header to reorder columns directly in the grid.",
+    notes: ["drag header", "drop to reorder", "pin-aware lanes"],
+    details: [
+      "Users can drag from the header label area without disturbing sort, filter, menu, or resize controls.",
+      "Pinned-left, center, and pinned-right columns reorder within their current lane.",
+      "The rendered cells, header, export order, and column chooser all follow the updated order.",
+    ],
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+/>
+
+// Drag the Name, Department, City, or Score header to change column order.
+// Pinning still works from each column menu.`,
+  },
+  columnMerge: {
+    title: "Column Merge",
+    subtitle: "Grouped headers",
+    overview: "Create Excel-style merged header cells that span any number of adjacent columns and label related fields.",
+    notes: ["mergedHeaders", "spans columns", "custom header text"],
+    details: [
+      "Use mergedHeaders to render a top header band above the normal column headers.",
+      "Each merged header receives stable column ids; GridNexa calculates the span from the current visible column order.",
+      "Merged headers continue to track column resize, hide/show, pinning lanes, and column reordering.",
+    ],
+    mergedHeaders: [
+      {
+        id: "person",
+        headerName: "Employee Profile",
+        columnIds: ["name", "department", "city"],
+      },
+      {
+        id: "performance",
+        headerName: "Performance",
+        columnIds: ["active", "score"],
+      },
+    ],
+    code: `import { GridNexa, type Column, type MergedHeader } from "@gridnexa/react";
+
+interface Employee {
+  id: number;
+  name: string;
+  department: string;
+  city: string;
+  active: boolean;
+  score: number;
+}
+
+const columns: Column<Employee>[] = [
+  { id: "name", field: "name", headerName: "Name", width: 220 },
+  { id: "department", field: "department", headerName: "Department", width: 210 },
+  { id: "city", field: "city", headerName: "City", width: 170 },
+  { id: "active", field: "active", headerName: "Active", width: 120 },
+  { id: "score", field: "score", headerName: "Score", width: 130 }
+];
+
+const mergedHeaders: MergedHeader[] = [
+  {
+    id: "profile",
+    headerName: "Employee Profile",
+    columnIds: ["name", "department", "city"]
+  },
+  {
+    id: "performance",
+    headerName: "Performance",
+    columnIds: ["active", "score"],
+    align: "center"
+  }
+];
+
+export function MergedHeaderGrid() {
+  return (
+    <GridNexa
+      columns={columns}
+      rows={rows}
+      mergedHeaders={mergedHeaders}
+      getRowId={(row) => row.id}
+    />
+  );
+}`,
+  },
+  frozenColumns: {
+    title: "Frozen Columns",
+    subtitle: "Pinned layout",
+    overview: "Pin important fields to the left or right so identity and metrics stay visible while scrolling.",
+    notes: ["pinned left", "pinned right", "sticky cells"],
+    columns: employeeColumns,
+    code: `const columns = [
+  { id: "name", field: "name", headerName: "Name", pinned: "left" },
+  { id: "score", field: "score", headerName: "Score", pinned: "right" }
+];
+
+<GridNexa columns={columns} rows={rows} />`,
+  },
+  templates: {
+    title: "Templates",
+    subtitle: "Rendering",
+    overview: "Use valueFormatter and cellRenderer to display rich domain-specific cell content.",
+    notes: ["cellRenderer", "valueFormatter", "badges"],
+    columns: readonlyEmployeeColumns.map((column) =>
+      column.id === "active"
+        ? {
+            ...column,
+            cellRenderer: (value) => value ? "Active" : "Inactive",
+          }
+        : column,
+    ),
+    code: `<GridNexa
+  columns={[
+    {
+      id: "active",
+      field: "active",
+      headerName: "Active",
+      cellRenderer: (value) => value ? "Active" : "Inactive"
+    }
+  ]}
+  rows={rows}
+/>`,
+  },
+  editing: {
+    title: "Editing",
+    subtitle: "Inline changes",
+    overview: "Configure text, number, date, checkbox, select, and advanced select editors per column.",
+    notes: ["inline edit", "undo/redo", "fill handle"],
+    cellEvents: true,
+    code: `<GridNexa
+  columns={editableColumns}
+  rows={rows}
+  enableUndoRedo
+  enableFillHandle
+  onCellValueChange={(params) => console.log(params)}
+/>`,
+  },
+  formulas: {
+    title: "Formulas",
+    subtitle: "Calculated cells",
+    overview: "Use formula strings that start with '=' to calculate values from other numeric fields in the same row.",
+    notes: ["=score * 1.05", "calculated display", "editable formula"],
+    details: [
+      "Any string value that begins with '=' is evaluated by GridNexa before display.",
+      "Formula expressions can reference numeric row fields such as score, age, or other metrics.",
+      "Invalid expressions render as #FORMULA!, which makes data issues visible to users.",
+    ],
+    columns: formulaEmployeeColumns,
+    code: `interface Employee {
+  id: number;
+  name: string;
+  department: string;
+  score: number;
+  adjustedScore: string;
+}
+
+const rows: Employee[] = [
+  {
+    id: 1,
+    name: "John Carter",
+    department: "Operations",
+    score: 92,
+    adjustedScore: "=score * 1.05"
+  }
+];
+
+const columns: Column<Employee>[] = [
+  { id: "name", field: "name", headerName: "Name", width: 220 },
+  { id: "score", field: "score", headerName: "Base Score", width: 140 },
+  {
+    id: "adjustedScore",
+    field: "adjustedScore",
+    headerName: "Formula",
+    editable: true,
+    editor: "text"
+  },
+  {
+    id: "calculatedScore",
+    field: "adjustedScore",
+    headerName: "Calculated",
+    valueFormatter: (value) =>
+      typeof value === "number" ? value.toFixed(1) : String(value ?? "")
+  }
+];
+
+export function FormulaGridExample() {
+  return (
+    <GridNexa
+      columns={columns}
+      rows={rows}
+      getRowId={(row) => row.id}
+    />
+  );
+}`,
+  },
+  treeGrid: {
+    title: "Tree Grid",
+    subtitle: "Hierarchical data",
+    overview: "Provide getTreeDataPath to turn flat rows into expandable hierarchy levels.",
+    notes: ["getTreeDataPath", "expand/collapse", "nested rows"],
+    columns: treeColumns,
+    rows: treeRows,
+    treeData: true,
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+  getTreeDataPath={(row) => [
+    row.region,
+    row.department,
+    row.name
+  ]}
+/>`,
+  },
+  grouping: {
+    title: "Grouping",
+    subtitle: "Grouped rows",
+    overview: "Group rows by a field and let users expand or collapse each bucket.",
+    notes: ["groupBy", "summaries", "collapsible"],
+    groupBy: "department",
+    masterDetail: true,
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+  groupBy="department"
+  masterDetailRenderer={(row) => <EmployeeDetail row={row} />}
+/>`,
+  },
+  aggregates: {
+    title: "Pivoting & Aggregates",
+    subtitle: "Cross-tab summaries",
+    overview: "Turn row-level data into a pivot table by grouping departments, splitting measures by region, and aggregating score metrics.",
+    notes: ["pivotBy region", "avg score", "dynamic columns", "groupBy department"],
+    details: [
+      "Use groupBy to define the row buckets in the pivot result.",
+      "Use pivotBy to create dynamic columns from unique values such as region, status, or quarter.",
+      "Use pivotValueColumns and pivotAggregation to choose the measure and summary function.",
+      "Supported aggregations include sum, avg, count, min, and max.",
+    ],
+    groupBy: "department",
+    pivotBy: "region",
+    pivotValueColumns: ["score"],
+    pivotAggregation: "avg" as PivotAggregation,
+    code: `type PivotAggregation = "sum" | "avg" | "count" | "min" | "max";
+
+const columns = [
+  { id: "department", field: "department", headerName: "Department" },
+  { id: "region", field: "region", headerName: "Region" },
+  { id: "score", field: "score", headerName: "Score", filter: "number" }
+];
+
+const rows = [
+  { id: 1, department: "Engineering", region: "EMEA", score: 96 },
+  { id: 2, department: "Engineering", region: "Americas", score: 89 },
+  { id: 3, department: "Finance", region: "APAC", score: 84 }
+];
+
+<GridNexa
+  columns={columns}
+  rows={rows}
+  groupBy="department"
+  pivotBy="region"
+  pivotValueColumns={["score"]}
+  pivotAggregation={"avg" as PivotAggregation}
+/>`,
+  },
+  virtualScrolling: {
+    title: "Virtual Scrolling",
+    subtitle: "Large lists",
+    overview: "The body renders only the visible row window with overscan, keeping scrolling responsive.",
+    notes: ["virtual body", "overscan", "stable height"],
+    rows: Array.from({ length: 160 }, (_, index) => ({
+      ...employees[index % employees.length],
+      id: index + 1,
+      name: `${employees[index % employees.length].name} ${index + 1}`,
+      score: 70 + (index % 30),
+    })),
+    code: `<GridNexa
+  columns={columns}
+  rows={largeRows}
+  getRowId={(row) => row.id}
+/>`,
+  },
+  remoteData: {
+    title: "Remote Data",
+    subtitle: "Server operations",
+    overview: "Listen to sort, filter, selection, paging, grouping, and transaction state for API-backed grids.",
+    notes: ["onServerSideOperation", "state payload", "API ready"],
+    serverEvents: true,
+    pageSize: 4,
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+  pageSize={4}
+  onServerSideOperation={(state) => {
+    fetchRows(state);
+  }}
+/>`,
+  },
+  export: {
+    title: "Export",
+    subtitle: "CSV and Excel",
+    overview: "Use the built-in toolbar export actions to download the current visible rows.",
+    notes: ["Export CSV", "Export Excel", "visible rows"],
+    rowNumbers: true,
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+/>
+
+// Users can export from the grid toolbar.`,
+  },
+  theme: {
+    title: "Theme",
+    subtitle: "Light and dark",
+    overview: "Switch between light and dark mode to see how GridNexa fits polished product interfaces.",
+    notes: ["Bootstrap theme", "CSS variables", "GridNexa classes"],
+    details: [
+      "Set Bootstrap's data-bs-theme and your own app theme attribute from the same theme state.",
+      "Override GridNexa surface variables such as --sg-pinned-bg and --sg-pinned-border near the grid wrapper.",
+      "Use GridNexa class selectors for toolbar, header, row, cell, status bar, and filter panel styling.",
+    ],
+    checkboxSelection: true,
+    rowNumbers: true,
+    code: `import { useEffect, useState } from "react";
+import { GridNexa } from "@gridnexa/react";
+
+type ThemeName = "light" | "dark";
+
+export function ThemedGrid() {
+  const [theme, setTheme] = useState<ThemeName>("light");
+
+  useEffect(() => {
+    document.documentElement.dataset.bsTheme = theme;
+    document.documentElement.dataset.appTheme = theme;
+  }, [theme]);
+
+  return (
+    <section className="grid-theme-surface">
+      <button
+        className="btn btn-primary mb-3"
+        type="button"
+        onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+      >
+        Toggle theme
+      </button>
+
+      <GridNexa columns={columns} rows={rows} getRowId={(row) => row.id} />
+    </section>
+  );
+}
+
+/* CSS customization */
+.grid-theme-surface {
+  --sg-pinned-bg: #ffffff;
+  --sg-pinned-border: rgba(15, 23, 42, 0.12);
+}
+
+[data-app-theme="light"] .sg-grid-root {
+  border-color: rgba(15, 23, 42, 0.12);
+  background: #ffffff;
+  box-shadow: 0 20px 42px rgba(15, 23, 42, 0.14);
+}
+
+[data-app-theme="light"] .sg-header,
+[data-app-theme="light"] .sg-header-cell {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+[data-app-theme="light"] .sg-cell {
+  background: #ffffff;
+  color: #182230;
+}`,
+  },
+  events: {
+    title: "Events",
+    subtitle: "Callbacks",
+    overview: "React to edits, selection, and server-side operation state from parent components.",
+    notes: ["onCellValueChange", "onRowSelectionChange", "console events"],
+    checkboxSelection: true,
+    cellEvents: true,
+    serverEvents: true,
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+  checkboxSelection
+  onCellValueChange={(event) => console.log(event)}
+  onRowSelectionChange={(rows) => console.log(rows)}
+  onServerSideOperation={(state) => console.log(state)}
+/>`,
+  },
+  performance: {
+    title: "Performance",
+    subtitle: "Production posture",
+    overview: "Combine row ids, virtualization, paging, and focused column models for fast production grids.",
+    notes: ["getRowId", "virtualized body", "focused columns"],
+    rows: Array.from({ length: 240 }, (_, index) => ({
+      ...employees[index % employees.length],
+      id: index + 1,
+      name: `${employees[index % employees.length].name} ${index + 1}`,
+      score: 75 + (index % 24),
+    })),
+    columns: compactEmployeeColumns,
+    checkboxSelection: true,
+    code: `<GridNexa
+  columns={compactColumns}
+  rows={largeRows}
+  getRowId={(row) => row.id}
+  checkboxSelection
+/>`,
+  },
+  transaction: {
+    title: "Transactions",
+    subtitle: "Row updates",
+    overview: "Apply add, update, and remove transactions without rebuilding the whole grid setup.",
+    notes: ["add rows", "update rows", "transaction prop"],
+    transaction: true,
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+  transaction={{
+    update: [{ ...rows[1], score: 95 }],
+    add: [newEmployee]
+  }}
+/>`,
+  },
+} satisfies Record<string, FeatureConfig>;

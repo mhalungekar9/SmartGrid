@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import type { ColumnFilterModel, GridOptions, PivotAggregation } from "@smartgrid/core";
+import type {
+  ColumnFilterModel,
+  GridOptions,
+  PivotAggregation,
+} from "@gridnexa/core";
 
 import { GridRoot } from "../GridRoot/GridRoot";
 import { GridHeader } from "../GridHeader/GridHeader";
@@ -10,11 +14,11 @@ import { GridRenderer } from "../../rendering";
 
 import GridContext from "../../context/GridContext";
 import { getColumnValue, getRawColumnValue } from "../../utils/cellValue";
-import type { Column } from "@smartgrid/core";
+import type { Column } from "@gridnexa/core";
 
-export interface SmartGridProps<T> extends GridOptions<T> {}
+export interface GridNexaProps<T> extends GridOptions<T> {}
 
-export interface SmartGridExtendedProps<T> extends GridOptions<T> {
+export interface GridNexaExtendedProps<T> extends GridOptions<T> {
   groupBy?: keyof T & string;
   pageSize?: number;
 }
@@ -183,8 +187,12 @@ function matchesColumnFilter<T>(
     }
 
     return filter.joinOperator === "or"
-      ? conditions.some((condition) => matchesColumnFilter(row, column, condition))
-      : conditions.every((condition) => matchesColumnFilter(row, column, condition));
+      ? conditions.some((condition) =>
+          matchesColumnFilter(row, column, condition),
+        )
+      : conditions.every((condition) =>
+          matchesColumnFilter(row, column, condition),
+        );
   }
 
   const value = getColumnValue(row, column);
@@ -252,8 +260,10 @@ function matchesColumnFilter<T>(
       );
     }
 
-    return new Date(dateValue).toDateString() ===
-      new Date(filterValue).toDateString();
+    return (
+      new Date(dateValue).toDateString() ===
+      new Date(filterValue).toDateString()
+    );
   }
 
   const text = String(value ?? "").toLowerCase();
@@ -392,11 +402,15 @@ function buildPivotResult<T>(
   }
 
   const groupColumn = groupBy
-    ? columns.find((column) => column.field === groupBy || column.id === groupBy)
+    ? columns.find(
+        (column) => column.field === groupBy || column.id === groupBy,
+      )
     : undefined;
   const configuredValueColumns = (pivotValueColumns ?? [])
     .map((columnId) =>
-      columns.find((column) => column.field === columnId || column.id === columnId),
+      columns.find(
+        (column) => column.field === columnId || column.id === columnId,
+      ),
     )
     .filter((column): column is Column<T> => Boolean(column));
   const inferredValueColumns = columns.filter((column) => {
@@ -407,17 +421,25 @@ function buildPivotResult<T>(
     return rows.some((row) => typeof getColumnValue(row, column) === "number");
   });
   const valueColumns =
-    configuredValueColumns.length > 0 ? configuredValueColumns : inferredValueColumns;
+    configuredValueColumns.length > 0
+      ? configuredValueColumns
+      : inferredValueColumns;
   const pivotLabels = Array.from(
     new Set(rows.map((row) => String(row[pivotBy] ?? "Blank"))),
   ).sort((left, right) =>
-    left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" }),
+    left.localeCompare(right, undefined, {
+      numeric: true,
+      sensitivity: "base",
+    }),
   );
   const groupBuckets = new Map<string, { label: string; items: T[] }>();
 
   rows.forEach((row) => {
     const groupLabel = groupBy ? String(row[groupBy] ?? "Ungrouped") : "Total";
-    const bucket = groupBuckets.get(groupLabel) ?? { label: groupLabel, items: [] };
+    const bucket = groupBuckets.get(groupLabel) ?? {
+      label: groupLabel,
+      items: [],
+    };
 
     bucket.items.push(row);
     groupBuckets.set(groupLabel, bucket);
@@ -425,16 +447,17 @@ function buildPivotResult<T>(
 
   const labelField = "__pivotGroupLabel";
   const labelColumn: Column<T> = groupColumn
-    ? {
+    ? ({
         ...groupColumn,
         id: makePivotColumnId("group", groupColumn.id),
         field: labelField as Extract<keyof T, string>,
         headerName: groupColumn.headerName,
         editable: false,
         filterable: false,
-        valueGetter: (row) => String((row as Record<string, unknown>)[labelField] ?? ""),
-      } as Column<T>
-    : {
+        valueGetter: (row) =>
+          String((row as Record<string, unknown>)[labelField] ?? ""),
+      } as Column<T>)
+    : ({
         id: makePivotColumnId("group"),
         field: labelField as Extract<keyof T, string>,
         headerName: "Pivot",
@@ -442,8 +465,9 @@ function buildPivotResult<T>(
         sortable: true,
         editable: false,
         filterable: false,
-        valueGetter: (row) => String((row as Record<string, unknown>)[labelField] ?? ""),
-      } as Column<T>;
+        valueGetter: (row) =>
+          String((row as Record<string, unknown>)[labelField] ?? ""),
+      } as Column<T>);
   const hasValueColumns = valueColumns.length > 0;
   const measureColumns = hasValueColumns
     ? valueColumns
@@ -456,7 +480,11 @@ function buildPivotResult<T>(
       ];
   const dynamicColumns = pivotLabels.flatMap((pivotLabel) =>
     measureColumns.map((valueColumn) => {
-      const columnId = makePivotColumnId(String(pivotBy), pivotLabel, valueColumn.id);
+      const columnId = makePivotColumnId(
+        String(pivotBy),
+        pivotLabel,
+        valueColumn.id,
+      );
       const headerName =
         measureColumns.length === 1
           ? pivotLabel
@@ -487,7 +515,11 @@ function buildPivotResult<T>(
       );
 
       measureColumns.forEach((valueColumn) => {
-        const columnId = makePivotColumnId(String(pivotBy), pivotLabel, valueColumn.id);
+        const columnId = makePivotColumnId(
+          String(pivotBy),
+          pivotLabel,
+          valueColumn.id,
+        );
         const values = hasValueColumns
           ? pivotItems.map((row) => getColumnValue(row, valueColumn))
           : pivotItems;
@@ -543,9 +575,11 @@ function buildTreeRows<T>(
   const visibleRows: Array<DataRow<T>> = [];
 
   keyedRows.forEach((entry) => {
-    const isHidden = entry.path.slice(0, -1).some((_, index) =>
-      collapsedKeys.has(entry.path.slice(0, index + 1).join("/")),
-    );
+    const isHidden = entry.path
+      .slice(0, -1)
+      .some((_, index) =>
+        collapsedKeys.has(entry.path.slice(0, index + 1).join("/")),
+      );
 
     if (isHidden) {
       return;
@@ -566,20 +600,23 @@ function buildTreeRows<T>(
   return visibleRows;
 }
 
-export function SmartGrid<T>({
+export function GridNexa<T>({
   rows,
   columns,
+  mergedHeaders,
   columnFilters,
   quickFilterText: quickFilterTextProp,
   externalFilter,
   advancedFilter,
   rowNumbers = false,
+  checkboxSelection = false,
   enableRangeSelection = true,
   enableFillHandle = true,
   enableUndoRedo = true,
   localeText,
   getRowId,
   onCellValueChange,
+  onRowSelectionChange,
   onServerSideOperation,
   groupBy,
   pivotBy,
@@ -589,13 +626,16 @@ export function SmartGrid<T>({
   masterDetailRenderer,
   transaction,
   pageSize,
-}: SmartGridExtendedProps<T>) {
+}: GridNexaExtendedProps<T>) {
   const [gridRows, setGridRows] = useState(rows);
   const [columnWidths, setColumnWidths] = useState(() =>
     columns.map((column) => column.width ?? 150),
   );
   const [sortModel, setSortModel] = useState<SortModel | null>(null);
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(
+    () => new Set(),
+  );
   const [activeCell, setActiveCellState] = useState<CellPosition | null>(null);
   const [selectionAnchor, setSelectionAnchorState] =
     useState<CellPosition | null>(null);
@@ -603,12 +643,15 @@ export function SmartGrid<T>({
   const [findText, setFindText] = useState("");
   const [findMatchIndex, setFindMatchIndex] = useState(0);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [filterPopoverColumnId, setFilterPopoverColumnId] = useState<
+    string | null
+  >(null);
   const [columnMenuColumnId, setColumnMenuColumnId] = useState<string | null>(
     null,
   );
-  const [filterModel, setFilterModel] = useState<Record<string, ColumnFilterModel>>(
-    () => columnFilters ?? {},
-  );
+  const [filterModel, setFilterModel] = useState<
+    Record<string, ColumnFilterModel>
+  >(() => columnFilters ?? {});
   const [undoStack, setUndoStack] = useState<T[][]>([]);
   const [redoStack, setRedoStack] = useState<T[][]>([]);
   const [editingCell, setEditingCell] = useState<EditingCellState | null>(null);
@@ -643,10 +686,18 @@ export function SmartGrid<T>({
         .map((column) => [column.id, column.pinned]),
     ),
   );
+  const [columnOrder, setColumnOrder] = useState<string[]>(() =>
+    columns.map((column) => column.id),
+  );
+  const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
+  const [dropTargetColumnId, setDropTargetColumnId] = useState<string | null>(
+    null,
+  );
   const [columnChooserOpen, setColumnChooserOpen] = useState(false);
   const [dynamicColumnWidths, setDynamicColumnWidths] = useState<
     Record<string, number>
   >({});
+  const filterPanelRef = useRef<HTMLDivElement | null>(null);
   const chooserRef = useRef<HTMLDivElement | null>(null);
   const resizeSession = useRef<{
     columnId: string;
@@ -672,7 +723,10 @@ export function SmartGrid<T>({
         (transaction.remove ?? []).map((row, index) => getId(row, index)),
       );
       const updateRows = new Map(
-        (transaction.update ?? []).map((row, index) => [getId(row, index), row]),
+        (transaction.update ?? []).map((row, index) => [
+          getId(row, index),
+          row,
+        ]),
       );
       const nextRows = currentRows
         .filter((row, index) => !removeIds.has(getId(row, index)))
@@ -688,6 +742,44 @@ export function SmartGrid<T>({
     }
   }, [columnFilters]);
 
+  useEffect(() => {
+    if (!filterPanelOpen && !columnChooserOpen) {
+      return;
+    }
+
+    const closeFloatingPanels = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+
+      if (!target) {
+        return;
+      }
+
+      if (filterPanelOpen && !filterPanelRef.current?.contains(target)) {
+        setFilterPanelOpen(false);
+      }
+
+      if (columnChooserOpen && !chooserRef.current?.contains(target)) {
+        setColumnChooserOpen(false);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      setFilterPanelOpen(false);
+      setColumnChooserOpen(false);
+    };
+
+    document.addEventListener("pointerdown", closeFloatingPanels, true);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("pointerdown", closeFloatingPanels, true);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [columnChooserOpen, filterPanelOpen]);
+
   const columnSignature = columns
     .map(
       (column) =>
@@ -699,6 +791,7 @@ export function SmartGrid<T>({
     setColumnWidths(columns.map((column) => column.width ?? 150));
     setSortModel(null);
     setSelectedRowIndex(null);
+    setSelectedRowIds(new Set());
     setActiveCellState(null);
     setSelectionAnchorState(null);
     setCollapsedGroups(new Set());
@@ -719,12 +812,16 @@ export function SmartGrid<T>({
           .map((column) => [column.id, column.pinned]),
       ),
     );
+    setColumnOrder(columns.map((column) => column.id));
+    setDraggedColumnId(null);
+    setDropTargetColumnId(null);
     setColumnChooserOpen(false);
+    setFilterPopoverColumnId(null);
     setColumnMenuColumnId(null);
     setDynamicColumnWidths({});
   }, [columnSignature]);
 
-  const effectiveColumns = useMemo(
+  const effectiveColumns = useMemo<Column<T>[]>(
     () =>
       columns.map((column) => ({
         ...column,
@@ -735,9 +832,25 @@ export function SmartGrid<T>({
     [columns, pinnedColumnIds],
   );
 
+  const orderedByUserColumns = useMemo<Column<T>[]>(() => {
+    const byId = new Map(effectiveColumns.map((column) => [column.id, column]));
+    const ordered = columnOrder
+      .flatMap((columnId) => {
+        const column = byId.get(columnId);
+
+        return column ? [column] : [];
+      });
+    const missing = effectiveColumns.filter(
+      (column) => !columnOrder.includes(column.id),
+    );
+
+    return [...ordered, ...missing];
+  }, [columnOrder, effectiveColumns]);
+
   const visibleColumns = useMemo(
-    () => effectiveColumns.filter((column) => !hiddenColumnIds.has(column.id)),
-    [effectiveColumns, hiddenColumnIds],
+    () =>
+      orderedByUserColumns.filter((column) => !hiddenColumnIds.has(column.id)),
+    [hiddenColumnIds, orderedByUserColumns],
   );
 
   const orderedColumns = useMemo(() => {
@@ -772,8 +885,9 @@ export function SmartGrid<T>({
           position: "sticky",
           left: leftOffset,
           zIndex: 3,
-          background: "rgba(8, 12, 24, 0.98)",
-          boxShadow: "inset -1px 0 0 rgba(255, 255, 255, 0.08)",
+          background: "var(--sg-pinned-bg, rgba(8, 12, 24, 0.98))",
+          boxShadow:
+            "inset -1px 0 0 var(--sg-pinned-border, rgba(255, 255, 255, 0.08))",
         };
 
         leftOffset += width;
@@ -792,8 +906,9 @@ export function SmartGrid<T>({
           position: "sticky",
           right: rightOffset,
           zIndex: 3,
-          background: "rgba(8, 12, 24, 0.98)",
-          boxShadow: "inset 1px 0 0 rgba(255, 255, 255, 0.08)",
+          background: "var(--sg-pinned-bg, rgba(8, 12, 24, 0.98))",
+          boxShadow:
+            "inset 1px 0 0 var(--sg-pinned-border, rgba(255, 255, 255, 0.08))",
         };
 
         rightOffset += width;
@@ -811,7 +926,9 @@ export function SmartGrid<T>({
 
       const { columnId, startX, startWidth } = resizeSession.current;
       const nextWidth = Math.max(60, startWidth + (event.clientX - startX));
-      const sourceColumnIndex = columns.findIndex((column) => column.id === columnId);
+      const sourceColumnIndex = columns.findIndex(
+        (column) => column.id === columnId,
+      );
 
       if (sourceColumnIndex >= 0) {
         setColumnWidths((currentWidths) =>
@@ -850,7 +967,10 @@ export function SmartGrid<T>({
       }
 
       if (enableUndoRedo) {
-        setUndoStack((currentStack) => [...currentStack.slice(-19), currentRows]);
+        setUndoStack((currentStack) => [
+          ...currentStack.slice(-19),
+          currentRows,
+        ]);
         setRedoStack([]);
       }
 
@@ -895,8 +1015,8 @@ export function SmartGrid<T>({
 
   const filteredRows = useMemo(() => {
     const query = (quickFilterTextProp ?? quickFilterText).trim().toLowerCase();
-    const activeFilterEntries = Object.entries(filterModel).filter(([, filter]) =>
-      isFilterActive(filter),
+    const activeFilterEntries = Object.entries(filterModel).filter(
+      ([, filter]) => isFilterActive(filter),
     );
 
     return resolvedRows.filter((row) => {
@@ -951,7 +1071,14 @@ export function SmartGrid<T>({
         pivotValueColumns,
         pivotAggregation,
       ),
-    [filteredRows, groupBy, orderedColumns, pivotAggregation, pivotBy, pivotValueColumns],
+    [
+      filteredRows,
+      groupBy,
+      orderedColumns,
+      pivotAggregation,
+      pivotBy,
+      pivotValueColumns,
+    ],
   );
   const sortedPivotRows = useMemo(
     () =>
@@ -1018,10 +1145,62 @@ export function SmartGrid<T>({
     return dataRows;
   }, [treeDataRows, groupBuckets, groupBy, collapsedGroups]);
 
-  const tableColumns = pivotResult.active ? pivotResult.columns : orderedColumns;
+  const tableColumns = pivotResult.active
+    ? pivotResult.columns
+    : orderedColumns;
   const tableRows = pivotResult.active ? pagedPivotRows : visibleDataRows;
+  const getRowSelectionId = (row: T, rowIndex: number) =>
+    pivotResult.active || !getRowId ? rowIndex : getRowId(row, rowIndex);
+  const visibleSelectedRowIds = useMemo(
+    () => tableRows.map(getRowSelectionId),
+    [getRowId, pivotResult.active, tableRows],
+  );
+  const selectedTableRows = useMemo(
+    () =>
+      tableRows.filter((row, rowIndex) =>
+        selectedRowIds.has(getRowSelectionId(row, rowIndex)),
+      ),
+    [getRowId, pivotResult.active, selectedRowIds, tableRows],
+  );
+  const allVisibleRowsSelected =
+    tableRows.length > 0 &&
+    visibleSelectedRowIds.every((rowId) => selectedRowIds.has(rowId));
+  const someVisibleRowsSelected =
+    visibleSelectedRowIds.some((rowId) => selectedRowIds.has(rowId));
+  const toggleRowSelection = (row: T, rowIndex: number) => {
+    const rowId = getRowSelectionId(row, rowIndex);
+
+    setSelectedRowIds((current) => {
+      const next = new Set(current);
+
+      if (next.has(rowId)) {
+        next.delete(rowId);
+      } else {
+        next.add(rowId);
+      }
+
+      return next;
+    });
+    setSelectedRowIndex(rowIndex);
+  };
+  const toggleAllRowsSelection = () => {
+    setSelectedRowIds((current) => {
+      const next = new Set(current);
+
+      if (allVisibleRowsSelected) {
+        visibleSelectedRowIds.forEach((rowId) => next.delete(rowId));
+      } else {
+        visibleSelectedRowIds.forEach((rowId) => next.add(rowId));
+      }
+
+      return next;
+    });
+    setSelectedRowIndex(tableRows.length ? 0 : null);
+  };
   const tableWidths = tableColumns.map((column, index) => {
-    const orderedIndex = orderedColumns.findIndex((entry) => entry.id === column.id);
+    const orderedIndex = orderedColumns.findIndex(
+      (entry) => entry.id === column.id,
+    );
     const originalIndex = columns.findIndex((entry) => entry.id === column.id);
 
     return (
@@ -1044,8 +1223,9 @@ export function SmartGrid<T>({
           position: "sticky",
           left: leftOffset,
           zIndex: 3,
-          background: "rgba(8, 12, 24, 0.98)",
-          boxShadow: "inset -1px 0 0 rgba(255, 255, 255, 0.08)",
+          background: "var(--sg-pinned-bg, rgba(8, 12, 24, 0.98))",
+          boxShadow:
+            "inset -1px 0 0 var(--sg-pinned-border, rgba(255, 255, 255, 0.08))",
         };
 
         leftOffset += width;
@@ -1064,8 +1244,9 @@ export function SmartGrid<T>({
           position: "sticky",
           right: rightOffset,
           zIndex: 3,
-          background: "rgba(8, 12, 24, 0.98)",
-          boxShadow: "inset 1px 0 0 rgba(255, 255, 255, 0.08)",
+          background: "var(--sg-pinned-bg, rgba(8, 12, 24, 0.98))",
+          boxShadow:
+            "inset 1px 0 0 var(--sg-pinned-border, rgba(255, 255, 255, 0.08))",
         };
 
         rightOffset += width;
@@ -1076,19 +1257,10 @@ export function SmartGrid<T>({
   }, [tableColumns, tableWidths]);
 
   useEffect(() => {
-    const selectedIndex = selectedRowIndex ?? -1;
-    const selectedRow = selectedIndex >= 0 ? tableRows[selectedIndex] : null;
-
     onServerSideOperation?.({
       sortModel: sortModel ? [sortModel] : [],
       filterModel,
-      selectedRowIds: selectedRow
-        ? [
-            pivotResult.active || !getRowId
-              ? selectedIndex
-              : getRowId(selectedRow, selectedIndex),
-          ]
-        : [],
+      selectedRowIds: Array.from(selectedRowIds),
       pageIndex,
       pageSize,
       groupBy,
@@ -1111,10 +1283,8 @@ export function SmartGrid<T>({
     pivotAggregation,
     pivotBy,
     pivotValueColumns,
-    pivotResult.active,
-    selectedRowIndex,
+    selectedRowIds,
     sortModel,
-    tableRows,
     transaction,
   ]);
 
@@ -1131,7 +1301,11 @@ export function SmartGrid<T>({
       tableColumns.forEach((column, columnIndex) => {
         const value = getColumnValue(row, column);
 
-        if (String(value ?? "").toLowerCase().includes(query)) {
+        if (
+          String(value ?? "")
+            .toLowerCase()
+            .includes(query)
+        ) {
           matches.push({ rowIndex, columnIndex });
         }
       });
@@ -1159,7 +1333,11 @@ export function SmartGrid<T>({
   }, [findMatch]);
 
   const displayRows = useMemo<DisplayRow<T>[]>(() => {
-    const appendDetailRow = (rowsToAppend: DisplayRow<T>[], row: T, rowIndex: number) => {
+    const appendDetailRow = (
+      rowsToAppend: DisplayRow<T>[],
+      row: T,
+      rowIndex: number,
+    ) => {
       if (!masterDetailRenderer) {
         return;
       }
@@ -1186,13 +1364,15 @@ export function SmartGrid<T>({
     }
 
     if (!groupBy) {
-      const sourceRows = getTreeDataPath ? treeDataRows : visibleDataRows.map((row, rowIndex) => ({
-        kind: "data" as const,
-        row,
-        rowIndex,
-        groupKey: "",
-        hasDetail: Boolean(masterDetailRenderer),
-      }));
+      const sourceRows = getTreeDataPath
+        ? treeDataRows
+        : visibleDataRows.map((row, rowIndex) => ({
+            kind: "data" as const,
+            row,
+            rowIndex,
+            groupKey: "",
+            hasDetail: Boolean(masterDetailRenderer),
+          }));
       const nextRows: DisplayRow<T>[] = [];
 
       sourceRows.forEach((entry) => {
@@ -1336,16 +1516,14 @@ export function SmartGrid<T>({
       const nextRows = [...currentRows];
       const [movedRow] = nextRows.splice(sourceOriginalIndex, 1);
 
-      let insertIndex = targetOriginalIndex;
-
-      if (sourceOriginalIndex < targetOriginalIndex) {
-        insertIndex -= 1;
-      }
-
-      nextRows.splice(insertIndex, 0, movedRow);
+      nextRows.splice(targetOriginalIndex, 0, movedRow);
 
       return nextRows;
     });
+  };
+
+  const moveVisibleRow = (rowIndex: number, direction: -1 | 1) => {
+    reorderVisibleRows(rowIndex, rowIndex + direction);
   };
 
   useEffect(() => {
@@ -1364,6 +1542,10 @@ export function SmartGrid<T>({
   }, [selectedRowIndex, tableRows.length]);
 
   useEffect(() => {
+    onRowSelectionChange?.(selectedTableRows);
+  }, [onRowSelectionChange, selectedTableRows]);
+
+  useEffect(() => {
     if (!pageSize || pageSize <= 0) {
       return;
     }
@@ -1378,10 +1560,7 @@ export function SmartGrid<T>({
       return;
     }
 
-    if (
-      activeCell.rowIndex >= tableRows.length ||
-      tableColumns.length === 0
-    ) {
+    if (activeCell.rowIndex >= tableRows.length || tableColumns.length === 0) {
       setActiveCellState(null);
       setSelectionAnchorState(null);
       return;
@@ -1399,8 +1578,14 @@ export function SmartGrid<T>({
     () => new GridRenderer(tableColumns, tableWidths),
     [tableColumns, tableWidths],
   );
-  const template = rowNumbers
-    ? `52px ${renderer.getTemplate()}`
+  const leadingTemplate = [
+    checkboxSelection ? "44px" : null,
+    rowNumbers ? "52px" : null,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const template = leadingTemplate
+    ? `${leadingTemplate} ${renderer.getTemplate()}`
     : renderer.getTemplate();
 
   const getCellRange = () => {
@@ -1504,7 +1689,7 @@ export function SmartGrid<T>({
     const link = document.createElement("a");
 
     link.href = downloadUrl;
-    link.download = "smartgrid-export.csv";
+    link.download = "gridnexa-export.csv";
     link.click();
 
     URL.revokeObjectURL(downloadUrl);
@@ -1965,17 +2150,25 @@ export function SmartGrid<T>({
       ? `${activeColumn.headerName} R${activeCell.rowIndex + 1}`
       : "No cell";
   const selectedRowsLabel =
-    selectedRowIndex == null ? "No row selected" : `Row ${selectedRowIndex + 1}`;
+    selectedRowIds.size > 0
+      ? `${selectedRowIds.size} selected`
+      : selectedRowIndex == null
+        ? "No row selected"
+        : `Row ${selectedRowIndex + 1}`;
   const rangeSize = cellRange
     ? (cellRange.endRow - cellRange.startRow + 1) *
       (cellRange.endColumn - cellRange.startColumn + 1)
     : 0;
-  const activeFilterCount = Object.values(filterModel).filter(isFilterActive).length;
+  const activeFilterCount =
+    Object.values(filterModel).filter(isFilterActive).length;
   const contextColumn = cellContextMenu
     ? tableColumns[cellContextMenu.columnIndex]
     : null;
 
-  const setColumnFilter = (columnId: string, filter: ColumnFilterModel | null) => {
+  const setColumnFilter = (
+    columnId: string,
+    filter: ColumnFilterModel | null,
+  ) => {
     setFilterModel((current) => {
       const next = { ...current };
 
@@ -2035,6 +2228,49 @@ export function SmartGrid<T>({
     setColumnMenuColumnId(null);
   };
 
+  const getColumnLane = (columnId: string) => {
+    const column = effectiveColumns.find((entry) => entry.id === columnId);
+
+    return column?.pinned ?? null;
+  };
+
+  const reorderColumn = (sourceColumnId: string, targetColumnId: string) => {
+    if (sourceColumnId === targetColumnId) {
+      return;
+    }
+
+    if (getColumnLane(sourceColumnId) !== getColumnLane(targetColumnId)) {
+      setDraggedColumnId(null);
+      setDropTargetColumnId(null);
+      return;
+    }
+
+    setColumnOrder((currentOrder) => {
+      const knownIds = new Set(columns.map((column) => column.id));
+      const nextOrder = [
+        ...currentOrder.filter((columnId) => knownIds.has(columnId)),
+        ...columns
+          .map((column) => column.id)
+          .filter((columnId) => !currentOrder.includes(columnId)),
+      ];
+      const sourceIndex = nextOrder.indexOf(sourceColumnId);
+      const targetIndex = nextOrder.indexOf(targetColumnId);
+
+      if (sourceIndex < 0 || targetIndex < 0) {
+        return currentOrder;
+      }
+
+      const [movedColumnId] = nextOrder.splice(sourceIndex, 1);
+      const insertIndex = sourceIndex < targetIndex ? targetIndex : targetIndex;
+
+      nextOrder.splice(insertIndex, 0, movedColumnId);
+
+      return nextOrder;
+    });
+    setDraggedColumnId(null);
+    setDropTargetColumnId(null);
+  };
+
   const exportVisibleRowsToExcel = () => {
     const escapeHtml = (value: unknown) =>
       String(value ?? "")
@@ -2048,7 +2284,9 @@ export function SmartGrid<T>({
       .map(
         (row) =>
           `<tr>${tableColumns
-            .map((column) => `<td>${escapeHtml(getColumnValue(row, column))}</td>`)
+            .map(
+              (column) => `<td>${escapeHtml(getColumnValue(row, column))}</td>`,
+            )
             .join("")}</tr>`,
       )
       .join("");
@@ -2060,7 +2298,7 @@ export function SmartGrid<T>({
     const link = document.createElement("a");
 
     link.href = downloadUrl;
-    link.download = "smartgrid-export.xls";
+    link.download = "gridnexa-export.xls";
     link.click();
 
     URL.revokeObjectURL(downloadUrl);
@@ -2093,6 +2331,13 @@ export function SmartGrid<T>({
         columnTemplate: template,
         selectedRowIndex,
         onRowSelect: setSelectedRowIndex,
+        selectedRowIds,
+        checkboxSelection,
+        allVisibleRowsSelected,
+        someVisibleRowsSelected,
+        getRowSelectionId,
+        toggleRowSelection,
+        toggleAllRowsSelection,
         rowNumbers,
         getColumnStyle: (columnId: string) => tableColumnStyles[columnId] ?? {},
         activeCell,
@@ -2122,7 +2367,7 @@ export function SmartGrid<T>({
       <div className="sg-shell" onClick={closeCellContextMenu}>
         <div className="sg-toolbar">
           <div className="sg-toolbar-copy">
-            <div className="sg-toolbar-title">SmartGrid</div>
+            <div className="sg-toolbar-title">GridNexa</div>
             <div className="sg-toolbar-subtitle">{rowCountLabel}</div>
           </div>
 
@@ -2221,7 +2466,7 @@ export function SmartGrid<T>({
               </button>
             ) : null}
 
-            <div className="sg-column-chooser">
+            <div className="sg-column-chooser" ref={filterPanelRef}>
               <button
                 className="sg-toolbar-button sg-toolbar-button--ghost"
                 type="button"
@@ -2304,7 +2549,14 @@ export function SmartGrid<T>({
                                 }
                               >
                                 {(filterType === "number"
-                                  ? ["equals", "gt", "gte", "lt", "lte", "between"]
+                                  ? [
+                                      "equals",
+                                      "gt",
+                                      "gte",
+                                      "lt",
+                                      "lte",
+                                      "between",
+                                    ]
                                   : filterType === "date"
                                     ? ["equals", "before", "after", "between"]
                                     : [
@@ -2340,7 +2592,9 @@ export function SmartGrid<T>({
                               {filter.operator === "between" ? (
                                 <input
                                   className="sg-filter-input"
-                                  type={filterType === "date" ? "date" : "number"}
+                                  type={
+                                    filterType === "date" ? "date" : "number"
+                                  }
                                   value={String(filter.valueTo ?? "")}
                                   onChange={(event) =>
                                     setColumnFilter(column.id, {
@@ -2384,7 +2638,7 @@ export function SmartGrid<T>({
                   role="menu"
                   aria-label="Column chooser"
                 >
-                  {columns.map((column) => {
+                  {orderedByUserColumns.map((column) => {
                     const isHidden = hiddenColumnIds.has(column.id);
 
                     return (
@@ -2431,19 +2685,50 @@ export function SmartGrid<T>({
           <GridHeader
             columns={tableColumns}
             widths={tableWidths}
+            mergedHeaders={mergedHeaders}
             sortModel={sortModel}
             onSort={handleSort}
             onSortDirection={handleSortDirection}
             onResizeStart={handleResizeStart}
             onAutoSize={autoSizeColumn}
+            draggedColumnId={draggedColumnId}
+            dropTargetColumnId={dropTargetColumnId}
+            onColumnDragStart={(columnId) => {
+              setDraggedColumnId(columnId);
+              setDropTargetColumnId(null);
+              setFilterPopoverColumnId(null);
+              setColumnMenuColumnId(null);
+            }}
+            onColumnDragOver={(columnId) => {
+              if (
+                draggedColumnId &&
+                draggedColumnId !== columnId &&
+                getColumnLane(draggedColumnId) === getColumnLane(columnId)
+              ) {
+                setDropTargetColumnId(columnId);
+              }
+            }}
+            onColumnDrop={reorderColumn}
+            onColumnDragEnd={() => {
+              setDraggedColumnId(null);
+              setDropTargetColumnId(null);
+            }}
             filterModel={filterModel}
             getColumnFilterType={getColumnFilterType}
             getColumnFilterValues={getColumnFilterValuesForColumn}
             onSetColumnFilter={setColumnFilter}
+            filterPopoverColumnId={filterPopoverColumnId}
+            onFilterPopoverOpenChange={(columnId, open) => {
+              setFilterPopoverColumnId(open ? columnId : null);
+            }}
             columnMenuColumnId={columnMenuColumnId}
-            onColumnMenuOpenChange={(columnId, open) =>
-              setColumnMenuColumnId(open ? columnId : null)
-            }
+            onColumnMenuOpenChange={(columnId, open) => {
+              if (open) {
+                setFilterPopoverColumnId(null);
+              }
+
+              setColumnMenuColumnId(open ? columnId : null);
+            }}
             onOpenFilters={openColumnFilters}
             onClearColumnFilter={clearColumnFilter}
             onPinColumn={pinColumn}
@@ -2459,6 +2744,7 @@ export function SmartGrid<T>({
             onToggleTreeNode={toggleTreeNode}
             onToggleDetailRow={toggleDetailRow}
             onReorderRow={reorderVisibleRows}
+            onMoveRow={moveVisibleRow}
             onResetRowDragState={resetRowDragState}
             onSetDraggedRowIndex={setDraggedRowIndex}
             onSetDropTargetRowIndex={setDropTargetRowIndex}
@@ -2521,7 +2807,9 @@ export function SmartGrid<T>({
           <span>{activeCellLabel}</span>
           <span>{rangeSize ? `${rangeSize} cells selected` : "No range"}</span>
           <span>{activeFilterCount} filters</span>
-          <span>{sortModel ? `Sorted ${sortModel.direction}` : "Unsorted"}</span>
+          <span>
+            {sortModel ? `Sorted ${sortModel.direction}` : "Unsorted"}
+          </span>
         </div>
       </div>
     </GridContext.Provider>

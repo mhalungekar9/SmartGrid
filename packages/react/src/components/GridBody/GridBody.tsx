@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { Column } from "@smartgrid/core";
+import type { Column } from "@gridnexa/core";
 import { GridRow } from "../GridRow/GridRow";
 import "./GridBody.css";
 
@@ -42,6 +42,7 @@ interface Props<T> {
   onToggleTreeNode: (treeKey: string) => void;
   onToggleDetailRow: (rowIndex: number) => void;
   onReorderRow: (sourceRowIndex: number, targetRowIndex: number) => void;
+  onMoveRow: (rowIndex: number, direction: -1 | 1) => void;
   onResetRowDragState: () => void;
   onSetDraggedRowIndex: (rowIndex: number | null) => void;
   onSetDropTargetRowIndex: (rowIndex: number | null) => void;
@@ -54,6 +55,7 @@ export function GridBody<T>({
   onToggleTreeNode,
   onToggleDetailRow,
   onReorderRow,
+  onMoveRow,
   onResetRowDragState,
   onSetDraggedRowIndex,
   onSetDropTargetRowIndex,
@@ -135,6 +137,7 @@ export function GridBody<T>({
           onToggleTreeNode={onToggleTreeNode}
           onToggleDetailRow={onToggleDetailRow}
           onReorderRow={onReorderRow}
+          onMoveRow={onMoveRow}
           onResetRowDragState={onResetRowDragState}
           onSetDraggedRowIndex={onSetDraggedRowIndex}
           onSetDropTargetRowIndex={onSetDropTargetRowIndex}

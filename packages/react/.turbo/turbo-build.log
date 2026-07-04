@@ -5,13 +5,13 @@ $ tsup src/index.ts --format esm,cjs --dts
 [34mCLI[39m Target: es2022
 [34mESM[39m Build start
 [34mCJS[39m Build start
-[32mCJS[39m [1mdist\index.css [22m[32m10.65 KB[39m
-[32mCJS[39m [1mdist\index.cjs [22m[32m108.55 KB[39m
-[32mCJS[39m ⚡️ Build success in 281ms
 [32mESM[39m [1mdist\index.css [22m[32m10.65 KB[39m
-[32mESM[39m [1mdist\index.js  [22m[32m101.53 KB[39m
-[32mESM[39m ⚡️ Build success in 291ms
+[32mESM[39m [1mdist\index.js  [22m[32m102.01 KB[39m
+[32mESM[39m ⚡️ Build success in 190ms
+[32mCJS[39m [1mdist\index.css [22m[32m10.65 KB[39m
+[32mCJS[39m [1mdist\index.cjs [22m[32m109.04 KB[39m
+[32mCJS[39m ⚡️ Build success in 194ms
 [34mDTS[39m Build start
-[32mDTS[39m ⚡️ Build success in 3851ms
+[32mDTS[39m ⚡️ Build success in 2275ms
 [32mDTS[39m [1mdist\index.d.ts  [22m[32m6.08 KB[39m
 [32mDTS[39m [1mdist\index.d.cts [22m[32m6.08 KB[39m

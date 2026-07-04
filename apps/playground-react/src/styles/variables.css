@@ -1,0 +1,32 @@
+:root {
+  --app-sidebar-width: 292px;
+  --app-radius: 14px;
+  --app-border: rgba(148, 163, 184, 0.22);
+  --app-primary: #2563eb;
+  --app-accent: #0f766e;
+  --app-danger: #dc2626;
+  --app-font: Inter, "Segoe UI", system-ui, sans-serif;
+  --app-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+[data-app-theme="dark"] {
+  --app-bg: #101418;
+  --app-panel: #171c22;
+  --app-panel-strong: #1f2630;
+  --app-muted: #9aa6b2;
+  --app-text: #eef2f6;
+  --app-heading: #ffffff;
+  --app-soft: rgba(37, 99, 235, 0.16);
+  --app-shadow: 0 18px 44px rgba(0, 0, 0, 0.28);
+}
+
+[data-app-theme="light"] {
+  --app-bg: #eef3f9;
+  --app-panel: #ffffff;
+  --app-panel-strong: #f6f8fb;
+  --app-muted: #5f6f82;
+  --app-text: #182230;
+  --app-heading: #0f172a;
+  --app-soft: rgba(37, 99, 235, 0.11);
+  --app-shadow: 0 16px 36px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06);
+}

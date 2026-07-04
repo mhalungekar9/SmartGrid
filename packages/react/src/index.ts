@@ -1,4 +1,4 @@
-import "./styles/smartgrid.css";
+import "./styles/gridnexa.css";
 
 export * from "./components";
-export * from "@smartgrid/core";
+export * from "@gridnexa/core";

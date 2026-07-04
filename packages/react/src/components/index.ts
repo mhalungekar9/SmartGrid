@@ -1,4 +1,4 @@
-export * from "./SmartGrid/SmartGrid";
+export * from "./GridNexa/GridNexa";
 export * from "./GridRoot/GridRoot";
 export * from "./GridHeader/GridHeader";
 export * from "./GridBody/GridBody";

@@ -51,19 +51,29 @@ export interface GridTransaction<T = unknown> {
   remove?: T[];
 }
 
+export interface MergedHeader {
+  id: string;
+  headerName: string;
+  columnIds: string[];
+  align?: "left" | "center" | "right";
+}
+
 export interface GridOptions<T = unknown> {
   columns: Column<T>[];
   rows: T[];
+  mergedHeaders?: MergedHeader[];
   columnFilters?: Record<string, ColumnFilterModel>;
   quickFilterText?: string;
   externalFilter?: ExternalFilter<T>;
   advancedFilter?: AdvancedFilter<T>;
   rowNumbers?: boolean;
+  checkboxSelection?: boolean;
   enableRangeSelection?: boolean;
   enableFillHandle?: boolean;
   enableUndoRedo?: boolean;
   localeText?: Record<string, string>;
   getRowId?: (row: T, index: number) => string | number;
+  onRowSelectionChange?: (selectedRows: T[]) => void;
   pivotBy?: keyof T & string;
   pivotValueColumns?: Array<keyof T & string>;
   pivotAggregation?: PivotAggregation;

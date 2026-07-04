@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useGridContext } from "../../context/GridContext";
-import type { Column } from "@smartgrid/core";
+import type { Column } from "@gridnexa/core";
 import { GridCell } from "../GridCell/GridCell";
 
 import "./GridRow.css";
@@ -41,6 +41,7 @@ interface Props<T> {
   onToggleTreeNode: (treeKey: string) => void;
   onToggleDetailRow: (rowIndex: number) => void;
   onReorderRow: (sourceRowIndex: number, targetRowIndex: number) => void;
+  onMoveRow: (rowIndex: number, direction: -1 | 1) => void;
   onResetRowDragState: () => void;
   onSetDraggedRowIndex: (rowIndex: number | null) => void;
   onSetDropTargetRowIndex: (rowIndex: number | null) => void;
@@ -53,17 +54,24 @@ export function GridRow<T>({
   onToggleTreeNode,
   onToggleDetailRow,
   onReorderRow,
+  onMoveRow,
   onResetRowDragState,
   onSetDraggedRowIndex,
   onSetDropTargetRowIndex,
 }: Props<T>) {
   const {
     columnTemplate,
+    rows: contextRows,
     selectedRowIndex,
+    selectedRowIds,
+    checkboxSelection,
+    getRowSelectionId,
     onRowSelect,
     dropTargetRowIndex,
     rowNumbers,
+    toggleRowSelection,
   } = useGridContext<T>();
+  const leadingColumnCount = (checkboxSelection ? 1 : 0) + (rowNumbers ? 1 : 0);
 
   if (item.kind === "group" || item.kind === "pivot") {
     const isPivot = item.kind === "pivot";
@@ -86,7 +94,7 @@ export function GridRow<T>({
           <div
             className="sg-group-label"
             style={{
-              gridColumn: `1 / span ${columns.length + (rowNumbers ? 1 : 0)}`,
+              gridColumn: `1 / span ${columns.length + leadingColumnCount}`,
             }}
           >
             <span className="sg-group-toggle" aria-hidden="true">
@@ -113,7 +121,7 @@ export function GridRow<T>({
           <div
             className="sg-detail-content"
             style={{
-              gridColumn: `1 / span ${columns.length + (rowNumbers ? 1 : 0)}`,
+              gridColumn: `1 / span ${columns.length + leadingColumnCount}`,
             }}
           >
             {item.content as ReactNode}
@@ -125,7 +133,9 @@ export function GridRow<T>({
 
   const dataItem = item as DataRow<T>;
   const { row, rowIndex } = dataItem;
-  const isSelected = selectedRowIndex === rowIndex;
+  const rowSelectionId = getRowSelectionId(row, rowIndex);
+  const isSelected =
+    selectedRowIndex === rowIndex || selectedRowIds.has(rowSelectionId);
 
   return (
     <div
@@ -136,6 +146,13 @@ export function GridRow<T>({
       draggable
       onClick={() => onRowSelect(rowIndex)}
       onDragStart={(event) => {
+        const target = event.target as HTMLElement | null;
+
+        if (target?.closest("button, input, select, textarea")) {
+          event.preventDefault();
+          return;
+        }
+
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", String(rowIndex));
         onSetDraggedRowIndex(rowIndex);
@@ -164,6 +181,46 @@ export function GridRow<T>({
         gridTemplateColumns: columnTemplate,
       }}
     >
+      <div className="sg-row-reorder-controls" aria-label="Move row">
+        <button
+          className="sg-row-reorder-button"
+          type="button"
+          title="Move row up"
+          aria-label={`Move row ${rowIndex + 1} up`}
+          disabled={rowIndex === 0}
+          onClick={(event) => {
+            event.stopPropagation();
+            onMoveRow(rowIndex, -1);
+          }}
+        >
+          ↑
+        </button>
+        <button
+          className="sg-row-reorder-button"
+          type="button"
+          title="Move row down"
+          aria-label={`Move row ${rowIndex + 1} down`}
+          disabled={rowIndex >= contextRows.length - 1}
+          onClick={(event) => {
+            event.stopPropagation();
+            onMoveRow(rowIndex, 1);
+          }}
+        >
+          ↓
+        </button>
+      </div>
+      {checkboxSelection ? (
+        <div className="sg-selection-cell">
+          <input
+            className="sg-selection-checkbox"
+            type="checkbox"
+            checked={selectedRowIds.has(rowSelectionId)}
+            aria-label={`Select row ${rowIndex + 1}`}
+            onChange={() => toggleRowSelection(row, rowIndex)}
+            onClick={(event) => event.stopPropagation()}
+          />
+        </div>
+      ) : null}
       {rowNumbers ? <div className="sg-row-number">{rowIndex + 1}</div> : null}
       {columns
         .filter((column) => !column.hidden)

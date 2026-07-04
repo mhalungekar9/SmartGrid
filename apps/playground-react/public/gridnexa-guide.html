@@ -5,10 +5,10 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1" name="viewport" />
     <meta
-      content="SmartGrid feature index, usage guide, and React examples"
+      content="GridNexa feature index, usage guide, and React examples"
       name="description"
     />
-    <title>SmartGrid Guide</title>
+    <title>GridNexa Guide</title>
     <style>
       :root {
         color-scheme: dark;
@@ -636,9 +636,9 @@
   </head>
   <body>
     <main class="shell">
-      <aside aria-label="SmartGrid feature index" class="sidebar">
+      <aside aria-label="GridNexa feature index" class="sidebar">
         <div class="brand">
-          <div class="brand-title">SmartGrid Guide</div>
+          <div class="brand-title">GridNexa Guide</div>
           <p class="brand-subtitle">
             Feature index and examples for the React grid.
           </p>
@@ -698,7 +698,7 @@
       </aside>
       <div class="content">
         <section class="hero">
-          <span class="kicker">React SmartGrid</span>
+          <span class="kicker">React GridNexa</span>
           <h1>Feature guide with usage examples</h1>
           <p class="lead">
             Use the left index to jump to a feature. Each section explains what
@@ -726,14 +726,14 @@
               The package re-exports core types like <code>Column</code>.
             </p>
           </div>
-          <pre><code>import { SmartGrid, type Column } from "@smartgrid/react";</code></pre>
+          <pre><code>import { GridNexa, type Column } from "@gridnexa/react";</code></pre>
         </section>
         <section class="section" id="basic-grid">
           <div class="section-header">
             <h2>Basic Grid</h2>
             <p>
               Define rows and typed columns, then pass them to
-              <code>SmartGrid</code>. The grid renders immediately with header,
+              <code>GridNexa</code>. The grid renders immediately with header,
               body, toolbar, and status bar behavior.
             </p>
           </div>
@@ -757,7 +757,7 @@ const columns: Column&lt;Employee&gt;[] = [
   { id: "score", field: "score", headerName: "Score", width: 120 },
 ];
 
-&lt;SmartGrid columns={columns} rows={rows} /&gt;</code></pre>
+&lt;GridNexa columns={columns} rows={rows} /&gt;</code></pre>
             <ul class="notes">
               <li>
                 <strong>Required props:</strong> <code>columns</code> and
@@ -779,12 +779,12 @@ const columns: Column&lt;Employee&gt;[] = [
             <div class="preview-title">
               <span>Example output</span>
               <span class="preview-caption"
-                >A basic SmartGrid with toolbar, rows, and status</span
+                >A basic GridNexa with toolbar, rows, and status</span
               >
             </div>
             <div class="mini-grid">
               <div class="mini-toolbar">
-                <span class="mini-button">SmartGrid</span>
+                <span class="mini-button">GridNexa</span>
                 <span class="mini-input">Quick filter</span>
                 <span class="mini-button">Columns</span>
                 <span class="mini-button">Export CSV</span>
@@ -843,7 +843,7 @@ const columns: Column&lt;Employee&gt;[] = [
           <div class="section-header">
             <h2>Column Options</h2>
             <p>
-              Most SmartGrid behavior is switched on from the column definition.
+              Most GridNexa behavior is switched on from the column definition.
               Use stable <code>id</code> values because sorting, filtering,
               pinning, and width state all refer to column ids.
             </p>
@@ -986,7 +986,7 @@ const columns: Column&lt;Employee&gt;[] = [
           <div class="section-header">
             <h2>Filtering</h2>
             <p>
-              SmartGrid supports text, number, date, set, and multi-condition
+              GridNexa supports text, number, date, set, and multi-condition
               filter models. Add <code>filter</code> to columns, or pass a
               controlled <code>columnFilters</code> object.
             </p>
@@ -999,7 +999,7 @@ const columns: Column&lt;Employee&gt;[] = [
   { id: "hired", field: "hired", headerName: "Hired", filter: "date" },
 ] satisfies Column&lt;Employee&gt;[];
 
-&lt;SmartGrid
+&lt;GridNexa
   columns={columns}
   rows={rows}
   columnFilters={{
@@ -1085,7 +1085,7 @@ const columns: Column&lt;Employee&gt;[] = [
               matching cells and moves the active cell through matches.
             </p>
           </div>
-          <pre><code>&lt;SmartGrid
+          <pre><code>&lt;GridNexa
   columns={columns}
   rows={rows}
   quickFilterText="engineering"
@@ -1161,11 +1161,11 @@ const columns: Column&lt;Employee&gt;[] = [
           <div class="section-header">
             <h2>Grouping</h2>
             <p>
-              Pass <code>groupBy</code> with a row field. SmartGrid creates
+              Pass <code>groupBy</code> with a row field. GridNexa creates
               group header rows, summary text, and collapse or expand behavior.
             </p>
           </div>
-          <pre><code>&lt;SmartGrid
+          <pre><code>&lt;GridNexa
   columns={columns}
   rows={rows}
   groupBy="department"
@@ -1208,7 +1208,7 @@ const columns: Column&lt;Employee&gt;[] = [
             </p>
           </div>
           <div class="example-grid">
-            <pre><code>&lt;SmartGrid
+            <pre><code>&lt;GridNexa
   columns={columns}
   rows={rows}
   groupBy="department"
@@ -1325,7 +1325,7 @@ const columns: Column&lt;Employee&gt;[] = [
               the returned path.
             </p>
           </div>
-          <pre><code>&lt;SmartGrid
+          <pre><code>&lt;GridNexa
   columns={columns}
   rows={rows}
   getTreeDataPath={(row) =&gt; [row.department, row.city, row.name]}
@@ -1399,7 +1399,7 @@ const columns: Column&lt;Employee&gt;[] = [
               to filtered data rows before grouping and tree rendering.
             </p>
           </div>
-          <pre><code>&lt;SmartGrid columns={columns} rows={rows} pageSize={25} /&gt;</code></pre>
+          <pre><code>&lt;GridNexa columns={columns} rows={rows} pageSize={25} /&gt;</code></pre>
           <div class="preview">
             <div class="preview-title">
               <span>Example output</span>
@@ -1532,7 +1532,7 @@ const columns: Column&lt;Employee&gt;[] = [
               <code>enableRangeSelection</code>.
             </p>
           </div>
-          <pre><code>&lt;SmartGrid
+          <pre><code>&lt;GridNexa
   columns={columns}
   rows={rows}
   enableRangeSelection
@@ -1610,7 +1610,7 @@ const columns: Column&lt;Employee&gt;[] = [
               selected range.
             </p>
           </div>
-          <pre><code>&lt;SmartGrid
+          <pre><code>&lt;GridNexa
   columns={columns}
   rows={rows}
   enableFillHandle
@@ -1687,7 +1687,7 @@ const columns: Column&lt;Employee&gt;[] = [
           </div>
           <pre><code>// No prop is required.
 // Right-click any body cell to open the cell context menu.
-&lt;SmartGrid columns={columns} rows={rows} /&gt;</code></pre>
+&lt;GridNexa columns={columns} rows={rows} /&gt;</code></pre>
           <div class="preview">
             <div class="preview-title">
               <span>Example output</span>
@@ -1721,7 +1721,7 @@ const columns: Column&lt;Employee&gt;[] = [
               because pivot rows are generated summaries.
             </p>
           </div>
-          <pre><code>&lt;SmartGrid columns={columns} rows={rows} /&gt;</code></pre>
+          <pre><code>&lt;GridNexa columns={columns} rows={rows} /&gt;</code></pre>
           <div class="preview">
             <div class="preview-title">
               <span>Example output</span>
@@ -1753,7 +1753,7 @@ const columns: Column&lt;Employee&gt;[] = [
               rows under each data row.
             </p>
           </div>
-          <pre><code>&lt;SmartGrid
+          <pre><code>&lt;GridNexa
   columns={columns}
   rows={rows}
   getRowId={(row) =&gt; row.id}
@@ -1962,7 +1962,7 @@ const columns: Column&lt;Employee&gt;[] = [
               Numbers reflect the current rendered row positions.
             </p>
           </div>
-          <pre><code>&lt;SmartGrid columns={columns} rows={rows} rowNumbers /&gt;</code></pre>
+          <pre><code>&lt;GridNexa columns={columns} rows={rows} rowNumbers /&gt;</code></pre>
           <div class="preview">
             <div class="preview-title">
               <span>Example output</span>
@@ -2035,7 +2035,7 @@ const columns: Column&lt;Employee&gt;[] = [
           </div>
           <pre><code>// No extra prop is required.
 // Use Export CSV or Export Excel from the toolbar.
-&lt;SmartGrid columns={columns} rows={rows} /&gt;</code></pre>
+&lt;GridNexa columns={columns} rows={rows} /&gt;</code></pre>
           <div class="preview">
             <div class="preview-title">
               <span>Example output</span>
@@ -2062,7 +2062,7 @@ const columns: Column&lt;Employee&gt;[] = [
               the grid state. Provide <code>getRowId</code> for stable matching.
             </p>
           </div>
-          <pre><code>&lt;SmartGrid
+          <pre><code>&lt;GridNexa
   columns={columns}
   rows={rows}
   getRowId={(row) =&gt; row.id}
@@ -2136,7 +2136,7 @@ const columns: Column&lt;Employee&gt;[] = [
               state. Use it to mirror grid operations to a backend.
             </p>
           </div>
-          <pre><code>&lt;SmartGrid
+          <pre><code>&lt;GridNexa
   columns={columns}
   rows={rows}
   getRowId={(row) =&gt; row.id}
@@ -2170,7 +2170,7 @@ const columns: Column&lt;Employee&gt;[] = [
               Missing keys fall back to built-in English labels.
             </p>
           </div>
-          <pre><code>&lt;SmartGrid
+          <pre><code>&lt;GridNexa
   columns={columns}
   rows={rows}
   localeText={{
@@ -2301,7 +2301,7 @@ const columns: Column&lt;Employee&gt;[] = [
           </div>
         </section>
         <p class="footer-note">
-          This guide matches the SmartGrid implementation in this workspace.
+          This guide matches the GridNexa implementation in this workspace.
           When adding a new prop or toolbar action, add it to the left index,
           create a matching section, and include a small React example.
         </p>

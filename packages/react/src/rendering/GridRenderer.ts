@@ -1,4 +1,4 @@
-import type { Column } from "@smartgrid/core";
+import type { Column } from "@gridnexa/core";
 import { buildGridTemplate } from "./GridLayout";
 
 export class GridRenderer<T> {

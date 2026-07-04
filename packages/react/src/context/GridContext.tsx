@@ -12,6 +12,13 @@ export interface GridContextValue<T> {
   columnTemplate: string;
   selectedRowIndex: number | null;
   onRowSelect: (rowIndex: number) => void;
+  selectedRowIds: Set<string | number>;
+  checkboxSelection: boolean;
+  allVisibleRowsSelected: boolean;
+  someVisibleRowsSelected: boolean;
+  getRowSelectionId: (row: T, rowIndex: number) => string | number;
+  toggleRowSelection: (row: T, rowIndex: number) => void;
+  toggleAllRowsSelection: () => void;
   rowNumbers: boolean;
   getColumnStyle: (columnId: string) => CSSProperties;
   activeCell: { rowIndex: number; columnIndex: number } | null;

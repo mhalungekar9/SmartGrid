@@ -4,7 +4,7 @@ import { GridStateManager } from "../state/GridState";
 import { EventBus } from "../events/EventBus";
 import { GridApi } from "../api/GridApi";
 
-export class SmartGridEngine<T = unknown> {
+export class GridNexaEngine<T = unknown> {
   private readonly stateManager: GridStateManager<T>;
   private readonly eventBus = new EventBus();
   private readonly api: GridApi<T>;

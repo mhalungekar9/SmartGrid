@@ -1,5 +1,5 @@
-import type { Column } from "@smartgrid/core";
-import type { ColumnFilterModel } from "@smartgrid/core";
+import type { Column } from "@gridnexa/core";
+import type { ColumnFilterModel } from "@gridnexa/core";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Popover from "@radix-ui/react-popover";
 import {
@@ -26,11 +26,19 @@ interface Props<T> {
   onSortDirection: (columnId: string, direction: "asc" | "desc" | null) => void;
   onResizeStart: (columnId: string, startWidth: number, startX: number) => void;
   onAutoSize: (columnId: string) => void;
+  isDragging: boolean;
+  isDropTarget: boolean;
+  onColumnDragStart: (columnId: string) => void;
+  onColumnDragOver: (columnId: string) => void;
+  onColumnDrop: (sourceColumnId: string, targetColumnId: string) => void;
+  onColumnDragEnd: () => void;
   hasFilter: boolean;
   filter: ColumnFilterModel | undefined;
   filterType: ColumnFilterModel["type"];
   filterValues: string[];
   onSetFilter: (columnId: string, filter: ColumnFilterModel | null) => void;
+  filterOpen: boolean;
+  onFilterOpenChange: (columnId: string, open: boolean) => void;
   menuOpen: boolean;
   onMenuOpenChange: (columnId: string, open: boolean) => void;
   onOpenFilters: (columnId: string) => void;
@@ -47,11 +55,19 @@ export function GridHeaderCell<T>({
   onSortDirection,
   onResizeStart,
   onAutoSize,
+  isDragging,
+  isDropTarget,
+  onColumnDragStart,
+  onColumnDragOver,
+  onColumnDrop,
+  onColumnDragEnd,
   hasFilter,
   filter,
   filterType,
   filterValues,
   onSetFilter,
+  filterOpen,
+  onFilterOpenChange,
   menuOpen,
   onMenuOpenChange,
   onOpenFilters,
@@ -69,8 +85,9 @@ export function GridHeaderCell<T>({
 
   return (
     <div
-      className="sg-header-cell"
+      className={`sg-header-cell${isDragging ? " sg-header-cell--dragging" : ""}${isDropTarget ? " sg-header-cell--drop-target" : ""}`}
       role="columnheader"
+      draggable
       aria-sort={
         sortDirection
           ? sortDirection === "asc"
@@ -78,7 +95,33 @@ export function GridHeaderCell<T>({
             : "descending"
           : "none"
       }
-      style={{ width, ...getColumnStyle(column.id) }}
+      style={getColumnStyle(column.id)}
+      onDragStart={(event) => {
+        const target = event.target as HTMLElement | null;
+
+        if (target?.closest("button, input, select, textarea, .sg-resize-handle")) {
+          event.preventDefault();
+          return;
+        }
+
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", column.id);
+        onColumnDragStart(column.id);
+      }}
+      onDragOver={(event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "move";
+        onColumnDragOver(column.id);
+      }}
+      onDrop={(event) => {
+        event.preventDefault();
+        const sourceColumnId = event.dataTransfer.getData("text/plain");
+
+        if (sourceColumnId) {
+          onColumnDrop(sourceColumnId, column.id);
+        }
+      }}
+      onDragEnd={onColumnDragEnd}
     >
       <span className="sg-header-label">{column.headerName}</span>
 
@@ -102,10 +145,13 @@ export function GridHeaderCell<T>({
         </button>
 
         <Popover.Root
+          open={filterOpen}
           onOpenChange={(open) => {
             if (open) {
               onMenuOpenChange(column.id, false);
             }
+
+            onFilterOpenChange(column.id, open);
           }}
         >
           <Popover.Trigger asChild>
@@ -129,6 +175,8 @@ export function GridHeaderCell<T>({
               sideOffset={8}
               collisionPadding={12}
               onClick={(event) => event.stopPropagation()}
+              onInteractOutside={() => onFilterOpenChange(column.id, false)}
+              onEscapeKeyDown={() => onFilterOpenChange(column.id, false)}
             >
               <div className="sg-column-filter-title">
                 <SlidersHorizontal size={15} />

@@ -1,4 +1,4 @@
-import type { Column } from "@smartgrid/core";
+import type { Column } from "@gridnexa/core";
 
 function evaluateFormula<T>(formula: string, row: T): unknown {
   const expression = formula.slice(1).trim();
