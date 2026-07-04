@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "..",
+    "outDir": "dist",
+    "lib": ["ES2022", "DOM"],
+    "experimentalDecorators": true,
+    "paths": {
+      "@gridnexa/javascript": ["../javascript/src/index.ts"]
+    }
+  },
+  "include": ["src"]
+}

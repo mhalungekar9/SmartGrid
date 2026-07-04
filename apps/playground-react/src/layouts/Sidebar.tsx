@@ -29,7 +29,14 @@ export function Sidebar({ collapsed, onNavigate }: SidebarProps) {
 
   return (
     <aside className="app-sidebar" aria-label="Primary navigation" data-collapsed={collapsed}>
-      <div className="brand-lockup">
+      <button
+        className="brand-lockup"
+        type="button"
+        onClick={() => {
+          navigateTo("/");
+          onNavigate();
+        }}
+      >
         <span className="brand-mark">
           <img src={gridNexaMark} alt="" aria-hidden="true" />
         </span>
@@ -37,7 +44,7 @@ export function Sidebar({ collapsed, onNavigate }: SidebarProps) {
           <strong>GridNexa</strong>
           <span>Developer docs</span>
         </div>
-      </div>
+      </button>
 
       <nav className="sidebar-nav" aria-label="GridNexa examples">
         {routeItems.map((group) => (

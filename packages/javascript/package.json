@@ -1,0 +1,35 @@
+{
+  "name": "@gridnexa/javascript",
+  "version": "0.0.1",
+  "description": "Vanilla JavaScript package for GridNexa",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "dev": "tsup src/index.ts --watch",
+    "clean": "rimraf dist"
+  },
+  "keywords": [
+    "gridnexa",
+    "data-grid",
+    "javascript",
+    "typescript",
+    "table",
+    "excel"
+  ],
+  "author": "Sachin M",
+  "license": "MIT",
+  "dependencies": {
+    "@gridnexa/core": "workspace:*"
+  },
+  "devDependencies": {
+    "rimraf": "^6.1.3",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3"
+  }
+}

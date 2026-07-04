@@ -143,6 +143,13 @@ const excelBanners = [
   },
 ];
 
+const supportedTechnologies = [
+  { name: "React", packageName: "@gridnexa/react", logo: "R", className: "react" },
+  { name: "Angular", packageName: "@gridnexa/angular", logo: "A", className: "angular" },
+  { name: "Vue", packageName: "@gridnexa/vue", logo: "V", className: "vue" },
+  { name: "JavaScript", packageName: "@gridnexa/javascript", logo: "JS", className: "javascript" },
+];
+
 export function Home() {
   const [rows, setRows] = useState(marketRows);
   const [pulse, setPulse] = useState(0);
@@ -150,6 +157,14 @@ export function Home() {
     () => rows.reduce((total, row) => total + row.totalValue, 0),
     [rows],
   );
+
+  useEffect(() => {
+    document.body.classList.add("gridnexa-marketing-page");
+
+    return () => {
+      document.body.classList.remove("gridnexa-marketing-page");
+    };
+  }, []);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -205,13 +220,29 @@ export function Home() {
 
       <section className="site-hero">
         <div className="site-hero-copy">
-          <span className="site-kicker">React data grid for serious interfaces</span>
-          <h1>Ship spreadsheet-grade data experiences without losing product polish.</h1>
-          <p>
-            GridNexa blends Excel-like power with modern React ergonomics: merged column
-            groups, live editing, formulas, filtering, grouping, pivoting, export, and
-            theme-ready surfaces your users can understand at a glance.
+          <span className="site-kicker">Data grid for serious interfaces</span>
+          <h1>Spreadsheet-grade grids for every modern UI stack.</h1>
+          <p className="site-punchline">
+            The Excel-like grid for React, Angular, Vue, and JavaScript apps.
           </p>
+          <div className="technology-strip" aria-label="Supported UI technologies">
+            {supportedTechnologies.map((technology) => (
+              <button
+                className="technology-chip"
+                key={technology.name}
+                type="button"
+                onClick={() => navigateTo("/docs/basic-grid")}
+              >
+                <span className={`technology-logo technology-logo--${technology.className}`}>
+                  {technology.logo}
+                </span>
+                <span>
+                  <strong>{technology.name}</strong>
+                  <small>{technology.packageName}</small>
+                </span>
+              </button>
+            ))}
+          </div>
           <div className="site-actions">
             <button className="btn btn-light btn-lg" type="button" onClick={() => navigateTo("/docs/basic-grid")}>
               <i className="bi bi-book me-2" />
@@ -228,6 +259,33 @@ export function Home() {
             <span><strong>${Math.round(liveVolume).toLocaleString()}</strong> active value</span>
           </div>
         </div>
+      </section>
+
+      <section className="site-grid-showcase" aria-label="GridNexa market grid preview">
+        <div className="showcase-toolbar">
+          <div>
+            <span className="site-kicker">Live grid preview</span>
+            <h2>Financial workspace, powered by GridNexa</h2>
+          </div>
+          <div className="showcase-controls">
+            <span className="live-dot">Live updates</span>
+            <span>Grouped headers</span>
+            <span>Excel features</span>
+          </div>
+        </div>
+        <div className="excel-feature-rail" aria-label="Excel-style features">
+          {["Merged headers", "Formulas", "Fill handle", "Range select", "Find", "Undo / Redo", "CSV / Excel export"].map((feature) => (
+            <span key={feature}>{feature}</span>
+          ))}
+        </div>
+        <GridNexa
+          columns={marketColumns}
+          rows={rows}
+          mergedHeaders={mergedHeaders}
+          rowNumbers
+          checkboxSelection
+          getRowId={(row) => row.id}
+        />
       </section>
 
       <section className="excel-banner-grid" aria-label="Excel-style GridNexa feature banners">
@@ -263,31 +321,66 @@ export function Home() {
         ))}
       </section>
 
-      <section className="site-grid-showcase" aria-label="GridNexa market grid preview">
-        <div className="showcase-toolbar">
-          <div>
-            <span className="site-kicker">Live grid preview</span>
-            <h2>Financial workspace, powered by GridNexa</h2>
+      <section className="structure-preview-grid" aria-label="Tree grid and grouping feature previews">
+        <article className="structure-preview-card">
+          <div className="structure-preview-copy">
+            <span className="site-kicker">Tree Grid</span>
+            <h2>Nested records with expandable branches.</h2>
+            <p>Show regions, departments, teams, and leaf rows in one readable hierarchy.</p>
           </div>
-          <div className="showcase-controls">
-            <span className="live-dot">Live updates</span>
-            <span>Grouped headers</span>
-            <span>Excel features</span>
+          <div className="structure-grid-preview" role="img" aria-label="Tree grid preview">
+            <div className="structure-header">
+              <span>Name</span>
+              <span>Department</span>
+              <span>City</span>
+            </div>
+            {[
+              ["expanded", "Americas", "", ""],
+              ["expanded depth-1", "Engineering", "Engineering", ""],
+              ["leaf depth-2", "Lena Brooks", "Engineering", "New York"],
+              ["expanded depth-1", "Finance", "Finance", ""],
+              ["leaf depth-2", "Nina Patel", "Finance", "Toronto"],
+              ["expanded depth-1", "Product", "Product", ""],
+              ["leaf depth-2", "Mateo Silva", "Product", "Sao Paulo"],
+            ].map(([state, name, department, city]) => (
+              <div className={`structure-row ${state}`} key={`${state}-${name}`}>
+                <span>{name}</span>
+                <span>{department}</span>
+                <span>{city}</span>
+              </div>
+            ))}
           </div>
-        </div>
-        <div className="excel-feature-rail" aria-label="Excel-style features">
-          {["Merged headers", "Formulas", "Fill handle", "Range select", "Find", "Undo / Redo", "CSV / Excel export"].map((feature) => (
-            <span key={feature}>{feature}</span>
-          ))}
-        </div>
-        <GridNexa
-          columns={marketColumns}
-          rows={rows}
-          mergedHeaders={mergedHeaders}
-          rowNumbers
-          checkboxSelection
-          getRowId={(row) => row.id}
-        />
+        </article>
+
+        <article className="structure-preview-card">
+          <div className="structure-preview-copy">
+            <span className="site-kicker">Grouping</span>
+            <h2>Bucket rows into collapsible summaries.</h2>
+            <p>Group by department, region, status, or any typed column while keeping row actions visible.</p>
+          </div>
+          <div className="structure-grid-preview" role="img" aria-label="Grouped rows preview">
+            <div className="structure-header">
+              <span>Name</span>
+              <span>Department</span>
+              <span>City</span>
+            </div>
+            {[
+              ["group", "Operations", "2 rows", ""],
+              ["leaf", "John Carter", "Operations", "London"],
+              ["leaf", "Kenji Sato", "Operations", "Tokyo"],
+              ["group", "Product", "3 rows", ""],
+              ["leaf", "Alice Moreau", "Product", "Paris"],
+              ["leaf", "Priya Rao", "Product", "Paris"],
+              ["leaf", "Mateo Silva", "Product", "Sao Paulo"],
+            ].map(([state, name, department, city]) => (
+              <div className={`structure-row ${state}`} key={`${state}-${name}-${city}`}>
+                <span>{name}</span>
+                <span>{department}</span>
+                <span>{city}</span>
+              </div>
+            ))}
+          </div>
+        </article>
       </section>
 
       <section className="site-demo-tabs" aria-label="Example industries">
