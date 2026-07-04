@@ -29,7 +29,7 @@ export function Sidebar({ collapsed, onNavigate }: SidebarProps) {
   return (
     <aside className="app-sidebar" aria-label="Primary navigation" data-collapsed={collapsed}>
       <div className="brand-lockup">
-        <span className="brand-mark">SG</span>
+        <span className="brand-mark">GN</span>
         <div>
           <strong>GridNexa</strong>
           <span>Developer docs</span>

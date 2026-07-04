@@ -1,4 +1,5 @@
 import type { AppTheme } from "../hooks/useTheme";
+import { navigateTo } from "../utils/navigation";
 
 interface HeaderProps {
   theme: AppTheme;
@@ -32,10 +33,14 @@ export function Header({
       </div>
 
       <div className="header-actions">
-        <a className="btn btn-outline-secondary btn-sm" href="/">
+        <button
+          className="btn btn-outline-secondary btn-sm"
+          type="button"
+          onClick={() => navigateTo("/")}
+        >
           <i className="bi bi-house me-2" />
           Home
-        </a>
+        </button>
         <button
           className="btn btn-primary btn-sm"
           type="button"

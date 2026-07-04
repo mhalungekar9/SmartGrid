@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { routeItems } from "../utils/routes";
+import { appRoutes } from "../utils/routes";
 
 function getCurrentPath() {
   const path = window.location.pathname.replace(/\/$/, "");
@@ -8,7 +8,7 @@ function getCurrentPath() {
 
 export function AppRoutes() {
   const [path, setPath] = useState(getCurrentPath);
-  const routes = useMemo(() => routeItems.flatMap((group) => group.items), []);
+  const routes = useMemo(() => appRoutes, []);
   const activeRoute = routes.find((route) => route.path === path) ?? routes[0];
   const Page = activeRoute.component;
 

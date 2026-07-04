@@ -21,12 +21,12 @@
 }
 
 [data-app-theme="light"] {
-  --app-bg: #eef3f9;
+  --app-bg: #f3f7fc;
   --app-panel: #ffffff;
-  --app-panel-strong: #f6f8fb;
-  --app-muted: #5f6f82;
-  --app-text: #182230;
-  --app-heading: #0f172a;
-  --app-soft: rgba(37, 99, 235, 0.11);
-  --app-shadow: 0 16px 36px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06);
+  --app-panel-strong: #f8fbff;
+  --app-muted: #40526b;
+  --app-text: #0f1b2d;
+  --app-heading: #071225;
+  --app-soft: rgba(37, 99, 235, 0.12);
+  --app-shadow: 0 24px 60px rgba(15, 23, 42, 0.14), 0 6px 18px rgba(15, 23, 42, 0.08);
 }
