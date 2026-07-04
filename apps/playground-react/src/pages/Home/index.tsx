@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { GridNexa, type Column, type MergedHeader } from "@gridnexa/react";
 import { navigateTo } from "../../utils/navigation";
+import gridNexaWordmark from "../../assets/GridNexa-With-Text-logo-transparent-cropped.png";
 
 interface MarketRow {
   id: number;
@@ -23,14 +24,14 @@ const marketRows: MarketRow[] = [
 ];
 
 const marketColumns: Column<MarketRow>[] = [
-  { id: "ticker", field: "ticker", headerName: "Ticker", width: 120, pinned: "left", sortable: true, filter: "text" },
-  { id: "name", field: "name", headerName: "Position", width: 240, sortable: true, filter: "text" },
-  { id: "desk", field: "desk", headerName: "Desk", width: 130, sortable: true, filter: "set" },
+  { id: "ticker", field: "ticker", headerName: "Ticker", width: 92, pinned: "left", sortable: true, filter: "text" },
+  { id: "name", field: "name", headerName: "Position", width: 190, sortable: true, filter: "text" },
+  { id: "desk", field: "desk", headerName: "Desk", width: 96, sortable: true, filter: "set" },
   {
     id: "trend",
     field: "trend",
     headerName: "Timeline",
-    width: 180,
+    width: 128,
     cellRenderer: (value) => (
       <span className="market-bars">
         {String(value)
@@ -41,12 +42,12 @@ const marketColumns: Column<MarketRow>[] = [
       </span>
     ),
   },
-  { id: "instrument", field: "instrument", headerName: "Instrument", width: 150, sortable: true, filter: "set" },
+  { id: "instrument", field: "instrument", headerName: "Type", width: 96, sortable: true, filter: "set" },
   {
     id: "pnl",
     field: "pnl",
     headerName: "P&L",
-    width: 130,
+    width: 92,
     sortable: true,
     filter: "number",
     cellRenderer: (value) => {
@@ -54,8 +55,8 @@ const marketColumns: Column<MarketRow>[] = [
       return <span className={amount >= 0 ? "market-up" : "market-down"}>{amount >= 0 ? "+" : "-"}{Math.abs(amount).toLocaleString()}</span>;
     },
   },
-  { id: "totalValue", field: "totalValue", headerName: "Total Value", width: 160, sortable: true, filter: "number", valueFormatter: (value) => `$${Number(value).toLocaleString()}` },
-  { id: "risk", field: "risk", headerName: "Risk", width: 130, sortable: true, filter: "set" },
+  { id: "totalValue", field: "totalValue", headerName: "Value", width: 118, sortable: true, filter: "number", valueFormatter: (value) => `$${Number(value).toLocaleString()}` },
+  { id: "risk", field: "risk", headerName: "Risk", width: 84, sortable: true, filter: "set" },
 ];
 
 const mergedHeaders: MergedHeader[] = [
@@ -73,11 +74,73 @@ const capabilities = [
   ["bi-download", "Export-ready", "Ship CSV and Excel export from the grid toolbar."],
 ];
 
+const animatedFeatures = [
+  ["bi-table", "Basic grid", "Typed rows and columns"],
+  ["bi-sort-alpha-down", "Sorting", "Click headers or menu"],
+  ["bi-funnel", "Filtering", "Column, quick, external"],
+  ["bi-check2-square", "Selection", "Rows, checkboxes, ranges"],
+  ["bi-distribute-horizontal", "Column merge", "Excel-style grouped headers"],
+  ["bi-arrow-left-right", "Reorder", "Drag rows and columns"],
+  ["bi-pencil-square", "Editing", "Editors, undo, redo"],
+  ["bi-calculator", "Formulas", "Calculated cells"],
+  ["bi-diagram-3", "Tree data", "Nested expandable rows"],
+  ["bi-collection", "Grouping", "Buckets and summaries"],
+  ["bi-bar-chart", "Pivoting", "Aggregated cross-tabs"],
+  ["bi-download", "Export", "CSV and Excel"],
+];
+
 const demoCards = [
   ["Performance", "160 rows", "bi-speedometer2"],
   ["Finance", "Merged headers", "bi-graph-up-arrow"],
   ["Operations", "Grouping", "bi-diagram-3"],
   ["Inventory", "Filters", "bi-box-seam"],
+];
+
+const excelBanners = [
+  {
+    icon: "bi-front",
+    title: "Merged column headers",
+    text: "Group related fields into a clear top header band.",
+    headers: ["Profile", "Score", "Status"],
+    rows: [
+      ["Ava", "94", "Live"],
+      ["Noah", "88", "Hold"],
+      ["Mia", "97", "Live"],
+    ],
+  },
+  {
+    icon: "bi-calculator",
+    title: "Formulas and fill",
+    text: "Calculate cells, fill ranges, and keep edits reversible.",
+    headers: ["Base", "Formula", "Result"],
+    rows: [
+      ["92", "=A1*1.05", "96.6"],
+      ["87", "=A2*1.05", "91.4"],
+      ["79", "=A3*1.05", "83.0"],
+    ],
+  },
+  {
+    icon: "bi-funnel",
+    title: "Filters and find",
+    text: "Search visible data and combine column filters quickly.",
+    headers: ["Team", "Region", "Match"],
+    rows: [
+      ["Ops", "EMEA", "Yes"],
+      ["Finance", "APAC", "Yes"],
+      ["Support", "NA", "No"],
+    ],
+  },
+  {
+    icon: "bi-bar-chart",
+    title: "Pivot and aggregate",
+    text: "Turn row-level data into summaries users can scan.",
+    headers: ["Dept", "EMEA", "APAC"],
+    rows: [
+      ["Eng", "96", "89"],
+      ["Ops", "92", "94"],
+      ["Finance", "91", "84"],
+    ],
+  },
 ];
 
 export function Home() {
@@ -114,20 +177,26 @@ export function Home() {
     return () => window.clearInterval(timer);
   }, []);
 
+  const scrollToSection = (sectionId: string) => {
+    document.getElementById(sectionId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
+
   return (
     <div className="site-home">
       <nav className="site-nav" aria-label="GridNexa website">
         <button className="site-brand" type="button" onClick={() => navigateTo("/")}>
-          <span className="site-brand-mark">GN</span>
-          <span>GridNexa</span>
+          <img src={gridNexaWordmark} alt="GridNexa" />
         </button>
         <div className="site-nav-links">
-          <button type="button" onClick={() => navigateTo("/docs/performance")}>Demos</button>
+          <button type="button" onClick={() => scrollToSection("demos")}>Demos</button>
           <button type="button" onClick={() => navigateTo("/docs/basic-grid")}>Docs</button>
           <button type="button" onClick={() => navigateTo("/docs/basic-grid")}>Playground</button>
-          <button type="button" onClick={() => navigateTo("/docs/export")}>Pricing</button>
-          <button type="button" onClick={() => navigateTo("/docs/events")}>Help</button>
-          <button type="button" onClick={() => navigateTo("/docs/theme")}>About</button>
+          <button type="button" onClick={() => scrollToSection("pricing")}>Pricing</button>
+          <button type="button" onClick={() => scrollToSection("help")}>Help</button>
+          <button type="button" onClick={() => scrollToSection("about")}>About</button>
         </div>
         <button className="site-nav-cta" type="button" onClick={() => navigateTo("/docs/basic-grid")}>
           Launch playground
@@ -159,32 +228,66 @@ export function Home() {
             <span><strong>${Math.round(liveVolume).toLocaleString()}</strong> active value</span>
           </div>
         </div>
+      </section>
 
-        <section className="site-grid-showcase site-grid-showcase--hero" aria-label="GridNexa market grid preview">
-          <div className="showcase-toolbar">
-            <div>
-              <span className="site-kicker">Live grid preview</span>
-              <h2>Financial workspace, powered by GridNexa</h2>
+      <section className="excel-banner-grid" aria-label="Excel-style GridNexa feature banners">
+        {excelBanners.map((banner, bannerIndex) => (
+          <article className="excel-banner-card" key={banner.title}>
+            <div className="excel-banner-copy">
+              <i className={`bi ${banner.icon}`} />
+              <div>
+                <h2>{banner.title}</h2>
+                <p>{banner.text}</p>
+              </div>
             </div>
-            <div className="showcase-controls">
-              <span className="live-dot">Live updates</span>
-              <span>Grouped headers</span>
+            <div className="mini-grid" style={{ animationDelay: `${bannerIndex * 140}ms` }}>
+              <div className="mini-grid-header">
+                {banner.headers.map((header) => (
+                  <span key={header}>{header}</span>
+                ))}
+              </div>
+              {banner.rows.map((row, rowIndex) => (
+                <div className="mini-grid-row" key={`${banner.title}-${rowIndex}`}>
+                  {row.map((cell, cellIndex) => (
+                    <span
+                      className={cellIndex === row.length - 1 ? "is-hot" : ""}
+                      key={`${cell}-${cellIndex}`}
+                    >
+                      {cell}
+                    </span>
+                  ))}
+                </div>
+              ))}
             </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="site-grid-showcase" aria-label="GridNexa market grid preview">
+        <div className="showcase-toolbar">
+          <div>
+            <span className="site-kicker">Live grid preview</span>
+            <h2>Financial workspace, powered by GridNexa</h2>
           </div>
-          <div className="excel-feature-rail" aria-label="Excel-style features">
-            {["Merged headers", "Formulas", "Fill handle", "Range select", "Find", "Undo / Redo", "CSV / Excel export"].map((feature) => (
-              <span key={feature}>{feature}</span>
-            ))}
+          <div className="showcase-controls">
+            <span className="live-dot">Live updates</span>
+            <span>Grouped headers</span>
+            <span>Excel features</span>
           </div>
-          <GridNexa
-            columns={marketColumns}
-            rows={rows}
-            mergedHeaders={mergedHeaders}
-            rowNumbers
-            checkboxSelection
-            getRowId={(row) => row.id}
-          />
-        </section>
+        </div>
+        <div className="excel-feature-rail" aria-label="Excel-style features">
+          {["Merged headers", "Formulas", "Fill handle", "Range select", "Find", "Undo / Redo", "CSV / Excel export"].map((feature) => (
+            <span key={feature}>{feature}</span>
+          ))}
+        </div>
+        <GridNexa
+          columns={marketColumns}
+          rows={rows}
+          mergedHeaders={mergedHeaders}
+          rowNumbers
+          checkboxSelection
+          getRowId={(row) => row.id}
+        />
       </section>
 
       <section className="site-demo-tabs" aria-label="Example industries">
@@ -195,6 +298,66 @@ export function Home() {
             <span>{subtitle}</span>
           </button>
         ))}
+      </section>
+
+      <section className="site-section" id="demos">
+        <div className="site-section-heading">
+          <span className="site-kicker">Demos</span>
+          <h2>Every major GridNexa feature, visible at a glance.</h2>
+          <p>Animated feature tiles help users understand the grid surface before they open the docs.</p>
+        </div>
+        <div className="animated-feature-grid">
+          {animatedFeatures.map(([icon, title, text], index) => (
+            <button
+              className="animated-feature-card"
+              key={title}
+              style={{ animationDelay: `${index * 70}ms` }}
+              type="button"
+              onClick={() => navigateTo("/docs/basic-grid")}
+            >
+              <i className={`bi ${icon}`} />
+              <strong>{title}</strong>
+              <span>{text}</span>
+              <div className="feature-scanline" />
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="site-info-grid">
+        <article className="site-info-card site-info-card--pricing" id="pricing">
+          <span className="site-kicker">Pricing</span>
+          <h2>Free to use</h2>
+          <p>
+            GridNexa is presented as a free React data grid package for developers
+            building modern data-heavy interfaces.
+          </p>
+          <button className="btn btn-primary" type="button" onClick={() => navigateTo("/docs/basic-grid")}>
+            Start with docs
+          </button>
+        </article>
+
+        <article className="site-info-card" id="help">
+          <span className="site-kicker">Help</span>
+          <h2>Need support?</h2>
+          <p>
+            If developers need help integrating the grid, debugging a feature, or
+            planning a custom workflow, they can connect for guidance and support.
+          </p>
+          <div className="support-actions">
+            <a href="mailto:support@gridnexa.com">support@gridnexa.com</a>
+            <button type="button" onClick={() => navigateTo("/docs/events")}>View events docs</button>
+          </div>
+        </article>
+
+        <article className="site-info-card" id="about">
+          <span className="site-kicker">About</span>
+          <h2>Built for product teams that live in data.</h2>
+          <p>
+            GridNexa focuses on practical grid behavior: polished themes, Excel-like
+            interactions, copyable examples, and APIs that fit naturally into React apps.
+          </p>
+        </article>
       </section>
 
       <section className="site-capabilities">

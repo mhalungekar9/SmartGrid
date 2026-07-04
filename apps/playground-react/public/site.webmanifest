@@ -1,0 +1,17 @@
+{
+  "name": "GridNexa",
+  "short_name": "GridNexa",
+  "description": "Free React data grid with Excel-like features, live demos, and developer documentation.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#08172c",
+  "theme_color": "#08172c",
+  "icons": [
+    {
+      "src": "/gridnexa-icon.png",
+      "sizes": "1254x1254",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

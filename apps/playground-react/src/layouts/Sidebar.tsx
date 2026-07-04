@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { navigateTo } from "../utils/navigation";
 import { routeItems } from "../utils/routes";
+import gridNexaMark from "../assets/GridNexa-Without-Text-Logo-transparent.png";
 
 function getCurrentPath() {
   return window.location.pathname.replace(/\/$/, "") || "/";
@@ -29,7 +30,9 @@ export function Sidebar({ collapsed, onNavigate }: SidebarProps) {
   return (
     <aside className="app-sidebar" aria-label="Primary navigation" data-collapsed={collapsed}>
       <div className="brand-lockup">
-        <span className="brand-mark">GN</span>
+        <span className="brand-mark">
+          <img src={gridNexaMark} alt="" aria-hidden="true" />
+        </span>
         <div>
           <strong>GridNexa</strong>
           <span>Developer docs</span>
