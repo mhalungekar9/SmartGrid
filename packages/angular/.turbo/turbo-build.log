@@ -5,11 +5,11 @@ $ tsup src/index.ts --format esm,cjs --dts --external @angular/core
 [34mCLI[39m Target: es2022
 [34mESM[39m Build start
 [34mCJS[39m Build start
-[32mCJS[39m [1mdist\index.cjs [22m[32m4.22 KB[39m
-[32mCJS[39m ⚡️ Build success in 133ms
-[32mESM[39m [1mdist\index.js [22m[32m2.89 KB[39m
-[32mESM[39m ⚡️ Build success in 135ms
+[32mESM[39m [1mdist\index.js [22m[32m48.55 KB[39m
+[32mESM[39m ⚡️ Build success in 326ms
+[32mCJS[39m [1mdist\index.cjs [22m[32m50.24 KB[39m
+[32mCJS[39m ⚡️ Build success in 375ms
 [34mDTS[39m Build start
-[32mDTS[39m ⚡️ Build success in 2163ms
-[32mDTS[39m [1mdist\index.d.ts  [22m[32m1.14 KB[39m
-[32mDTS[39m [1mdist\index.d.cts [22m[32m1.14 KB[39m
+[32mDTS[39m ⚡️ Build success in 5481ms
+[32mDTS[39m [1mdist\index.d.ts  [22m[32m3.92 KB[39m
+[32mDTS[39m [1mdist\index.d.cts [22m[32m3.92 KB[39m

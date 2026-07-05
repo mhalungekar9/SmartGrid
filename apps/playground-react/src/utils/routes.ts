@@ -12,6 +12,7 @@ import { ColumnMerge } from "../pages/ColumnMerge";
 import { FrozenColumns } from "../pages/FrozenColumns";
 import { Templates } from "../pages/Templates";
 import { Editing } from "../pages/Editing";
+import { AICommand } from "../pages/AICommand";
 import { Formulas } from "../pages/Formulas";
 import { TreeGrid } from "../pages/TreeGrid";
 import { Grouping } from "../pages/Grouping";
@@ -56,6 +57,7 @@ export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
     title: "Advanced",
     items: [
       { path: "/docs/editing", label: "Editing", icon: "bi-pencil-square", component: Editing },
+      { path: "/docs/ai-command", label: "AI Command", icon: "bi-stars", component: AICommand },
       { path: "/docs/formulas", label: "Formulas", icon: "bi-calculator", component: Formulas },
       { path: "/docs/tree-grid", label: "Tree Grid", icon: "bi-diagram-3", component: TreeGrid },
       { path: "/docs/grouping", label: "Grouping", icon: "bi-collection", component: Grouping },

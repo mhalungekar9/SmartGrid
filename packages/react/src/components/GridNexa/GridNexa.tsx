@@ -4,6 +4,9 @@ import type {
   AdvancedFilterModel,
   ColumnFilterModel,
   GridOptions,
+  GridNexaAiRequest,
+  GridNexaCommandAction,
+  GridNexaCommandPlan,
   PivotAggregation,
 } from "@gridnexa/core";
 
@@ -813,6 +816,7 @@ export function GridNexa<T>({
   masterDetailRenderer,
   transaction,
   pageSize,
+  ai,
 }: GridNexaExtendedProps<T>) {
   const [gridRows, setGridRows] = useState(rows);
   const [columnWidths, setColumnWidths] = useState(() =>
@@ -829,6 +833,10 @@ export function GridNexa<T>({
   const [quickFilterText, setQuickFilterText] = useState("");
   const [findText, setFindText] = useState("");
   const [findMatchIndex, setFindMatchIndex] = useState(0);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiPlan, setAiPlan] = useState<GridNexaCommandPlan | null>(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [advancedFilterPanelOpen, setAdvancedFilterPanelOpen] =
     useState(false);
@@ -2917,6 +2925,190 @@ export function GridNexa<T>({
     setSelectionAnchorState(null);
   };
 
+  const resolveColumn = (idOrField: string | null | undefined) =>
+    idOrField
+      ? columns.find(
+          (column) => column.id === idOrField || column.field === idOrField,
+        )
+      : undefined;
+
+  const createAiRequest = (prompt: string): GridNexaAiRequest => ({
+    prompt,
+    state: {
+      columns: columns.map((column) => ({
+        id: column.id,
+        field: String(column.field),
+        headerName: column.headerName,
+        type:
+          typeof column.filter === "string"
+            ? column.filter
+            : column.filter?.type,
+        hidden: hiddenColumnIds.has(column.id) || column.hidden,
+        pinned: getColumnLane(column.id) ?? undefined,
+      })),
+      rowCount: gridRows.length,
+      sampleRows: gridRows
+        .slice(0, ai?.sampleRowCount ?? 8)
+        .map((row) =>
+          Object.fromEntries(
+            columns.map((column) => [
+              String(column.field),
+              getColumnValue(row, column),
+            ]),
+          ),
+        ),
+      quickFilterText: quickFilterTextProp ?? quickFilterText,
+      groupBy,
+      pivotBy,
+      pivotValueColumns,
+      pivotAggregation,
+      activeColumnFilters: filterModel,
+      advancedFilterModel,
+    },
+  });
+
+  const applyAiAction = (action: GridNexaCommandAction) => {
+    if (action.type === "quickFilter") {
+      setQuickFilterText(action.value);
+      setPageIndex(0);
+      return;
+    }
+
+    if (action.type === "setColumnFilter") {
+      const column = resolveColumn(action.columnId);
+      if (column) setColumnFilter(column.id, action.filter);
+      return;
+    }
+
+    if (action.type === "setAdvancedFilter") {
+      setAdvancedFilterModel(action.model);
+      return;
+    }
+
+    if (action.type === "sort") {
+      const column = resolveColumn(action.columnId);
+      setSortModel(
+        column && action.direction
+          ? { columnId: column.id, direction: action.direction }
+          : null,
+      );
+      setPageIndex(0);
+      return;
+    }
+
+    if (action.type === "group") {
+      const column = resolveColumn(action.columnId);
+      updatePivotModel({ groupBy: column ? column.field : "" });
+      return;
+    }
+
+    if (action.type === "pivot") {
+      const groupColumn = resolveColumn(action.groupBy);
+      const pivotColumn = resolveColumn(action.pivotBy);
+      const valueColumns: Array<keyof T & string> = [];
+      (action.valueColumns ?? []).forEach((columnId) => {
+        const column = resolveColumn(columnId);
+        if (column) valueColumns.push(column.field as keyof T & string);
+      });
+
+      updatePivotModel({
+        groupBy:
+          action.groupBy === null
+            ? ""
+            : (groupColumn?.field as (keyof T & string) | undefined),
+        pivotBy:
+          action.pivotBy === null
+            ? ""
+            : (pivotColumn?.field as (keyof T & string) | undefined),
+        pivotValueColumns: valueColumns.length
+          ? valueColumns
+          : runtimePivotValueColumns,
+        pivotAggregation: action.aggregation ?? runtimePivotAggregation,
+      });
+      return;
+    }
+
+    if (action.type === "pinColumn") {
+      const column = resolveColumn(action.columnId);
+      if (column) pinColumn(column.id, action.pinned);
+      return;
+    }
+
+    if (action.type === "hideColumn") {
+      const column = resolveColumn(action.columnId);
+      if (!column) return;
+      setHiddenColumnIds((current) => {
+        const next = new Set(current);
+        action.hidden ? next.add(column.id) : next.delete(column.id);
+        return next;
+      });
+      setPageIndex(0);
+      return;
+    }
+
+    if (action.type === "export") {
+      action.format === "excel"
+        ? exportVisibleRowsToExcel()
+        : exportVisibleRowsToCsv();
+    }
+  };
+
+  const applyAiPlan = (plan: GridNexaCommandPlan) => {
+    plan.actions.forEach(applyAiAction);
+    ai?.onApply?.(plan);
+    setAiPlan(null);
+  };
+
+  const requestAiPlan = async () => {
+    const prompt = aiPrompt.trim();
+
+    if (!prompt || aiBusy) return;
+
+    setAiBusy(true);
+    setAiError(null);
+
+    try {
+      const request = createAiRequest(prompt);
+      const result = ai?.provider
+        ? await ai.provider(request)
+        : ai?.endpoint
+          ? await (async () => {
+              const fetcher = ai.fetcher ?? fetch;
+              const response = await fetcher(ai.endpoint!, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(request),
+              });
+
+              if (!response.ok) {
+                throw new Error(`AI request failed with ${response.status}`);
+              }
+
+              return response.json() as Promise<
+                { plan?: GridNexaCommandPlan } | GridNexaCommandPlan
+              >;
+            })()
+          : null;
+      const plan =
+        result && "plan" in result ? result.plan : (result as GridNexaCommandPlan);
+
+      if (!plan?.actions?.length) {
+        throw new Error("AI did not return any grid actions.");
+      }
+
+      setAiPlan(plan);
+      ai?.onPlan?.(plan);
+      if (ai?.autoApply) applyAiPlan(plan);
+    } catch (error) {
+      setAiError(error instanceof Error ? error.message : "AI request failed");
+      ai?.onError?.(error);
+    } finally {
+      setAiBusy(false);
+    }
+  };
+
+  const aiEnabled = ai?.enabled ?? Boolean(ai?.provider || ai?.endpoint);
+
   return (
     <GridContext.Provider
       value={{
@@ -2964,6 +3156,69 @@ export function GridNexa<T>({
             <div className="sg-toolbar-title">GridNexa</div>
             <div className="sg-toolbar-subtitle">{rowCountLabel}</div>
           </div>
+
+          {aiEnabled ? (
+            <div className="sg-ai-command" onClick={(event) => event.stopPropagation()}>
+              <form
+                className="sg-ai-command-form"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void requestAiPlan();
+                }}
+              >
+                <label className="sg-ai-command-input-wrap">
+                  <span className="sg-filter-label">
+                    {t("aiCommand", "AI command")}
+                  </span>
+                  <input
+                    className="sg-filter-input sg-ai-command-input"
+                    type="search"
+                    value={aiPrompt}
+                    onChange={(event) => setAiPrompt(event.target.value)}
+                    placeholder={
+                      ai?.placeholder ??
+                      "Ask GridNexa to filter, sort, group, pivot, pin, or export"
+                    }
+                  />
+                </label>
+                <button
+                  className="sg-toolbar-button"
+                  type="submit"
+                  disabled={!aiPrompt.trim() || aiBusy}
+                >
+                  {aiBusy ? "Thinking" : "Ask AI"}
+                </button>
+              </form>
+
+              {aiError ? <div className="sg-ai-error">{aiError}</div> : null}
+
+              {aiPlan ? (
+                <div className="sg-ai-plan">
+                  <div className="sg-ai-plan-copy">
+                    <strong>{aiPlan.title}</strong>
+                    {aiPlan.explanation ? <span>{aiPlan.explanation}</span> : null}
+                  </div>
+                  <div className="sg-ai-plan-actions">
+                    <span>{aiPlan.actions.length} actions</span>
+                    <button
+                      className="sg-toolbar-button sg-toolbar-button--ghost"
+                      type="button"
+                      onClick={() => setAiPlan(null)}
+                    >
+                      Dismiss
+                    </button>
+                    <button
+                      className="sg-toolbar-button"
+                      type="button"
+                      onClick={() => applyAiPlan(aiPlan)}
+                    >
+                      Apply
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <div className="sg-toolbar-actions">
             {pageSize && pageSize > 0 ? (

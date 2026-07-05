@@ -13,6 +13,10 @@ import type {
   Column,
   ColumnFilterModel,
   GridOptions,
+  GridNexaAiOptions,
+  GridNexaAiRequest,
+  GridNexaCommandAction,
+  GridNexaCommandPlan,
   GridTransaction,
   MergedHeader,
   PivotAggregation,
@@ -215,6 +219,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   @Input() masterDetailRenderer: GridNexaAngularOptions<T>["masterDetailRenderer"];
   @Input() transaction: GridTransaction<T> | undefined;
   @Input() localeText: Record<string, string> | undefined;
+  @Input() ai: GridNexaAiOptions | undefined;
 
   @Output() rowSelectionChange = new EventEmitter<T[]>();
   @Output() cellClick = new EventEmitter<{ row: T; rowIndex: number; column: Column<T> }>();
@@ -251,6 +256,10 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   private draggedColumnId: string | null = null;
   private draggedRowIndex: number | null = null;
   private columnWidths = new Map<string, number>();
+  private aiPrompt = "";
+  private aiPlan: GridNexaCommandPlan | null = null;
+  private aiBusy = false;
+  private aiError: string | null = null;
   private undoStack: Array<CellEdit<T>> = [];
   private redoStack: Array<CellEdit<T>> = [];
 
@@ -532,6 +541,121 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     this.render();
   }
 
+  private resolveColumn(idOrField?: string | null) {
+    return idOrField ? this.columns.find((column) => column.id === idOrField || column.field === idOrField) : undefined;
+  }
+
+  private createAiRequest(prompt: string): GridNexaAiRequest {
+    return {
+      prompt,
+      state: {
+        columns: this.columns.map((column) => ({
+          id: column.id,
+          field: String(column.field),
+          headerName: column.headerName,
+          type: typeof column.filter === "string" ? column.filter : column.filter?.type,
+          hidden: this.hiddenColumnIds.has(column.id) || column.hidden,
+          pinned: column.pinned,
+        })),
+        rowCount: this.rows.length,
+        sampleRows: this.rows.slice(0, this.ai?.sampleRowCount ?? 8).map((row) =>
+          Object.fromEntries(this.columns.map((column) => [String(column.field), value(row, column, this.columns)])),
+        ),
+        quickFilterText: this.quickFilterText,
+        groupBy: this.groupBy,
+        pivotBy: this.pivotBy,
+        pivotValueColumns: this.pivotValueColumns as string[] | undefined,
+        pivotAggregation: this.pivotAggregation,
+        activeColumnFilters: this.columnFilters,
+        advancedFilterModel: this.advancedFilterModel,
+      },
+    };
+  }
+
+  private applyAiAction(action: GridNexaCommandAction) {
+    if (action.type === "quickFilter") {
+      this.quickFilterText = action.value;
+      this.pageIndex = 0;
+    } else if (action.type === "setColumnFilter") {
+      const column = this.resolveColumn(action.columnId);
+      if (column) {
+        const filters = { ...(this.columnFilters ?? {}) };
+        action.filter ? (filters[column.id] = action.filter) : delete filters[column.id];
+        this.columnFilters = filters;
+      }
+    } else if (action.type === "setAdvancedFilter") {
+      this.advancedFilterModel = action.model;
+      this.advancedFilterModelChange.emit(action.model);
+    } else if (action.type === "sort") {
+      const column = this.resolveColumn(action.columnId);
+      this.sortState = column && action.direction ? { columnId: column.id, direction: action.direction } : null;
+    } else if (action.type === "group") {
+      const column = this.resolveColumn(action.columnId);
+      this.updatePivot({ groupBy: column ? column.field as keyof T & string : undefined });
+      return;
+    } else if (action.type === "pivot") {
+      const groupColumn = this.resolveColumn(action.groupBy);
+      const pivotColumn = this.resolveColumn(action.pivotBy);
+      const valueColumns = (action.valueColumns ?? [])
+        .map((columnId) => this.resolveColumn(columnId)?.field as keyof T & string | undefined)
+        .filter((field): field is keyof T & string => Boolean(field));
+      this.updatePivot({
+        groupBy: action.groupBy === null ? undefined : groupColumn?.field as keyof T & string | undefined,
+        pivotBy: action.pivotBy === null ? undefined : pivotColumn?.field as keyof T & string | undefined,
+        pivotValueColumns: valueColumns.length ? valueColumns : this.pivotValueColumns,
+        pivotAggregation: action.aggregation ?? this.pivotAggregation,
+      });
+      return;
+    } else if (action.type === "pinColumn") {
+      const column = this.resolveColumn(action.columnId);
+      if (column) column.pinned = action.pinned ?? undefined;
+    } else if (action.type === "hideColumn") {
+      const column = this.resolveColumn(action.columnId);
+      if (column) action.hidden ? this.hiddenColumnIds.add(column.id) : this.hiddenColumnIds.delete(column.id);
+    } else if (action.type === "export") {
+      const visible = this.columns.filter((column) => !this.hiddenColumnIds.has(column.id) && !column.hidden);
+      action.format === "excel" ? this.exportRows(visible, this.visibleRows(), true) : this.exportRows(visible, this.visibleRows());
+    }
+    this.render();
+  }
+
+  private applyAiPlan(plan: GridNexaCommandPlan) {
+    plan.actions.forEach((action) => this.applyAiAction(action));
+    this.ai?.onApply?.(plan);
+    this.aiPlan = null;
+  }
+
+  private async requestAiPlan() {
+    const prompt = this.aiPrompt.trim();
+    if (!prompt || this.aiBusy) return;
+    this.aiBusy = true;
+    this.aiError = null;
+    this.render();
+    try {
+      const request = this.createAiRequest(prompt);
+      const result = this.ai?.provider
+        ? await this.ai.provider(request)
+        : this.ai?.endpoint
+          ? await (await (this.ai.fetcher ?? fetch)(this.ai.endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(request),
+            })).json()
+          : null;
+      const plan = result && "plan" in result ? result.plan : result as GridNexaCommandPlan;
+      if (!plan?.actions?.length) throw new Error("AI did not return any grid actions.");
+      this.aiPlan = plan;
+      this.ai?.onPlan?.(plan);
+      if (this.ai?.autoApply) this.applyAiPlan(plan);
+    } catch (error) {
+      this.aiError = error instanceof Error ? error.message : "AI request failed";
+      this.ai?.onError?.(error);
+    } finally {
+      this.aiBusy = false;
+      this.render();
+    }
+  }
+
   private render() {
     if (!this.host) return;
     const sourceRows = this.visibleRows();
@@ -570,6 +694,8 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     toolbar.append(`${rows.length} rows`);
     const actions = document.createElement("div");
     actions.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
+    const aiEnabled = this.ai?.enabled ?? Boolean(this.ai?.provider || this.ai?.endpoint);
+    if (aiEnabled) toolbar.appendChild(this.renderAiCommand());
     const find = document.createElement("input");
     find.type = "search";
     find.placeholder = "Find cell";
@@ -624,6 +750,33 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     );
     toolbar.appendChild(actions);
     return toolbar;
+  }
+
+  private renderAiCommand() {
+    const shell = document.createElement("div");
+    shell.style.cssText = "display:flex;gap:8px;align-items:end;flex-wrap:wrap";
+    const input = document.createElement("input");
+    input.placeholder = this.ai?.placeholder ?? "Ask AI to filter, sort, group, pivot, pin, or export";
+    input.value = this.aiPrompt;
+    input.style.cssText = "min-height:32px;min-width:280px;padding:0 10px;border:1px solid #bfdbfe;border-radius:8px";
+    input.addEventListener("input", () => {
+      this.aiPrompt = input.value;
+    });
+    const ask = this.button(this.aiBusy ? "Thinking" : "Ask AI", () => void this.requestAiPlan());
+    ask.disabled = this.aiBusy;
+    shell.append(input, ask);
+    if (this.aiError) shell.append(` ${this.aiError}`);
+    if (this.aiPlan) {
+      shell.append(
+        ` ${this.aiPlan.title} `,
+        this.button("Dismiss", () => {
+          this.aiPlan = null;
+          this.render();
+        }),
+        this.button(`Apply ${this.aiPlan.actions.length}`, () => this.applyAiPlan(this.aiPlan!)),
+      );
+    }
+    return shell;
   }
 
   private renderTable(columns: Column<T>[], rows: Array<DisplayRow<T>>) {

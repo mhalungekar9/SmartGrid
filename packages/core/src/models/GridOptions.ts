@@ -1,4 +1,5 @@
 import { Column } from "./Column";
+import type { GridNexaAiOptions } from "../types/GridCommand";
 
 export type ColumnFilterOperator =
   | "contains"
@@ -112,6 +113,7 @@ export interface GridOptions<T = unknown> {
   getTreeDataPath?: (row: T) => string[];
   masterDetailRenderer?: (row: T) => unknown;
   transaction?: GridTransaction<T>;
+  ai?: GridNexaAiOptions;
   onCellValueChange?: (params: {
     row: T;
     rowIndex: number;

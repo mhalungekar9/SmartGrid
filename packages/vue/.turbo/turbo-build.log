@@ -5,11 +5,11 @@ $ tsup src/index.ts --format esm,cjs --dts --external vue
 [34mCLI[39m Target: es2022
 [34mESM[39m Build start
 [34mCJS[39m Build start
-[32mESM[39m [1mdist\index.js [22m[32m1.81 KB[39m
-[32mESM[39m ⚡️ Build success in 142ms
-[32mCJS[39m [1mdist\index.cjs [22m[32m3.07 KB[39m
-[32mCJS[39m ⚡️ Build success in 154ms
+[32mCJS[39m [1mdist\index.cjs [22m[32m47.65 KB[39m
+[32mCJS[39m ⚡️ Build success in 147ms
+[32mESM[39m [1mdist\index.js [22m[32m46.38 KB[39m
+[32mESM[39m ⚡️ Build success in 148ms
 [34mDTS[39m Build start
-[32mDTS[39m ⚡️ Build success in 2259ms
-[32mDTS[39m [1mdist\index.d.ts  [22m[32m2.87 KB[39m
-[32mDTS[39m [1mdist\index.d.cts [22m[32m2.87 KB[39m
+[32mDTS[39m ⚡️ Build success in 4874ms
+[32mDTS[39m [1mdist\index.d.ts  [22m[32m7.19 KB[39m
+[32mDTS[39m [1mdist\index.d.cts [22m[32m7.19 KB[39m
