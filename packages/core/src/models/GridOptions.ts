@@ -1,4 +1,4 @@
-import { Column } from "./Column";
+import { Column, type GridNexaClassName } from "./Column";
 import type { GridNexaAiOptions } from "../types/GridCommand";
 
 export type ColumnFilterOperator =
@@ -53,6 +53,30 @@ export type AdvancedFilterModel =
 export type AdvancedFilter<T = unknown> = (row: T) => boolean;
 export type ExternalFilter<T = unknown> = (row: T) => boolean;
 export type PivotAggregation = "sum" | "avg" | "count" | "min" | "max";
+export type GridNexaTheme = "light" | "dark" | "system";
+export type GridNexaDensity = "compact" | "standard" | "comfortable";
+export type GridNexaSlotClassNames = Partial<{
+  shell: GridNexaClassName;
+  toolbar: GridNexaClassName;
+  toolbarTitle: GridNexaClassName;
+  toolbarSubtitle: GridNexaClassName;
+  toolbarActions: GridNexaClassName;
+  button: GridNexaClassName;
+  input: GridNexaClassName;
+  gridWorkspace: GridNexaClassName;
+  gridRoot: GridNexaClassName;
+  header: GridNexaClassName;
+  headerRow: GridNexaClassName;
+  mergedHeaderRow: GridNexaClassName;
+  mergedHeaderCell: GridNexaClassName;
+  headerCell: GridNexaClassName;
+  row: GridNexaClassName;
+  cell: GridNexaClassName;
+  statusBar: GridNexaClassName;
+  sideTools: GridNexaClassName;
+  sideTab: GridNexaClassName;
+  panel: GridNexaClassName;
+}>;
 
 export interface ServerSideOperationState<T = unknown> {
   sortModel?: Array<{ columnId: string; direction: "asc" | "desc" }>;
@@ -86,6 +110,25 @@ export interface MergedHeader {
 export interface GridOptions<T = unknown> {
   columns: Column<T>[];
   rows: T[];
+  className?: string;
+  theme?: GridNexaTheme;
+  density?: GridNexaDensity;
+  unstyled?: boolean;
+  classNames?: GridNexaSlotClassNames;
+  getRowClassName?: (params: {
+    row: T;
+    rowIndex: number;
+    selected: boolean;
+  }) => GridNexaClassName;
+  getCellClassName?: (params: {
+    value: unknown;
+    row: T;
+    rowIndex: number;
+    column: Column<T>;
+    columnIndex: number;
+    selected: boolean;
+  }) => GridNexaClassName;
+  getHeaderClassName?: (params: { column: Column<T>; columnIndex: number }) => GridNexaClassName;
   mergedHeaders?: MergedHeader[];
   columnFilters?: Record<string, ColumnFilterModel>;
   quickFilterText?: string;

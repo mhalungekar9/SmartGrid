@@ -66,6 +66,7 @@ const mergedHeaders: MergedHeader[] = [
 ];
 
 const capabilities = [
+  ["bi-stars", "AI command layer", "Let users describe filters, sorts, pivots, column changes, and exports in plain English."],
   ["bi-front", "Merged headers", "Group related columns into clean Excel-style header bands."],
   ["bi-magic", "Formulas and fill", "Use calculated cells, fill handle flows, find, and undo/redo."],
   ["bi-funnel", "Advanced filtering", "Combine quick search, set filters, operators, and external predicates."],
@@ -82,6 +83,7 @@ const animatedFeatures = [
   ["bi-distribute-horizontal", "Column merge", "Excel-style grouped headers"],
   ["bi-arrow-left-right", "Reorder", "Drag rows and columns"],
   ["bi-pencil-square", "Editing", "Editors, undo, redo"],
+  ["bi-stars", "AI command", "Safe action plans"],
   ["bi-calculator", "Formulas", "Calculated cells"],
   ["bi-diagram-3", "Tree data", "Nested expandable rows"],
   ["bi-collection", "Grouping", "Buckets and summaries"],
@@ -271,10 +273,11 @@ export function Home() {
             <span className="live-dot">Live updates</span>
             <span>Grouped headers</span>
             <span>Excel features</span>
+            <span>AI-ready</span>
           </div>
         </div>
         <div className="excel-feature-rail" aria-label="Excel-style features">
-          {["Merged headers", "Formulas", "Fill handle", "Range select", "Find", "Undo / Redo", "CSV / Excel export"].map((feature) => (
+          {["AI command", "Merged headers", "Formulas", "Fill handle", "Range select", "Find", "Undo / Redo", "CSV / Excel export"].map((feature) => (
             <span key={feature}>{feature}</span>
           ))}
         </div>
@@ -286,6 +289,19 @@ export function Home() {
           checkboxSelection
           getRowId={(row) => row.id}
         />
+        <div className="ai-home-panel" aria-label="GridNexa AI command preview">
+          <div>
+            <span className="site-kicker">AI Command</span>
+            <h3>Ask the grid to reshape data.</h3>
+            <p>Generate safe action plans for filtering, sorting, grouping, pivoting, pinning, hiding columns, and exporting.</p>
+          </div>
+          <div className="ai-home-command">
+            <span>Try: pivot score by region and group by department</span>
+            <button type="button" onClick={() => navigateTo("/docs/ai-command")}>
+              Explore AI docs
+            </button>
+          </div>
+        </div>
       </section>
 
       <section className="excel-banner-grid" aria-label="Excel-style GridNexa feature banners">

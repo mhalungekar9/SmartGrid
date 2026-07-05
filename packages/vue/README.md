@@ -1,8 +1,20 @@
-# @gridnexa/vue
+# GridNexa Vue Data Grid | Vue Table
 
-Enterprise Vue data grid for modern UI products that need spreadsheet-grade power without giving up product polish.
+Enterprise Vue data grid with Excel-like workflows, safe AI command support, typed columns, and theme-ready styling.
 
-GridNexa is built for React, Angular, Vue, and JavaScript teams. The Vue package gives you a native Vue grid with typed columns, row selection, row numbers, sorting, filtering, advanced filters, formulas, inline editing, grouped headers, grouping, pivoting, tree data, master/detail, CSV export, Excel export, and theme-ready UI.
+[![npm](https://img.shields.io/npm/v/@gridnexa/vue?color=42b883)](https://www.npmjs.com/package/@gridnexa/vue)
+[![license](https://img.shields.io/npm/l/@gridnexa/vue)](https://github.com/mhalungekar9/SmartGrid)
+[![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
+[![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
+
+GridNexa for Vue is a native Vue package for dashboards, admin products, reporting tools, and spreadsheet-style interfaces.
+
+## Quick Links
+
+- Website: https://www.gridnexa.in/
+- Docs and playground: https://www.gridnexa.in/docs/basic-grid
+- Help: https://www.gridnexa.in/help
+- Repository: https://github.com/mhalungekar9/SmartGrid
 
 ## Install
 
@@ -14,7 +26,7 @@ npm install @gridnexa/vue
 pnpm add @gridnexa/vue
 ```
 
-## Usage
+## Basic Usage
 
 ```vue
 <script setup lang="ts">
@@ -50,6 +62,8 @@ const rows: Employee[] = [
     checkbox-selection
     enable-fill-handle
     enable-undo-redo
+    theme="light"
+    density="standard"
     :page-size="20"
     :get-row-id="(row) => row.id"
     @row-selection-change="console.log"
@@ -58,18 +72,45 @@ const rows: Employee[] = [
 </template>
 ```
 
-## Features
+## AI Command Support
 
-- Native Vue data grid with TypeScript column models
-- Excel-style features: formulas, fill, copy/paste, undo/redo, find, CSV export, and Excel export
-- Filtering: column filters, quick filter, external filter, and advanced filter model
-- Data modeling: grouping, pivoting, tree data indentation, master/detail, and transactions
-- Grid UX: row selection, row numbers, pagination, status output, and tools panel
-- Columns: merged headers, column visibility tools, column reorder, and row reorder
-- Events: row selection, cell value changes, pivot model changes, advanced filter changes, and server-side operation events
+```vue
+<template>
+  <GridNexaVue
+    :columns="columns"
+    :rows="rows"
+    :ai="{
+      enabled: true,
+      endpoint: '/api/gridnexa-ai',
+      placeholder: 'Ask AI to filter, sort, group, pivot, pin, hide, or export'
+    }"
+  />
+</template>
+```
 
-## Links
+Keep AI provider keys on your backend. GridNexa receives only safe action-plan JSON and supports OpenAI, Azure OpenAI, Anthropic, Gemini, local models, or custom gateways.
 
-- Website: https://www.gridnexa.in/
-- Help: https://www.gridnexa.in/help
-- Repository: https://github.com/mhalungekar9/SmartGrid
+## Styling And Classes
+
+Use `className`, `classNames`, `getRowClassName`, `getCellClassName`, `getHeaderClassName`, and column class callbacks to connect Vue apps to Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS.
+
+## Feature Highlights
+
+- Native Vue component with TypeScript column models
+- Sorting, pagination, quick filter, column filters, external filters, and advanced filter model
+- Selection, row numbers, copy/paste, fill, find, undo, and redo
+- Inline editing, formulas, CSV export, and Excel export
+- Merged headers, column resize, reorder, hide/show, pinning, and row reorder
+- Grouping, pivoting, tree data, master/detail, transactions, and server-side operation events
+- AI command bar with safe action plans
+
+## Related Packages
+
+- `@gridnexa/react`
+- `@gridnexa/angular`
+- `@gridnexa/javascript`
+- `@gridnexa/core`
+
+## License
+
+MIT

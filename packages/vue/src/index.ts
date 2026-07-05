@@ -4,6 +4,7 @@ import type {
   Column,
   ColumnFilterModel,
   GridOptions,
+  GridNexaClassName,
   GridNexaAiOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
@@ -179,11 +180,33 @@ function cell(text: string, tag: "td" | "th" = "td") {
   return element;
 }
 
+function classNameList(...values: GridNexaClassName[]) {
+  return values
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .filter(Boolean)
+    .join(" ");
+}
+
+function resolveClassName<T>(
+  value: GridNexaClassName | ((params: { value: unknown; row: T; rowIndex: number; column: Column<T> }) => GridNexaClassName),
+  params: { value: unknown; row: T; rowIndex: number; column: Column<T> },
+) {
+  return typeof value === "function" ? value(params) : value;
+}
+
 export const GridNexaVue = defineComponent({
   name: "GridNexaVue",
   props: {
     columns: { type: Array as PropType<Column<RowRecord>[]>, required: true },
     rows: { type: Array as PropType<RowRecord[]>, required: true },
+    className: { type: String, default: undefined },
+    theme: { type: String as PropType<GridNexaVueOptions<RowRecord>["theme"]>, default: "light" },
+    density: { type: String as PropType<GridNexaVueOptions<RowRecord>["density"]>, default: "standard" },
+    unstyled: { type: Boolean, default: false },
+    classNames: { type: Object as PropType<GridNexaVueOptions<RowRecord>["classNames"]>, default: () => ({}) },
+    getRowClassName: { type: Function as PropType<GridNexaVueOptions<RowRecord>["getRowClassName"]>, default: undefined },
+    getCellClassName: { type: Function as PropType<GridNexaVueOptions<RowRecord>["getCellClassName"]>, default: undefined },
+    getHeaderClassName: { type: Function as PropType<GridNexaVueOptions<RowRecord>["getHeaderClassName"]>, default: undefined },
     mergedHeaders: { type: Array as PropType<MergedHeader[]>, default: undefined },
     rowNumbers: { type: Boolean, default: false },
     checkboxSelection: { type: Boolean, default: false },
@@ -584,7 +607,9 @@ export const GridNexaVue = defineComponent({
       const pageRows = props.pageSize ? pivot.rows.slice(pageIndex.value * props.pageSize, pageIndex.value * props.pageSize + props.pageSize) : pivot.rows;
       const displayRows = pivot.active ? pageRows.map((row) => ({ kind: "data" as const, row, rowIndex: pivot.rows.indexOf(row) })) : makeDisplayRows(pageRows);
       const root = document.createElement("div");
-      root.className = "gridnexa-vue-grid";
+      root.className = ["gridnexa-vue-grid", props.className].filter(Boolean).join(" ");
+      root.dataset.gnxTheme = props.theme ?? "light";
+      root.dataset.gnxDensity = props.density ?? "standard";
       root.append(renderToolbar(columns, pivot.rows), renderTable(columns, displayRows));
       if (toolsOpen) root.appendChild(renderToolsPanel());
       root.appendChild(renderStatus(pivot.rows.length));
@@ -706,9 +731,16 @@ export const GridNexaVue = defineComponent({
       const header = document.createElement("tr");
       if (props.checkboxSelection) header.appendChild(cell("", "th"));
       if (props.rowNumbers) header.appendChild(cell("#", "th"));
-      columns.forEach((column) => {
+      columns.forEach((column, columnIndex) => {
         const th = cell(`${column.headerName}${sortState?.columnId === column.id ? (sortState.direction === "asc" ? " ↑" : " ↓") : ""}`, "th");
         th.style.cssText = `padding:10px;border:1px solid #dbe3ef;background:#f8fbff;text-align:left;width:${columnWidths.get(column.id) ?? column.width ?? 150}px;${pinnedStyle(column, columns)}`;
+        th.className = classNameList(
+          props.classNames?.headerCell,
+          typeof column.headerClassName === "function"
+            ? column.headerClassName({ column })
+            : column.headerClassName,
+          props.getHeaderClassName?.({ column, columnIndex }),
+        );
         th.draggable = true;
         th.addEventListener("dragstart", () => {
           draggedColumnId = column.id;
@@ -792,6 +824,11 @@ export const GridNexaVue = defineComponent({
 
     const appendRow = (tbody: HTMLTableSectionElement, row: RowRecord, rowIndex: number, columns: Column<RowRecord>[], leading: number, display?: Extract<DisplayRow, { kind: "data" }>) => {
       const tr = document.createElement("tr");
+      const rowSelected = selected.has(rowId(row, rowIndex));
+      tr.className = classNameList(
+        props.classNames?.row,
+        props.getRowClassName?.({ row, rowIndex, selected: rowSelected }),
+      );
       tr.draggable = true;
       tr.addEventListener("dragstart", () => {
         draggedRowIndex = rowIndex;
@@ -825,7 +862,21 @@ export const GridNexaVue = defineComponent({
         tr.appendChild(rowNumber);
       }
       columns.forEach((column, columnIndex) => {
+        const cellValue = value(row, column, workingColumns);
         const td = cell(format(row, column, workingColumns));
+        td.className = classNameList(
+          props.classNames?.cell,
+          resolveClassName(column.className, { value: cellValue, row, rowIndex, column }),
+          resolveClassName(column.cellClassName, { value: cellValue, row, rowIndex, column }),
+          props.getCellClassName?.({
+            value: cellValue,
+            row,
+            rowIndex,
+            column,
+            columnIndex,
+            selected: rowSelected,
+          }),
+        );
         td.style.cssText = `padding:10px;border:1px solid #dbe3ef;width:${columnWidths.get(column.id) ?? column.width ?? 150}px;${pinnedStyle(column, columns)}`;
         if (activeCell?.rowIndex === rowIndex && activeCell.columnId === column.id) {
           td.style.outline = "2px solid #2563eb";

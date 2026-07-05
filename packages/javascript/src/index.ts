@@ -3,6 +3,7 @@ import type {
   Column,
   ColumnFilterModel,
   GridOptions,
+  GridNexaClassName,
   GridNexaAiRequest,
   GridNexaCommandAction,
   GridNexaCommandPlan,
@@ -212,6 +213,20 @@ function cell(text: string, tag: "td" | "th" = "td") {
   const element = document.createElement(tag);
   element.textContent = text;
   return element;
+}
+
+function classNameList(...values: GridNexaClassName[]) {
+  return values
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .filter(Boolean)
+    .join(" ");
+}
+
+function resolveClassName<T>(
+  value: GridNexaClassName | ((params: { value: unknown; row: T; rowIndex: number; column: Column<T> }) => GridNexaClassName),
+  params: { value: unknown; row: T; rowIndex: number; column: Column<T> },
+) {
+  return typeof value === "function" ? value(params) : value;
 }
 
 export class GridNexaGrid<T = Record<string, unknown>> {
@@ -624,7 +639,11 @@ export class GridNexaGrid<T = Record<string, unknown>> {
         ? this.makeDisplayRows(rows)
         : rows.map((row) => ({ kind: "data" as const, row, rowIndex: pivot.rows.indexOf(row) }));
     const root = document.createElement("div");
-    root.className = "gnx-grid";
+    root.className = ["gnx-grid", this.options.className]
+      .filter(Boolean)
+      .join(" ");
+    root.dataset.gnxTheme = this.options.theme ?? "light";
+    root.dataset.gnxDensity = this.options.density ?? "standard";
     const main = document.createElement("div");
     main.className = "gnx-main";
     main.appendChild(this.renderToolbar(columns, pivot.rows));
@@ -856,8 +875,15 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     const header = document.createElement("tr");
     if (this.options.checkboxSelection) header.appendChild(cell("", "th")).className = "gnx-control";
     if (this.options.rowNumbers) header.appendChild(cell("#", "th")).className = "gnx-control";
-    columns.forEach((column) => {
+    columns.forEach((column, columnIndex) => {
       const th = cell(column.headerName, "th");
+      th.className = classNameList(
+        this.options.classNames?.headerCell,
+        typeof column.headerClassName === "function"
+          ? column.headerClassName({ column })
+          : column.headerClassName,
+        this.options.getHeaderClassName?.({ column, columnIndex }),
+      );
       th.style.width = `${this.columnWidths.get(column.id) ?? column.width ?? 150}px`;
       Object.assign(th.style, this.pinnedStyle(column, columns));
       th.draggable = true;
@@ -967,6 +993,11 @@ export class GridNexaGrid<T = Record<string, unknown>> {
 
   private appendDataRow(tbody: HTMLTableSectionElement, row: T, rowIndex: number, columns: Column<T>[], leading: number, display?: Extract<DisplayRow<T>, { kind: "data" }>) {
     const tr = document.createElement("tr");
+    const rowSelected = this.selectedIds.has(this.getRowId(row, rowIndex));
+    tr.className = classNameList(
+      this.options.classNames?.row,
+      this.options.getRowClassName?.({ row, rowIndex, selected: rowSelected }),
+    );
     tr.draggable = true;
     tr.addEventListener("dragstart", () => {
       this.draggedRowIndex = rowIndex;
@@ -1017,7 +1048,21 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       tr.appendChild(rowNumber);
     }
     columns.forEach((column, columnIndex) => {
+      const cellValue = getResolvedValue(row, column, this.options.columns);
       const td = cell(formatValue(row, column, this.options.columns));
+      td.className = classNameList(
+        this.options.classNames?.cell,
+        resolveClassName(column.className, { value: cellValue, row, rowIndex, column }),
+        resolveClassName(column.cellClassName, { value: cellValue, row, rowIndex, column }),
+        this.options.getCellClassName?.({
+          value: cellValue,
+          row,
+          rowIndex,
+          column,
+          columnIndex,
+          selected: rowSelected,
+        }),
+      );
       td.style.width = `${this.columnWidths.get(column.id) ?? column.width ?? 150}px`;
       Object.assign(td.style, this.pinnedStyle(column, columns));
       if (this.activeCell?.rowIndex === rowIndex && this.activeCell.columnId === column.id) {

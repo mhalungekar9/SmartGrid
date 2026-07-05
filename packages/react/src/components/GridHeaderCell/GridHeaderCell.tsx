@@ -16,10 +16,11 @@ import {
   X,
 } from "lucide-react";
 import "./GridHeaderCell.css";
-import { useGridContext } from "../../context/GridContext";
+import { cx, useGridContext } from "../../context/GridContext";
 
 interface Props<T> {
   column: Column<T>;
+  columnIndex: number;
   width: number;
   sortDirection: "asc" | "desc" | null;
   onSort: (columnId: string) => void;
@@ -49,6 +50,7 @@ interface Props<T> {
 
 export function GridHeaderCell<T>({
   column,
+  columnIndex,
   width,
   sortDirection,
   onSort,
@@ -75,7 +77,7 @@ export function GridHeaderCell<T>({
   onPinColumn,
   onHideColumn,
 }: Props<T>) {
-  const { getColumnStyle } = useGridContext<T>();
+  const { classNames, getColumnStyle, getHeaderClassName } = useGridContext<T>();
   const sortLabel =
     sortDirection === "asc"
       ? "Sort descending"
@@ -85,7 +87,16 @@ export function GridHeaderCell<T>({
 
   return (
     <div
-      className={`sg-header-cell${isDragging ? " sg-header-cell--dragging" : ""}${isDropTarget ? " sg-header-cell--drop-target" : ""}`}
+      className={cx(
+        "sg-header-cell",
+        isDragging && "sg-header-cell--dragging",
+        isDropTarget && "sg-header-cell--drop-target",
+        classNames.headerCell,
+        typeof column.headerClassName === "function"
+          ? column.headerClassName({ column })
+          : column.headerClassName,
+        getHeaderClassName({ column, columnIndex }),
+      )}
       role="columnheader"
       draggable
       aria-sort={

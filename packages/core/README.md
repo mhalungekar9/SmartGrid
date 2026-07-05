@@ -1,8 +1,20 @@
-# @gridnexa/core
+# GridNexa Core | Data Grid Contracts
 
-Shared TypeScript contracts for GridNexa enterprise data grid packages.
+Framework-neutral TypeScript contracts for GridNexa data grid packages.
 
-This package contains framework-neutral models and types used by the native GridNexa packages for React, Angular, Vue, and JavaScript.
+[![npm](https://img.shields.io/npm/v/@gridnexa/core?color=2563eb)](https://www.npmjs.com/package/@gridnexa/core)
+[![license](https://img.shields.io/npm/l/@gridnexa/core)](https://github.com/mhalungekar9/SmartGrid)
+[![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
+[![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
+
+`@gridnexa/core` contains the shared models used by the React, Angular, Vue, and JavaScript packages. Most applications should install a framework package directly; install core when you need shared types for library wrappers, backend contracts, or cross-framework tooling.
+
+## Quick Links
+
+- Website: https://www.gridnexa.in/
+- Docs and playground: https://www.gridnexa.in/docs/basic-grid
+- Help: https://www.gridnexa.in/help
+- Repository: https://github.com/mhalungekar9/SmartGrid
 
 ## Install
 
@@ -10,7 +22,7 @@ This package contains framework-neutral models and types used by the native Grid
 npm install @gridnexa/core
 ```
 
-Most applications should install a framework package instead:
+Most apps should install one of these instead:
 
 ```bash
 npm install @gridnexa/react
@@ -19,7 +31,7 @@ npm install @gridnexa/vue
 npm install @gridnexa/javascript
 ```
 
-## Included Types
+## Included Contracts
 
 - `Column`
 - `GridOptions`
@@ -29,6 +41,34 @@ npm install @gridnexa/javascript
 - `GridTransaction`
 - `ServerSideOperationState`
 - `PivotAggregation`
+- `GridNexaAiRequest`
+- `GridNexaCommandPlan`
+- `GridNexaCommandAction`
+- `GridNexaAiOptions`
+
+## AI Action Plan Contract
+
+```ts
+import type { GridNexaAiRequest, GridNexaCommandPlan } from "@gridnexa/core";
+
+export async function gridAiProvider(
+  request: GridNexaAiRequest,
+): Promise<GridNexaCommandPlan> {
+  return {
+    title: "Focus engineering performance",
+    actions: [
+      {
+        type: "setColumnFilter",
+        columnId: "department",
+        filter: { type: "set", operator: "in", values: ["Engineering"] },
+      },
+      { type: "sort", columnId: "score", direction: "desc" },
+    ],
+  };
+}
+```
+
+GridNexa AI actions are explicit and allow-listed. Providers return JSON plans; the grid decides how to apply them.
 
 ## Framework Packages
 
@@ -37,8 +77,6 @@ npm install @gridnexa/javascript
 - `@gridnexa/vue` for Vue UI applications
 - `@gridnexa/javascript` for framework-free JavaScript and TypeScript applications
 
-## Links
+## License
 
-- Website: https://www.gridnexa.in/
-- Help: https://www.gridnexa.in/help
-- Repository: https://github.com/mhalungekar9/SmartGrid
+MIT

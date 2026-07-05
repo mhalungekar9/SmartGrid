@@ -1,7 +1,7 @@
 import type { Column } from "@gridnexa/core";
 import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
 import "./GridCell.css";
-import { useGridContext } from "../../context/GridContext";
+import { cx, useGridContext } from "../../context/GridContext";
 import { getColumnValue, getRawColumnValue } from "../../utils/cellValue";
 
 interface Props<T> {
@@ -50,6 +50,11 @@ export function GridCell<T>({
     setActiveCell,
     setSelectionAnchor,
     openCellContextMenu,
+    classNames,
+    selectedRowIndex,
+    selectedRowIds,
+    getRowSelectionId,
+    getCellClassName,
   } = useGridContext<T>();
   const value = getColumnValue(row, column);
   const rawValue = getRawColumnValue(row, column);
@@ -59,6 +64,8 @@ export function GridCell<T>({
     activeCell?.rowIndex === rowIndex && activeCell.columnIndex === columnIndex;
   const isFindMatch =
     findMatch?.rowIndex === rowIndex && findMatch.columnIndex === columnIndex;
+  const isSelected =
+    selectedRowIndex === rowIndex || selectedRowIds.has(getRowSelectionId(row, rowIndex));
   const rangeStartRow = Math.min(
     activeCell?.rowIndex ?? rowIndex,
     selectionAnchor?.rowIndex ?? rowIndex,
@@ -134,7 +141,17 @@ export function GridCell<T>({
 
     return (
       <div
-        className="sg-cell sg-cell--editing"
+        className={cx(
+          "sg-cell sg-cell--editing",
+          classNames.cell,
+          typeof column.className === "function"
+            ? column.className({ value, row, rowIndex, column })
+            : column.className,
+          typeof column.cellClassName === "function"
+            ? column.cellClassName({ value, row, rowIndex, column })
+            : column.cellClassName,
+          getCellClassName({ value, row, rowIndex, column, columnIndex, selected: isSelected }),
+        )}
         style={getColumnStyle(column.id)}
       >
         {editorType === "largeText" ? (
@@ -217,7 +234,20 @@ export function GridCell<T>({
 
   return (
     <div
-      className={`sg-cell${isInRange ? " sg-cell--range" : ""}${isActiveCell ? " sg-cell--active" : ""}${isFindMatch ? " sg-cell--find-match" : ""}`}
+      className={cx(
+        "sg-cell",
+        isInRange && "sg-cell--range",
+        isActiveCell && "sg-cell--active",
+        isFindMatch && "sg-cell--find-match",
+        classNames.cell,
+        typeof column.className === "function"
+          ? column.className({ value, row, rowIndex, column })
+          : column.className,
+        typeof column.cellClassName === "function"
+          ? column.cellClassName({ value, row, rowIndex, column })
+          : column.cellClassName,
+        getCellClassName({ value, row, rowIndex, column, columnIndex, selected: isSelected }),
+      )}
       style={getColumnStyle(column.id)}
       tabIndex={column.editable ? 0 : -1}
       onClick={(event) => {

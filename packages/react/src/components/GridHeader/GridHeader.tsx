@@ -1,6 +1,6 @@
 import type { Column } from "@gridnexa/core";
 import type { ColumnFilterModel, MergedHeader } from "@gridnexa/core";
-import { useGridContext } from "../../context/GridContext";
+import { cx, useGridContext } from "../../context/GridContext";
 import { GridHeaderCell } from "../GridHeaderCell/GridHeaderCell";
 import "./GridHeader.css";
 
@@ -68,6 +68,7 @@ export function GridHeader<T>({
     allVisibleRowsSelected,
     checkboxSelection,
     columnTemplate,
+    classNames,
     rowNumbers,
     someVisibleRowsSelected,
     toggleAllRowsSelection,
@@ -99,15 +100,15 @@ export function GridHeader<T>({
     .filter(Boolean) as Array<MergedHeader & { gridColumn: string }>;
 
   return (
-    <div className="sg-header">
+    <div className={cx("sg-header", classNames.header)}>
       {mergedHeaderCells.length ? (
         <div
-          className="sg-merged-header-row"
+          className={cx("sg-merged-header-row", classNames.mergedHeaderRow)}
           style={{ gridTemplateColumns: columnTemplate }}
         >
           {mergedHeaderCells.map((mergedHeader) => (
             <div
-              className="sg-merged-header-cell"
+              className={cx("sg-merged-header-cell", classNames.mergedHeaderCell)}
               data-align={mergedHeader.align ?? "center"}
               key={mergedHeader.id}
               role="columnheader"
@@ -119,12 +120,12 @@ export function GridHeader<T>({
         </div>
       ) : null}
       <div
-        className="sg-column-header-row"
+        className={cx("sg-column-header-row", classNames.headerRow)}
         style={{ gridTemplateColumns: columnTemplate }}
       >
         {checkboxSelection ? (
           <div
-            className="sg-header-cell sg-selection-header"
+            className={cx("sg-header-cell sg-selection-header", classNames.headerCell)}
             role="columnheader"
             aria-label="Select rows"
           >
@@ -150,7 +151,7 @@ export function GridHeader<T>({
         ) : null}
         {rowNumbers ? (
           <div
-            className="sg-header-cell sg-row-number-header"
+            className={cx("sg-header-cell sg-row-number-header", classNames.headerCell)}
             role="columnheader"
           >
             #
@@ -160,6 +161,7 @@ export function GridHeader<T>({
           <GridHeaderCell
             key={column.id}
             column={column}
+            columnIndex={index}
             width={widths[index]}
             sortDirection={
               sortModel?.columnId === column.id ? sortModel.direction : null

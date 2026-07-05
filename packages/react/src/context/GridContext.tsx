@@ -1,14 +1,18 @@
 import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
+import type { Column, GridNexaClassName, GridNexaSlotClassNames } from "@gridnexa/core";
+
+export function cx(...values: GridNexaClassName[]): string {
+  return values
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .filter(Boolean)
+    .join(" ");
+}
 
 export interface GridContextValue<T> {
   rows: T[];
-  columns: Array<{
-    id: string;
-    hidden?: boolean;
-    editable?: boolean;
-    field: keyof T & string;
-  }>;
+  columns: Column<T>[];
+  classNames: GridNexaSlotClassNames;
   columnTemplate: string;
   selectedRowIndex: number | null;
   onRowSelect: (rowIndex: number) => void;
@@ -21,6 +25,23 @@ export interface GridContextValue<T> {
   toggleAllRowsSelection: () => void;
   rowNumbers: boolean;
   getColumnStyle: (columnId: string) => CSSProperties;
+  getRowClassName: (params: {
+    row: T;
+    rowIndex: number;
+    selected: boolean;
+  }) => GridNexaClassName;
+  getCellClassName: (params: {
+    value: unknown;
+    row: T;
+    rowIndex: number;
+    column: Column<T>;
+    columnIndex: number;
+    selected: boolean;
+  }) => GridNexaClassName;
+  getHeaderClassName: (params: {
+    column: Column<T>;
+    columnIndex: number;
+  }) => GridNexaClassName;
   activeCell: { rowIndex: number; columnIndex: number } | null;
   selectionAnchor: { rowIndex: number; columnIndex: number } | null;
   setActiveCell: (rowIndex: number, columnIndex: number) => void;

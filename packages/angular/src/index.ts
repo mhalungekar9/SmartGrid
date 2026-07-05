@@ -13,6 +13,7 @@ import type {
   Column,
   ColumnFilterModel,
   GridOptions,
+  GridNexaClassName,
   GridNexaAiOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
@@ -188,6 +189,20 @@ function cell(text: string, tag: "td" | "th" = "td") {
   return element;
 }
 
+function classNameList(...values: GridNexaClassName[]) {
+  return values
+    .flatMap((value) => (Array.isArray(value) ? value : [value]))
+    .filter(Boolean)
+    .join(" ");
+}
+
+function resolveClassName<T>(
+  value: GridNexaClassName | ((params: { value: unknown; row: T; rowIndex: number; column: Column<T> }) => GridNexaClassName),
+  params: { value: unknown; row: T; rowIndex: number; column: Column<T> },
+) {
+  return typeof value === "function" ? value(params) : value;
+}
+
 @Component({
   selector: "grid-nexa",
   standalone: true,
@@ -198,6 +213,14 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
 {
   @Input({ required: true }) columns: Column<T>[] = [];
   @Input({ required: true }) rows: T[] = [];
+  @Input() className: string | undefined;
+  @Input() theme: GridNexaAngularOptions<T>["theme"] = "light";
+  @Input() density: GridNexaAngularOptions<T>["density"] = "standard";
+  @Input() unstyled = false;
+  @Input() classNames: GridNexaAngularOptions<T>["classNames"] = {};
+  @Input() getRowClassName: GridNexaAngularOptions<T>["getRowClassName"];
+  @Input() getCellClassName: GridNexaAngularOptions<T>["getCellClassName"];
+  @Input() getHeaderClassName: GridNexaAngularOptions<T>["getHeaderClassName"];
   @Input() mergedHeaders: MergedHeader[] | undefined;
   @Input() rowNumbers = false;
   @Input() checkboxSelection = false;
@@ -666,7 +689,11 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const pageRows = this.pageSize ? pivot.rows.slice(this.pageIndex * this.pageSize, this.pageIndex * this.pageSize + this.pageSize) : pivot.rows;
     const displayRows = pivot.active ? pageRows.map((row) => ({ kind: "data" as const, row, rowIndex: pivot.rows.indexOf(row) })) : this.makeDisplayRows(pageRows);
     const root = document.createElement("div");
-    root.className = "gridnexa-angular-grid";
+    root.className = ["gridnexa-angular-grid", this.className]
+      .filter(Boolean)
+      .join(" ");
+    root.dataset.gnxTheme = this.theme ?? "light";
+    root.dataset.gnxDensity = this.density ?? "standard";
     root.append(this.renderToolbar(columns, pivot.rows), this.renderTable(columns, displayRows));
     if (this.toolsOpen) root.appendChild(this.renderToolsPanel());
     root.appendChild(this.renderStatus(pivot.rows.length));
@@ -788,9 +815,16 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const header = document.createElement("tr");
     if (this.checkboxSelection) header.appendChild(cell("", "th"));
     if (this.rowNumbers) header.appendChild(cell("#", "th"));
-    columns.forEach((column) => {
+    columns.forEach((column, columnIndex) => {
       const th = cell(`${column.headerName}${this.sortState?.columnId === column.id ? (this.sortState.direction === "asc" ? " ↑" : " ↓") : ""}`, "th");
       th.style.cssText = `padding:10px;border:1px solid #dbe3ef;background:#f8fbff;text-align:left;width:${this.columnWidths.get(column.id) ?? column.width ?? 150}px;${this.pinnedStyle(column, columns)}`;
+      th.className = classNameList(
+        this.classNames?.headerCell,
+        typeof column.headerClassName === "function"
+          ? column.headerClassName({ column })
+          : column.headerClassName,
+        this.getHeaderClassName?.({ column, columnIndex }),
+      );
       th.draggable = true;
       th.addEventListener("dragstart", () => {
         this.draggedColumnId = column.id;
@@ -874,6 +908,11 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
 
   private appendRow(tbody: HTMLTableSectionElement, row: T, rowIndex: number, columns: Column<T>[], leading: number, display?: Extract<DisplayRow<T>, { kind: "data" }>) {
     const tr = document.createElement("tr");
+    const rowSelected = this.selected.has(this.rowId(row, rowIndex));
+    tr.className = classNameList(
+      this.classNames?.row,
+      this.getRowClassName?.({ row, rowIndex, selected: rowSelected }),
+    );
     tr.draggable = true;
     tr.addEventListener("dragstart", () => {
       this.draggedRowIndex = rowIndex;
@@ -907,7 +946,21 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       tr.appendChild(rowNumber);
     }
     columns.forEach((column, columnIndex) => {
+      const cellValue = value(row, column, this.columns);
       const td = cell(format(row, column, this.columns));
+      td.className = classNameList(
+        this.classNames?.cell,
+        resolveClassName(column.className, { value: cellValue, row, rowIndex, column }),
+        resolveClassName(column.cellClassName, { value: cellValue, row, rowIndex, column }),
+        this.getCellClassName?.({
+          value: cellValue,
+          row,
+          rowIndex,
+          column,
+          columnIndex,
+          selected: rowSelected,
+        }),
+      );
       td.style.cssText = `padding:10px;border:1px solid #dbe3ef;width:${this.columnWidths.get(column.id) ?? column.width ?? 150}px;${this.pinnedStyle(column, columns)}`;
       if (this.activeCell?.rowIndex === rowIndex && this.activeCell.columnId === column.id) {
         td.style.outline = "2px solid #2563eb";

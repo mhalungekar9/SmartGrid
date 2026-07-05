@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from "react";
-import { useGridContext } from "../../context/GridContext";
+import { cx, useGridContext } from "../../context/GridContext";
 import "./GridRoot.css";
 
 export function GridRoot({ children }: PropsWithChildren) {
@@ -15,6 +15,7 @@ export function GridRoot({ children }: PropsWithChildren) {
     copySelection,
     pasteSelection,
     moveActiveCell,
+    classNames,
   } = useGridContext<any>();
 
   const firstEditableColumn = columns.find(
@@ -121,7 +122,7 @@ export function GridRoot({ children }: PropsWithChildren) {
 
   return (
     <div
-      className="sg-grid-root"
+      className={cx("sg-grid-root", classNames.gridRoot)}
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}

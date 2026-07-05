@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useGridContext } from "../../context/GridContext";
+import { cx, useGridContext } from "../../context/GridContext";
 import type { Column } from "@gridnexa/core";
 import { GridCell } from "../GridCell/GridCell";
 
@@ -70,6 +70,8 @@ export function GridRow<T>({
     dropTargetRowIndex,
     rowNumbers,
     toggleRowSelection,
+    classNames,
+    getRowClassName,
   } = useGridContext<T>();
   const leadingColumnCount = (checkboxSelection ? 1 : 0) + (rowNumbers ? 1 : 0);
 
@@ -78,7 +80,7 @@ export function GridRow<T>({
 
     return (
       <div
-        className={`sg-row sg-row--group${isPivot ? " sg-row--pivot" : ""}`}
+        className={cx("sg-row sg-row--group", isPivot && "sg-row--pivot", classNames.row)}
         role="row"
         aria-expanded={isPivot ? undefined : true}
         onClick={() => {
@@ -113,7 +115,7 @@ export function GridRow<T>({
 
   if (item.kind === "detail") {
     return (
-      <div className="sg-row sg-row--detail" role="row">
+      <div className={cx("sg-row sg-row--detail", classNames.row)} role="row">
         <div
           className="sg-detail-row"
           style={{ gridTemplateColumns: columnTemplate }}
@@ -139,7 +141,12 @@ export function GridRow<T>({
 
   return (
     <div
-      className={`sg-row sg-row--data${dropTargetRowIndex === rowIndex ? " sg-row--drop-target" : ""}`}
+      className={cx(
+        "sg-row sg-row--data",
+        dropTargetRowIndex === rowIndex && "sg-row--drop-target",
+        classNames.row,
+        getRowClassName({ row, rowIndex, selected: isSelected }),
+      )}
       data-selected={isSelected ? "true" : "false"}
       role="row"
       aria-selected={isSelected}

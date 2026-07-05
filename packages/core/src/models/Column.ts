@@ -1,6 +1,12 @@
 type Field<T> = Extract<keyof T, string>;
 
 export type CellRenderer<T> = (value: unknown, row: T) => unknown;
+export type GridNexaClassName =
+  | string
+  | string[]
+  | null
+  | undefined
+  | false;
 
 export type ColumnFilterKind = "text" | "number" | "date" | "set" | "multi";
 
@@ -45,6 +51,18 @@ export interface Column<T = unknown> {
   field: Field<T>;
 
   headerName: string;
+
+  className?:
+    | GridNexaClassName
+    | ((params: { value: unknown; row: T; rowIndex: number; column: Column<T> }) => GridNexaClassName);
+
+  cellClassName?:
+    | GridNexaClassName
+    | ((params: { value: unknown; row: T; rowIndex: number; column: Column<T> }) => GridNexaClassName);
+
+  headerClassName?:
+    | GridNexaClassName
+    | ((params: { column: Column<T> }) => GridNexaClassName);
 
   width?: number;
 

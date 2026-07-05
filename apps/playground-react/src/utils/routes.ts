@@ -13,6 +13,7 @@ import { FrozenColumns } from "../pages/FrozenColumns";
 import { Templates } from "../pages/Templates";
 import { Editing } from "../pages/Editing";
 import { AICommand } from "../pages/AICommand";
+import { AIProviders } from "../pages/AIProviders";
 import { Formulas } from "../pages/Formulas";
 import { TreeGrid } from "../pages/TreeGrid";
 import { Grouping } from "../pages/Grouping";
@@ -21,6 +22,7 @@ import { VirtualScrolling } from "../pages/VirtualScrolling";
 import { RemoteData } from "../pages/RemoteData";
 import { Export } from "../pages/Export";
 import { Theme } from "../pages/Theme";
+import { StylingConfiguration } from "../pages/StylingConfiguration";
 import { Events } from "../pages/Events";
 import { Performance } from "../pages/Performance";
 
@@ -58,6 +60,7 @@ export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
     items: [
       { path: "/docs/editing", label: "Editing", icon: "bi-pencil-square", component: Editing },
       { path: "/docs/ai-command", label: "AI Command", icon: "bi-stars", component: AICommand },
+      { path: "/docs/ai-providers", label: "AI Providers", icon: "bi-cpu", component: AIProviders },
       { path: "/docs/formulas", label: "Formulas", icon: "bi-calculator", component: Formulas },
       { path: "/docs/tree-grid", label: "Tree Grid", icon: "bi-diagram-3", component: TreeGrid },
       { path: "/docs/grouping", label: "Grouping", icon: "bi-collection", component: Grouping },
@@ -71,7 +74,10 @@ export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
   },
   {
     title: "Design",
-    items: [{ path: "/docs/theme", label: "Theme", icon: "bi-palette", component: Theme }],
+    items: [
+      { path: "/docs/theme", label: "Theme", icon: "bi-palette", component: Theme },
+      { path: "/docs/styling-configuration", label: "Styling Config", icon: "bi-brush", component: StylingConfiguration },
+    ],
   },
 ];
 

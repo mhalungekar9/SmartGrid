@@ -1,8 +1,20 @@
-# @gridnexa/angular
+# GridNexa Angular Data Grid | Angular Table
 
-Enterprise Angular data grid for modern UI products that need spreadsheet-grade power without giving up product polish.
+Enterprise Angular data grid with Excel-like interactions, safe AI command support, typed column models, and design-system friendly styling.
 
-GridNexa is built for React, Angular, Vue, and JavaScript teams. The Angular package gives you a native Angular grid with typed columns, row selection, row numbers, sorting, filtering, advanced filters, formulas, inline editing, grouped headers, grouping, pivoting, tree data, master/detail, CSV export, Excel export, and theme-ready UI.
+[![npm](https://img.shields.io/npm/v/@gridnexa/angular?color=dd0031)](https://www.npmjs.com/package/@gridnexa/angular)
+[![license](https://img.shields.io/npm/l/@gridnexa/angular)](https://github.com/mhalungekar9/SmartGrid)
+[![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
+[![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
+
+GridNexa for Angular is a native Angular package for product teams building admin tools, dashboards, reporting screens, and spreadsheet-style workflows.
+
+## Quick Links
+
+- Website: https://www.gridnexa.in/
+- Docs and playground: https://www.gridnexa.in/docs/basic-grid
+- Help: https://www.gridnexa.in/help
+- Repository: https://github.com/mhalungekar9/SmartGrid
 
 ## Install
 
@@ -14,7 +26,7 @@ npm install @gridnexa/angular
 pnpm add @gridnexa/angular
 ```
 
-## Usage
+## Basic Usage
 
 ```ts
 import { Component } from "@angular/core";
@@ -42,6 +54,8 @@ interface Employee {
       [enableFillHandle]="true"
       [enableUndoRedo]="true"
       [pageSize]="20"
+      theme="light"
+      density="standard"
       [getRowId]="getRowId"
       (rowSelectionChange)="onSelection($event)"
       (cellValueChange)="onCellValueChange($event)"
@@ -73,18 +87,42 @@ export class AppComponent {
 }
 ```
 
-## Features
+## AI Command Support
 
-- Native Angular data grid with TypeScript column models
-- Excel-style features: formulas, fill, copy/paste, undo/redo, find, CSV export, and Excel export
-- Filtering: column filters, quick filter, external filter, and advanced filter model
-- Data modeling: grouping, pivoting, tree data indentation, master/detail, and transactions
-- Grid UX: row selection, row numbers, pagination, status output, and tools panel
-- Columns: merged headers, column visibility tools, column reorder, and row reorder
-- Events: row selection, cell value changes, pivot model changes, advanced filter changes, and server-side operation events
+```html
+<grid-nexa
+  [columns]="columns"
+  [rows]="rows"
+  [ai]="{
+    enabled: true,
+    endpoint: '/api/gridnexa-ai',
+    placeholder: 'Ask AI to filter, sort, group, pivot, pin, hide, or export'
+  }"
+/>
+```
 
-## Links
+Keep provider keys on your backend. GridNexa accepts safe action plans from OpenAI, Azure OpenAI, Anthropic, Gemini, local models, or an internal gateway.
 
-- Website: https://www.gridnexa.in/
-- Help: https://www.gridnexa.in/help
-- Repository: https://github.com/mhalungekar9/SmartGrid
+## Styling And Classes
+
+Use `className`, `classNames`, `getRowClassName`, `getCellClassName`, `getHeaderClassName`, and column-level `className`, `cellClassName`, and `headerClassName` to connect Bootstrap, utility classes, CSS Modules, SCSS, Less, or plain CSS.
+
+## Feature Highlights
+
+- Sorting, pagination, quick filter, column filters, external filters, and advanced filter model
+- Selection, row numbers, clipboard operations, fill, find, undo, and redo
+- Inline editing, formulas, CSV export, and Excel export
+- Merged headers, column resize, drag reorder, hide/show, pinning, and row reorder
+- Grouping, pivoting, tree data, master/detail, transactions, and server-side operation events
+- AI command bar with safe action plans
+
+## Related Packages
+
+- `@gridnexa/react`
+- `@gridnexa/vue`
+- `@gridnexa/javascript`
+- `@gridnexa/core`
+
+## License
+
+MIT

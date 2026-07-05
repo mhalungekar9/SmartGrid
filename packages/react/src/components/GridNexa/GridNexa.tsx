@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useInsertionEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, ReactElement } from "react";
 import type {
   AdvancedFilterModel,
   ColumnFilterModel,
   GridOptions,
+  GridNexaSlotClassNames,
   GridNexaAiRequest,
   GridNexaCommandAction,
   GridNexaCommandPlan,
@@ -16,7 +17,8 @@ import { GridBody } from "../GridBody/GridBody";
 
 import { GridRenderer } from "../../rendering";
 
-import GridContext from "../../context/GridContext";
+import GridContext, { cx } from "../../context/GridContext";
+import { injectGridNexaStyles } from "../../styles/injectGridNexaStyles";
 import { getColumnValue, getRawColumnValue } from "../../utils/cellValue";
 import type { Column } from "@gridnexa/core";
 
@@ -790,6 +792,14 @@ function buildTreeRows<T>(
 export function GridNexa<T>({
   rows,
   columns,
+  className,
+  theme = "light",
+  density = "standard",
+  unstyled = false,
+  classNames = {},
+  getRowClassName,
+  getCellClassName,
+  getHeaderClassName,
   mergedHeaders,
   columnFilters,
   quickFilterText: quickFilterTextProp,
@@ -818,6 +828,12 @@ export function GridNexa<T>({
   pageSize,
   ai,
 }: GridNexaExtendedProps<T>) {
+  useInsertionEffect(() => {
+    if (!unstyled) {
+      injectGridNexaStyles();
+    }
+  }, [unstyled]);
+
   const [gridRows, setGridRows] = useState(rows);
   const [columnWidths, setColumnWidths] = useState(() =>
     columns.map((column) => column.width ?? 150),
@@ -2624,7 +2640,7 @@ export function GridNexa<T>({
         <div className="sg-advanced-filter-group" key={node.id ?? path.join(".")}>
           <div className="sg-advanced-filter-group-header">
             <select
-              className="sg-filter-operator"
+              className={cx("sg-filter-operator", mergedClassNames.input)}
               value={node.joinOperator}
               onChange={(event) =>
                 updateAdvancedFilterModelAtPath(path, (currentNode) =>
@@ -2643,14 +2659,14 @@ export function GridNexa<T>({
             </select>
             <div>
               <button
-                className="sg-toolbar-button sg-toolbar-button--ghost"
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                 type="button"
                 onClick={() => addAdvancedRule(path)}
               >
                 Add rule
               </button>
               <button
-                className="sg-toolbar-button sg-toolbar-button--ghost"
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                 type="button"
                 onClick={() => addAdvancedGroup(path)}
               >
@@ -2658,7 +2674,7 @@ export function GridNexa<T>({
               </button>
               {path.length ? (
                 <button
-                  className="sg-toolbar-button sg-toolbar-button--ghost"
+                  className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                   type="button"
                   onClick={() => removeAdvancedNode(path)}
                 >
@@ -2688,7 +2704,7 @@ export function GridNexa<T>({
     return (
       <div className="sg-advanced-filter-rule" key={node.id ?? path.join(".")}>
         <select
-          className="sg-filter-input"
+          className={cx("sg-filter-input", mergedClassNames.input)}
           value={node.columnId}
           onChange={(event) => {
             const nextColumn = columns.find(
@@ -2725,7 +2741,7 @@ export function GridNexa<T>({
             ))}
         </select>
         <select
-          className="sg-filter-operator"
+          className={cx("sg-filter-operator", mergedClassNames.input)}
           value={node.operator}
           onChange={(event) =>
             updateAdvancedFilterModelAtPath(path, (currentNode) =>
@@ -2750,7 +2766,7 @@ export function GridNexa<T>({
         </select>
         {needsValue && node.operator === "in" ? (
           <select
-            className="sg-filter-input"
+            className={cx("sg-filter-input", mergedClassNames.input)}
             multiple
             value={(node.values ?? []).map(String)}
             onChange={(event) => {
@@ -2774,7 +2790,7 @@ export function GridNexa<T>({
         ) : needsValue ? (
           <>
             <input
-              className="sg-filter-input"
+              className={cx("sg-filter-input", mergedClassNames.input)}
               type={
                 filterType === "number"
                   ? "number"
@@ -2794,7 +2810,7 @@ export function GridNexa<T>({
             />
             {node.operator === "between" ? (
               <input
-                className="sg-filter-input"
+                className={cx("sg-filter-input", mergedClassNames.input)}
                 type={filterType === "date" ? "date" : "number"}
                 value={String(node.valueTo ?? "")}
                 onChange={(event) =>
@@ -2812,7 +2828,7 @@ export function GridNexa<T>({
           <span className="sg-advanced-filter-readonly">No value needed</span>
         )}
         <button
-          className="sg-toolbar-button sg-toolbar-button--ghost"
+          className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
           type="button"
           onClick={() => removeAdvancedNode(path)}
         >
@@ -3108,12 +3124,14 @@ export function GridNexa<T>({
   };
 
   const aiEnabled = ai?.enabled ?? Boolean(ai?.provider || ai?.endpoint);
+  const mergedClassNames: GridNexaSlotClassNames = classNames;
 
   return (
     <GridContext.Provider
       value={{
         rows: tableRows,
         columns: tableColumns,
+        classNames: mergedClassNames,
         columnTemplate: template,
         selectedRowIndex,
         onRowSelect: setSelectedRowIndex,
@@ -3126,6 +3144,9 @@ export function GridNexa<T>({
         toggleAllRowsSelection,
         rowNumbers,
         getColumnStyle: (columnId: string) => tableColumnStyles[columnId] ?? {},
+        getRowClassName: (params) => getRowClassName?.(params),
+        getCellClassName: (params) => getCellClassName?.(params),
+        getHeaderClassName: (params) => getHeaderClassName?.(params),
         activeCell,
         selectionAnchor,
         setActiveCell,
@@ -3150,11 +3171,20 @@ export function GridNexa<T>({
         cancelCellEdit: () => setEditingCell(null),
       }}
     >
-      <div className="sg-shell" onClick={closeCellContextMenu}>
-        <div className="sg-toolbar">
+      <div
+        className={cx("sg-shell", mergedClassNames.shell, className)}
+        data-gnx-theme={theme}
+        data-gnx-density={density}
+        onClick={closeCellContextMenu}
+      >
+        <div className={cx("sg-toolbar", mergedClassNames.toolbar)}>
           <div className="sg-toolbar-copy">
-            <div className="sg-toolbar-title">GridNexa</div>
-            <div className="sg-toolbar-subtitle">{rowCountLabel}</div>
+            <div className={cx("sg-toolbar-title", mergedClassNames.toolbarTitle)}>
+              GridNexa
+            </div>
+            <div className={cx("sg-toolbar-subtitle", mergedClassNames.toolbarSubtitle)}>
+              {rowCountLabel}
+            </div>
           </div>
 
           {aiEnabled ? (
@@ -3171,7 +3201,7 @@ export function GridNexa<T>({
                     {t("aiCommand", "AI command")}
                   </span>
                   <input
-                    className="sg-filter-input sg-ai-command-input"
+                    className={cx("sg-filter-input sg-ai-command-input", mergedClassNames.input)}
                     type="search"
                     value={aiPrompt}
                     onChange={(event) => setAiPrompt(event.target.value)}
@@ -3182,7 +3212,7 @@ export function GridNexa<T>({
                   />
                 </label>
                 <button
-                  className="sg-toolbar-button"
+                  className={cx("sg-toolbar-button", mergedClassNames.button)}
                   type="submit"
                   disabled={!aiPrompt.trim() || aiBusy}
                 >
@@ -3201,14 +3231,14 @@ export function GridNexa<T>({
                   <div className="sg-ai-plan-actions">
                     <span>{aiPlan.actions.length} actions</span>
                     <button
-                      className="sg-toolbar-button sg-toolbar-button--ghost"
+                      className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                       type="button"
                       onClick={() => setAiPlan(null)}
                     >
                       Dismiss
                     </button>
                     <button
-                      className="sg-toolbar-button"
+                      className={cx("sg-toolbar-button", mergedClassNames.button)}
                       type="button"
                       onClick={() => applyAiPlan(aiPlan)}
                     >
@@ -3220,11 +3250,11 @@ export function GridNexa<T>({
             </div>
           ) : null}
 
-          <div className="sg-toolbar-actions">
+          <div className={cx("sg-toolbar-actions", mergedClassNames.toolbarActions)}>
             {pageSize && pageSize > 0 ? (
               <div className="sg-pager">
                 <button
-                  className="sg-toolbar-button sg-toolbar-button--ghost"
+                  className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                   type="button"
                   onClick={goToPreviousPage}
                   disabled={pageIndex === 0}
@@ -3235,7 +3265,7 @@ export function GridNexa<T>({
                   Page {pageIndex + 1} of {pageCount}
                 </span>
                 <button
-                  className="sg-toolbar-button sg-toolbar-button--ghost"
+                  className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                   type="button"
                   onClick={goToNextPage}
                   disabled={pageIndex >= pageCount - 1}
@@ -3250,7 +3280,7 @@ export function GridNexa<T>({
                 {t("quickFilter", "Quick filter")}
               </span>
               <input
-                className="sg-filter-input"
+                className={cx("sg-filter-input", mergedClassNames.input)}
                 type="search"
                 value={quickFilterText}
                 onChange={(event) => setQuickFilterText(event.target.value)}
@@ -3262,7 +3292,7 @@ export function GridNexa<T>({
             <label className="sg-filter">
               <span className="sg-filter-label">{t("find", "Find")}</span>
               <input
-                className="sg-filter-input sg-filter-input--short"
+                className={cx("sg-filter-input sg-filter-input--short", mergedClassNames.input)}
                 type="search"
                 value={findText}
                 onChange={(event) => setFindText(event.target.value)}
@@ -3271,7 +3301,7 @@ export function GridNexa<T>({
             </label>
 
             <button
-              className="sg-toolbar-button sg-toolbar-button--ghost"
+              className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
               type="button"
               onClick={() =>
                 setFindMatchIndex((current) =>
@@ -3286,7 +3316,7 @@ export function GridNexa<T>({
             {enableUndoRedo ? (
               <>
                 <button
-                  className="sg-toolbar-button sg-toolbar-button--ghost"
+                  className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                   type="button"
                   onClick={undo}
                   disabled={!undoStack.length}
@@ -3294,7 +3324,7 @@ export function GridNexa<T>({
                   Undo
                 </button>
                 <button
-                  className="sg-toolbar-button sg-toolbar-button--ghost"
+                  className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                   type="button"
                   onClick={redo}
                   disabled={!redoStack.length}
@@ -3306,7 +3336,7 @@ export function GridNexa<T>({
 
             {enableFillHandle ? (
               <button
-                className="sg-toolbar-button sg-toolbar-button--ghost"
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                 type="button"
                 onClick={fillSelection}
                 disabled={!cellRange}
@@ -3317,7 +3347,7 @@ export function GridNexa<T>({
 
             <div className="sg-column-chooser" ref={filterPanelRef}>
               <button
-                className="sg-toolbar-button sg-toolbar-button--ghost"
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                 type="button"
                 onClick={() => setFilterPanelOpen((current) => !current)}
                 aria-expanded={filterPanelOpen}
@@ -3328,7 +3358,7 @@ export function GridNexa<T>({
 
               {filterPanelOpen ? (
                 <div
-                  className="sg-column-chooser-panel sg-filter-panel"
+                  className={cx("sg-column-chooser-panel sg-filter-panel", mergedClassNames.panel)}
                   role="menu"
                   aria-label="Column filters"
                 >
@@ -3361,7 +3391,7 @@ export function GridNexa<T>({
                           </span>
                           {filterType === "set" ? (
                             <select
-                              className="sg-filter-input"
+                              className={cx("sg-filter-input", mergedClassNames.input)}
                               multiple
                               value={(filter.values ?? []).map(String)}
                               onChange={(event) => {
@@ -3386,7 +3416,7 @@ export function GridNexa<T>({
                           ) : (
                             <>
                               <select
-                                className="sg-filter-operator"
+                                className={cx("sg-filter-operator", mergedClassNames.input)}
                                 value={filter.operator}
                                 onChange={(event) =>
                                   setColumnFilter(column.id, {
@@ -3421,7 +3451,7 @@ export function GridNexa<T>({
                                 ))}
                               </select>
                               <input
-                                className="sg-filter-input"
+                                className={cx("sg-filter-input", mergedClassNames.input)}
                                 type={
                                   filterType === "number"
                                     ? "number"
@@ -3440,7 +3470,7 @@ export function GridNexa<T>({
                               />
                               {filter.operator === "between" ? (
                                 <input
-                                  className="sg-filter-input"
+                                  className={cx("sg-filter-input", mergedClassNames.input)}
                                   type={
                                     filterType === "date" ? "date" : "number"
                                   }
@@ -3457,7 +3487,7 @@ export function GridNexa<T>({
                             </>
                           )}
                           <button
-                            className="sg-toolbar-button sg-toolbar-button--ghost"
+                            className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                             type="button"
                             onClick={() => setColumnFilter(column.id, null)}
                           >
@@ -3472,7 +3502,7 @@ export function GridNexa<T>({
 
             <div className="sg-column-chooser" ref={advancedFilterPanelRef}>
               <button
-                className="sg-toolbar-button sg-toolbar-button--ghost"
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                 type="button"
                 onClick={() => {
                   ensureAdvancedFilterModel();
@@ -3487,7 +3517,7 @@ export function GridNexa<T>({
 
               {advancedFilterPanelOpen ? (
                 <div
-                  className="sg-column-chooser-panel sg-advanced-filter-panel"
+                  className={cx("sg-column-chooser-panel sg-advanced-filter-panel", mergedClassNames.panel)}
                   role="menu"
                   aria-label="Advanced filter builder"
                 >
@@ -3497,7 +3527,7 @@ export function GridNexa<T>({
                       <span>Build nested AND/OR rules visually.</span>
                     </div>
                     <button
-                      className="sg-toolbar-button sg-toolbar-button--ghost"
+                      className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                       type="button"
                       onClick={() => setAdvancedFilterModel(null)}
                       disabled={!advancedFilterModel}
@@ -3509,7 +3539,7 @@ export function GridNexa<T>({
                     renderAdvancedFilterNode(advancedFilterModel, [])
                   ) : (
                     <button
-                      className="sg-toolbar-button"
+                      className={cx("sg-toolbar-button", mergedClassNames.button)}
                       type="button"
                       onClick={() =>
                         setAdvancedFilterModel(createAdvancedFilterGroup(columns))
@@ -3524,7 +3554,7 @@ export function GridNexa<T>({
 
             <div className="sg-column-chooser" ref={chooserRef}>
               <button
-                className="sg-toolbar-button sg-toolbar-button--ghost"
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                 type="button"
                 onClick={() => setColumnChooserOpen((current) => !current)}
                 aria-expanded={columnChooserOpen}
@@ -3535,7 +3565,7 @@ export function GridNexa<T>({
 
               {columnChooserOpen ? (
                 <div
-                  className="sg-column-chooser-panel"
+                  className={cx("sg-column-chooser-panel", mergedClassNames.panel)}
                   role="menu"
                   aria-label="Column chooser"
                 >
@@ -3565,7 +3595,7 @@ export function GridNexa<T>({
             </div>
 
             <button
-              className="sg-toolbar-button"
+              className={cx("sg-toolbar-button", mergedClassNames.button)}
               type="button"
               onClick={exportVisibleRowsToCsv}
             >
@@ -3573,7 +3603,7 @@ export function GridNexa<T>({
             </button>
 
             <button
-              className="sg-toolbar-button"
+              className={cx("sg-toolbar-button", mergedClassNames.button)}
               type="button"
               onClick={exportVisibleRowsToExcel}
             >
@@ -3582,7 +3612,7 @@ export function GridNexa<T>({
           </div>
         </div>
 
-        <div className="sg-grid-workspace">
+        <div className={cx("sg-grid-workspace", mergedClassNames.gridWorkspace)}>
           <GridRoot>
             <GridHeader
               columns={tableColumns}
@@ -3653,10 +3683,18 @@ export function GridNexa<T>({
             />
           </GridRoot>
 
-          <aside className="sg-side-tools" ref={pivotPanelRef} aria-label="Grid tool panel">
+          <aside
+            className={cx("sg-side-tools", mergedClassNames.sideTools)}
+            ref={pivotPanelRef}
+            aria-label="Grid tool panel"
+          >
             <div className="sg-side-tabs" aria-label="Tool tabs">
               <button
-                className={`sg-side-tab${pivotPanelOpen ? " sg-side-tab--active" : ""}`}
+                className={cx(
+                  "sg-side-tab",
+                  pivotPanelOpen && "sg-side-tab--active",
+                  mergedClassNames.sideTab,
+                )}
                 type="button"
                 aria-expanded={pivotPanelOpen}
                 onClick={() => setPivotPanelOpen((current) => !current)}
@@ -3665,7 +3703,7 @@ export function GridNexa<T>({
                 <span>Columns</span>
               </button>
               <button
-                className="sg-side-tab"
+                className={cx("sg-side-tab", mergedClassNames.sideTab)}
                 type="button"
                 onClick={() => setFilterPanelOpen(true)}
               >
@@ -3675,7 +3713,7 @@ export function GridNexa<T>({
             </div>
 
             {pivotPanelOpen ? (
-              <div className="sg-pivot-panel">
+              <div className={cx("sg-pivot-panel", mergedClassNames.panel)}>
                 <div className="sg-pivot-panel-header">
                   <label className="sg-pivot-toggle">
                     <input
@@ -3724,7 +3762,7 @@ export function GridNexa<T>({
                 <label className="sg-pivot-search">
                   <span>Search columns</span>
                   <input
-                    className="sg-filter-input"
+                    className={cx("sg-filter-input", mergedClassNames.input)}
                     type="search"
                     placeholder="Search..."
                     value={pivotToolSearch}
@@ -3761,7 +3799,7 @@ export function GridNexa<T>({
                 <section className="sg-pivot-section">
                   <h3>Row Groups</h3>
                   <select
-                    className="sg-filter-input"
+                    className={cx("sg-filter-input", mergedClassNames.input)}
                     value={groupBy ?? ""}
                     onChange={(event) =>
                       updatePivotModel({
@@ -3781,7 +3819,7 @@ export function GridNexa<T>({
                 <section className="sg-pivot-section">
                   <h3>Pivot Columns</h3>
                   <select
-                    className="sg-filter-input"
+                    className={cx("sg-filter-input", mergedClassNames.input)}
                     value={pivotBy ?? ""}
                     onChange={(event) =>
                       updatePivotModel({
@@ -3828,7 +3866,7 @@ export function GridNexa<T>({
                   <label className="sg-pivot-aggregation">
                     <span>Aggregation</span>
                     <select
-                      className="sg-filter-input"
+                      className={cx("sg-filter-input", mergedClassNames.input)}
                       value={pivotAggregation}
                       onChange={(event) =>
                         updatePivotModel({
@@ -3901,7 +3939,7 @@ export function GridNexa<T>({
           </div>
         ) : null}
 
-        <div className="sg-status-bar" role="status">
+        <div className={cx("sg-status-bar", mergedClassNames.statusBar)} role="status">
           <span>{rowCountLabel}</span>
           <span>{selectedRowsLabel}</span>
           <span>{activeCellLabel}</span>
