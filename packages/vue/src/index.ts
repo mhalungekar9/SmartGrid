@@ -28,6 +28,9 @@ type CellEdit = {
   oldValue: unknown;
   newValue: unknown;
 };
+type DisplayRow =
+  | { kind: "group"; key: string; label: string; rows: RowRecord[]; summaries: string }
+  | { kind: "data"; row: RowRecord; rowIndex: number; depth?: number; treeKey?: string; hasChildren?: boolean };
 
 function rawValue<T>(row: T, column: Column<T>) {
   return column.valueGetter ? column.valueGetter(row) : row[column.field];
@@ -154,6 +157,18 @@ function buildPivot<T extends RowRecord>(
   return { columns: pivotColumns as Column<T>[], rows: pivotRows as T[], active: true };
 }
 
+function buildGroupSummary<T extends RowRecord>(rows: T[], columns: Column<T>[], groupBy?: string) {
+  return columns
+    .filter((column) => column.field !== groupBy)
+    .map((column) => {
+      const values = rows.map((row) => Number(value(row, column, columns))).filter(Number.isFinite);
+      return values.length ? `${column.headerName}: ${values.reduce((sum, entry) => sum + entry, 0).toLocaleString()}` : "";
+    })
+    .filter(Boolean)
+    .slice(0, 3)
+    .join(" | ");
+}
+
 function cell(text: string, tag: "td" | "th" = "td") {
   const element = document.createElement(tag);
   element.textContent = text;
@@ -201,12 +216,21 @@ export const GridNexaVue = defineComponent({
     const selected = new Set<string | number>();
     let sortState: SortState = null;
     let activeCell: CellPoint | null = null;
+    let rangeAnchor: CellPoint | null = null;
+    let rangeEnd: CellPoint | null = null;
+    let contextMenu: { x: number; y: number; rowIndex: number; columnId: string } | null = null;
+    let localQuickFilterText = props.quickFilterText;
     let findText = "";
     let toolsOpen = false;
     let draggedColumnId: string | null = null;
+    let draggedRowIndex: number | null = null;
     let workingColumns = [...props.columns];
     let workingRows = [...props.rows];
     const hiddenColumnIds = new Set(props.columns.filter((column) => column.hidden).map((column) => column.id));
+    const expandedDetailIds = new Set<string | number>();
+    const collapsedGroups = new Set<string>();
+    const collapsedTreeKeys = new Set<string>();
+    const columnWidths = new Map<string, number>();
     const undoStack: CellEdit[] = [];
     const redoStack: CellEdit[] = [];
 
@@ -215,9 +239,12 @@ export const GridNexaVue = defineComponent({
       workingRows = [...props.rows];
       workingColumns = [...props.columns];
       props.columns.filter((column) => column.hidden).forEach((column) => hiddenColumnIds.add(column.id));
+      props.columns.forEach((column) => {
+        if (column.width && !columnWidths.has(column.id)) columnWidths.set(column.id, column.width);
+      });
     };
     const visibleRows = () => {
-      const query = props.quickFilterText.trim().toLowerCase();
+      const query = localQuickFilterText.trim().toLowerCase();
       const rows = workingRows.filter((row) => {
         if (props.externalFilter && !props.externalFilter(row)) return false;
         if (props.advancedFilter && !props.advancedFilter(row)) return false;
@@ -266,9 +293,22 @@ export const GridNexaVue = defineComponent({
 
     const fillDown = () => {
       if (!activeCell || !props.enableFillHandle) return;
+      const column = workingColumns.find((entry) => entry.id === activeCell?.columnId);
+      if (rangeAnchor && rangeEnd && column) {
+        const minRow = Math.min(rangeAnchor.rowIndex, rangeEnd.rowIndex);
+        const maxRow = Math.max(rangeAnchor.rowIndex, rangeEnd.rowIndex);
+        const sourceRow = workingRows[minRow];
+        if (!sourceRow || column.editable === false) return;
+        const sourceValue = rawValue(sourceRow, column);
+        for (let rowIndex = minRow + 1; rowIndex <= maxRow; rowIndex += 1) {
+          const row = workingRows[rowIndex];
+          if (row) setCellValue(row, rowIndex, column, sourceValue);
+        }
+        render();
+        return;
+      }
       const sourceRow = workingRows[activeCell.rowIndex];
       const targetRow = workingRows[activeCell.rowIndex + 1];
-      const column = workingColumns.find((entry) => entry.id === activeCell?.columnId);
       if (!sourceRow || !targetRow || !column || column.editable === false) return;
       setCellValue(targetRow, activeCell.rowIndex + 1, column, rawValue(sourceRow, column));
       render();
@@ -276,6 +316,17 @@ export const GridNexaVue = defineComponent({
 
     const copyActiveCell = async () => {
       if (!activeCell || typeof navigator === "undefined") return;
+      if (rangeAnchor && rangeEnd) {
+        const columns = workingColumns.filter((column) => !column.hidden && !hiddenColumnIds.has(column.id));
+        const anchorColumn = columns.findIndex((entry) => entry.id === rangeAnchor?.columnId);
+        const endColumn = columns.findIndex((entry) => entry.id === rangeEnd?.columnId);
+        const text = workingRows
+          .slice(Math.min(rangeAnchor.rowIndex, rangeEnd.rowIndex), Math.max(rangeAnchor.rowIndex, rangeEnd.rowIndex) + 1)
+          .map((row) => columns.slice(Math.min(anchorColumn, endColumn), Math.max(anchorColumn, endColumn) + 1).map((column) => format(row, column, workingColumns)).join("\t"))
+          .join("\n");
+        await navigator.clipboard?.writeText(text);
+        return;
+      }
       const row = workingRows[activeCell.rowIndex];
       const column = workingColumns.find((entry) => entry.id === activeCell?.columnId);
       if (!row || !column) return;
@@ -284,10 +335,17 @@ export const GridNexaVue = defineComponent({
 
     const pasteActiveCell = async () => {
       if (!activeCell || typeof navigator === "undefined") return;
-      const row = workingRows[activeCell.rowIndex];
-      const column = workingColumns.find((entry) => entry.id === activeCell?.columnId);
-      if (!row || !column || column.editable === false) return;
-      setCellValue(row, activeCell.rowIndex, column, await navigator.clipboard?.readText());
+      const text = await navigator.clipboard?.readText();
+      const columns = workingColumns.filter((column) => !column.hidden && !hiddenColumnIds.has(column.id));
+      const startColumn = columns.findIndex((entry) => entry.id === activeCell?.columnId);
+      text.split(/\r?\n/).forEach((line, rowOffset) => {
+        line.split("\t").forEach((value, columnOffset) => {
+          const rowIndex = activeCell!.rowIndex + rowOffset;
+          const row = workingRows[rowIndex];
+          const column = columns[startColumn + columnOffset];
+          if (row && column && column.editable !== false) setCellValue(row, rowIndex, column, value);
+        });
+      });
       render();
     };
 
@@ -299,6 +357,13 @@ export const GridNexaVue = defineComponent({
       render();
     };
 
+    const reorderRow = (sourceIndex: number, targetIndex: number) => {
+      if (sourceIndex === targetIndex || sourceIndex < 0 || targetIndex < 0 || sourceIndex >= workingRows.length || targetIndex >= workingRows.length) return;
+      const [row] = workingRows.splice(sourceIndex, 1);
+      workingRows.splice(targetIndex, 0, row);
+      render();
+    };
+
     const moveColumn = (sourceId: string, targetId: string) => {
       if (sourceId === targetId) return;
       const sourceIndex = workingColumns.findIndex((column) => column.id === sourceId);
@@ -307,6 +372,78 @@ export const GridNexaVue = defineComponent({
       const [column] = workingColumns.splice(sourceIndex, 1);
       workingColumns.splice(targetIndex, 0, column);
       render();
+    };
+
+    const makeDisplayRows = (rows: RowRecord[]): DisplayRow[] => {
+      if (props.groupBy) {
+        const groupBy = props.groupBy;
+        const buckets = new Map<string, RowRecord[]>();
+        rows.forEach((row) => {
+          const key = String(row[groupBy] ?? "Ungrouped");
+          buckets.set(key, [...(buckets.get(key) ?? []), row]);
+        });
+        return Array.from(buckets.entries()).flatMap(([key, bucket]) => [
+          { kind: "group" as const, key, label: key, rows: bucket, summaries: buildGroupSummary(bucket, workingColumns, groupBy) },
+          ...(collapsedGroups.has(key) ? [] : bucket.map((row) => ({ kind: "data" as const, row, rowIndex: workingRows.indexOf(row) }))),
+        ]);
+      }
+      if (props.getTreeDataPath) {
+        return rows
+          .map((row) => {
+            const path = props.getTreeDataPath?.(row).filter(Boolean) ?? [];
+            return { row, path, key: path.join("/") };
+          })
+          .sort((left, right) => left.key.localeCompare(right.key))
+          .filter((entry) => entry.path.slice(0, -1).every((_, index) => !collapsedTreeKeys.has(entry.path.slice(0, index + 1).join("/"))))
+          .map((entry, _index, entries) => ({
+            kind: "data" as const,
+            row: entry.row,
+            rowIndex: workingRows.indexOf(entry.row),
+            depth: Math.max(0, entry.path.length - 1),
+            treeKey: entry.key,
+            hasChildren: entries.some((other) => other.key.startsWith(`${entry.key}/`)),
+          }));
+      }
+      return rows.map((row) => ({ kind: "data", row, rowIndex: workingRows.indexOf(row) }));
+    };
+
+    const isCellInRange = (rowIndex: number, columnId: string, columns: Column<RowRecord>[]) => {
+      if (!rangeAnchor || !rangeEnd || !props.enableRangeSelection) return false;
+      const columnIndex = columns.findIndex((column) => column.id === columnId);
+      const anchorIndex = columns.findIndex((column) => column.id === rangeAnchor?.columnId);
+      const endIndex = columns.findIndex((column) => column.id === rangeEnd?.columnId);
+      return rowIndex >= Math.min(rangeAnchor.rowIndex, rangeEnd.rowIndex) &&
+        rowIndex <= Math.max(rangeAnchor.rowIndex, rangeEnd.rowIndex) &&
+        columnIndex >= Math.min(anchorIndex, endIndex) &&
+        columnIndex <= Math.max(anchorIndex, endIndex);
+    };
+
+    const startColumnResize = (event: MouseEvent, column: Column<RowRecord>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const startX = event.clientX;
+      const startWidth = columnWidths.get(column.id) ?? column.width ?? 150;
+      const move = (moveEvent: MouseEvent) => {
+        columnWidths.set(column.id, Math.max(72, startWidth + moveEvent.clientX - startX));
+        render();
+      };
+      const up = () => {
+        document.removeEventListener("mousemove", move);
+        document.removeEventListener("mouseup", up);
+      };
+      document.addEventListener("mousemove", move);
+      document.addEventListener("mouseup", up);
+    };
+
+    const pinnedStyle = (column: Column<RowRecord>, columns: Column<RowRecord>[]) => {
+      if (!column.pinned) return "";
+      const index = columns.findIndex((entry) => entry.id === column.id);
+      const width = (entry: Column<RowRecord>) => columnWidths.get(entry.id) ?? entry.width ?? 150;
+      const offset =
+        column.pinned === "left"
+          ? columns.slice(0, index).filter((entry) => entry.pinned === "left").reduce((sum, entry) => sum + width(entry), 0)
+          : columns.slice(index + 1).filter((entry) => entry.pinned === "right").reduce((sum, entry) => sum + width(entry), 0);
+      return `position:sticky;${column.pinned}:${offset}px;z-index:2;background:white;box-shadow:${column.pinned === "left" ? "inset -1px 0 #dbe3ef" : "inset 1px 0 #dbe3ef"};`;
     };
 
     const download = (columns: Column<RowRecord>[], rows: RowRecord[], excel = false) => {
@@ -325,13 +462,17 @@ export const GridNexaVue = defineComponent({
       if (!host.value) return;
       const sourceRows = visibleRows();
       const pivot = buildPivot(sourceRows, workingColumns, props.groupBy, props.pivotBy, props.pivotValueColumns, props.pivotAggregation);
-      const columns = pivot.columns.filter((column) => !column.hidden && !hiddenColumnIds.has(column.id));
+      const columns = pivot.columns
+        .filter((column) => !column.hidden && !hiddenColumnIds.has(column.id))
+        .sort((left, right) => (left.pinned === "left" ? 0 : left.pinned === "right" ? 2 : 1) - (right.pinned === "left" ? 0 : right.pinned === "right" ? 2 : 1));
       const pageRows = props.pageSize ? pivot.rows.slice(pageIndex.value * props.pageSize, pageIndex.value * props.pageSize + props.pageSize) : pivot.rows;
+      const displayRows = pivot.active ? pageRows.map((row) => ({ kind: "data" as const, row, rowIndex: pivot.rows.indexOf(row) })) : makeDisplayRows(pageRows);
       const root = document.createElement("div");
       root.className = "gridnexa-vue-grid";
-      root.append(renderToolbar(columns, pivot.rows), renderTable(columns, pageRows));
+      root.append(renderToolbar(columns, pivot.rows), renderTable(columns, displayRows));
       if (toolsOpen) root.appendChild(renderToolsPanel());
       root.appendChild(renderStatus(pivot.rows.length));
+      if (contextMenu) root.appendChild(renderContextMenu());
       host.value.replaceChildren(root);
       emit("serverSideOperation", {
         sortModel: sortState ? [sortState] : [],
@@ -364,6 +505,16 @@ export const GridNexaVue = defineComponent({
         findText = find.value;
         render();
       });
+      const quickFilter = document.createElement("input");
+      quickFilter.type = "search";
+      quickFilter.placeholder = "Quick filter";
+      quickFilter.value = localQuickFilterText;
+      quickFilter.style.cssText = "min-height:32px;padding:0 10px;border:1px solid #bfdbfe;border-radius:8px";
+      quickFilter.addEventListener("input", () => {
+        localQuickFilterText = quickFilter.value;
+        pageIndex.value = 0;
+        render();
+      });
       const pageCount = props.pageSize ? Math.max(1, Math.ceil(rows.length / props.pageSize)) : 1;
       if (props.pageSize) {
         const prev = button("Prev", () => {
@@ -378,7 +529,7 @@ export const GridNexaVue = defineComponent({
         next.disabled = pageIndex.value >= pageCount - 1;
         actions.append(prev, ` Page ${pageIndex.value + 1} `, next);
       }
-      actions.appendChild(find);
+      actions.append(quickFilter, find);
       if (props.enableUndoRedo) {
         const undoButton = button("Undo", undo);
         undoButton.disabled = !undoStack.length;
@@ -401,7 +552,7 @@ export const GridNexaVue = defineComponent({
       return toolbar;
     };
 
-    const renderTable = (columns: Column<RowRecord>[], rows: RowRecord[]) => {
+    const renderTable = (columns: Column<RowRecord>[], rows: DisplayRow[]) => {
       const table = document.createElement("table");
       table.style.cssText = "width:100%;border-collapse:collapse";
       const thead = document.createElement("thead");
@@ -412,7 +563,7 @@ export const GridNexaVue = defineComponent({
       if (props.rowNumbers) header.appendChild(cell("#", "th"));
       columns.forEach((column) => {
         const th = cell(`${column.headerName}${sortState?.columnId === column.id ? (sortState.direction === "asc" ? " ↑" : " ↓") : ""}`, "th");
-        th.style.cssText = "padding:10px;border:1px solid #dbe3ef;background:#f8fbff;text-align:left";
+        th.style.cssText = `padding:10px;border:1px solid #dbe3ef;background:#f8fbff;text-align:left;width:${columnWidths.get(column.id) ?? column.width ?? 150}px;${pinnedStyle(column, columns)}`;
         th.draggable = true;
         th.addEventListener("dragstart", () => {
           draggedColumnId = column.id;
@@ -428,12 +579,25 @@ export const GridNexaVue = defineComponent({
           sortState = sortState?.columnId !== column.id ? { columnId: column.id, direction: "asc" } : sortState.direction === "asc" ? { columnId: column.id, direction: "desc" } : null;
           render();
         });
+        if (column.resizable !== false) {
+          const resizer = document.createElement("span");
+          resizer.style.cssText = "float:right;width:7px;height:24px;cursor:col-resize;border-right:2px solid #bfdbfe";
+          resizer.addEventListener("mousedown", (event) => startColumnResize(event, column));
+          th.appendChild(resizer);
+        }
         header.appendChild(th);
       });
       thead.appendChild(header);
       table.appendChild(thead);
       const tbody = document.createElement("tbody");
-      rows.forEach((row, rowIndex) => appendRow(tbody, row, rowIndex, columns, leading));
+      rows.forEach((entry) => {
+        if (entry.kind === "group") appendGroupRow(tbody, entry, columns.length + leading);
+        if (entry.kind === "data") {
+          appendRow(tbody, entry.row, entry.rowIndex, columns, leading, entry);
+          const id = rowId(entry.row, entry.rowIndex);
+          if (props.masterDetailRenderer && expandedDetailIds.has(id)) appendDetailRow(tbody, entry.row, columns.length + leading);
+        }
+      });
       table.appendChild(tbody);
       return table;
     };
@@ -456,8 +620,43 @@ export const GridNexaVue = defineComponent({
       return row;
     };
 
-    const appendRow = (tbody: HTMLTableSectionElement, row: RowRecord, rowIndex: number, columns: Column<RowRecord>[], leading: number) => {
+    const appendGroupRow = (tbody: HTMLTableSectionElement, entry: Extract<DisplayRow, { kind: "group" }>, colSpan: number) => {
       const tr = document.createElement("tr");
+      const td = document.createElement("td");
+      td.colSpan = colSpan;
+      td.style.cssText = "padding:10px;border:1px solid #dbe3ef;background:#eef4ff;color:#153e90;font-weight:800;text-transform:uppercase";
+      const toggle = button(collapsedGroups.has(entry.key) ? "+" : "-", () => {
+        collapsedGroups.has(entry.key) ? collapsedGroups.delete(entry.key) : collapsedGroups.add(entry.key);
+        render();
+      });
+      td.append(toggle, `${entry.label}  ${entry.rows.length} rows${entry.summaries ? `  ${entry.summaries}` : ""}`);
+      tr.appendChild(td);
+      tbody.appendChild(tr);
+    };
+
+    const appendDetailRow = (tbody: HTMLTableSectionElement, row: RowRecord, colSpan: number) => {
+      const detailRow = document.createElement("tr");
+      const detail = document.createElement("td");
+      detail.colSpan = colSpan;
+      detail.style.cssText = "padding:12px;border:1px solid #dbe3ef;background:#f8fbff;color:#334155";
+      const content = props.masterDetailRenderer?.(row);
+      content instanceof Node ? detail.appendChild(content) : detail.textContent = String(content ?? "");
+      detailRow.appendChild(detail);
+      tbody.appendChild(detailRow);
+    };
+
+    const appendRow = (tbody: HTMLTableSectionElement, row: RowRecord, rowIndex: number, columns: Column<RowRecord>[], leading: number, display?: Extract<DisplayRow, { kind: "data" }>) => {
+      const tr = document.createElement("tr");
+      tr.draggable = true;
+      tr.addEventListener("dragstart", () => {
+        draggedRowIndex = rowIndex;
+      });
+      tr.addEventListener("dragover", (event) => event.preventDefault());
+      tr.addEventListener("drop", (event) => {
+        event.preventDefault();
+        if (draggedRowIndex != null) reorderRow(draggedRowIndex, rowIndex);
+        draggedRowIndex = null;
+      });
       if (props.checkboxSelection) {
         const td = document.createElement("td");
         const checkbox = document.createElement("input");
@@ -482,46 +681,126 @@ export const GridNexaVue = defineComponent({
       }
       columns.forEach((column, columnIndex) => {
         const td = cell(format(row, column, workingColumns));
-        td.style.cssText = "padding:10px;border:1px solid #dbe3ef";
+        td.style.cssText = `padding:10px;border:1px solid #dbe3ef;width:${columnWidths.get(column.id) ?? column.width ?? 150}px;${pinnedStyle(column, columns)}`;
         if (activeCell?.rowIndex === rowIndex && activeCell.columnId === column.id) {
           td.style.outline = "2px solid #2563eb";
           td.style.outlineOffset = "-2px";
         }
+        if (isCellInRange(rowIndex, column.id, columns)) td.style.background = "rgba(37,99,235,.12)";
         if (findText && format(row, column, workingColumns).toLowerCase().includes(findText.toLowerCase())) {
           td.style.background = "rgba(37,99,235,.1)";
         }
-        if (props.getTreeDataPath && columnIndex === 0) td.style.paddingLeft = `${12 + Math.max(0, props.getTreeDataPath(row).length - 1) * 24}px`;
-        td.addEventListener("click", () => {
+        if (props.getTreeDataPath && columnIndex === 0) {
+          td.style.paddingLeft = `${12 + (display?.depth ?? Math.max(0, props.getTreeDataPath(row).length - 1)) * 24}px`;
+          if (display?.hasChildren && display.treeKey) {
+            const treeKey = display.treeKey;
+            const toggle = button(collapsedTreeKeys.has(treeKey) ? "+" : "-", () => {
+              collapsedTreeKeys.has(treeKey) ? collapsedTreeKeys.delete(treeKey) : collapsedTreeKeys.add(treeKey);
+              render();
+            });
+            td.prepend(toggle);
+          }
+        } else if (props.masterDetailRenderer && columnIndex === 0) {
+          const id = rowId(row, rowIndex);
+          const toggle = button(expandedDetailIds.has(id) ? "-" : "+", () => {
+            expandedDetailIds.has(id) ? expandedDetailIds.delete(id) : expandedDetailIds.add(id);
+            render();
+          });
+          td.prepend(toggle);
+        }
+        td.addEventListener("click", (event) => {
+          contextMenu = null;
           activeCell = { rowIndex, columnId: column.id };
+          if (event.shiftKey && rangeAnchor) {
+            rangeEnd = { rowIndex, columnId: column.id };
+          } else {
+            rangeAnchor = { rowIndex, columnId: column.id };
+            rangeEnd = { rowIndex, columnId: column.id };
+          }
           emit("cellClick", { row, rowIndex, column });
+          render();
+        });
+        td.addEventListener("contextmenu", (event) => {
+          event.preventDefault();
+          activeCell = { rowIndex, columnId: column.id };
+          contextMenu = { x: event.clientX, y: event.clientY, rowIndex, columnId: column.id };
           render();
         });
         if (column.editable) td.addEventListener("dblclick", () => editCell(td, row, rowIndex, column));
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
-      if (props.masterDetailRenderer) {
-        const detailRow = document.createElement("tr");
-        const detail = document.createElement("td");
-        detail.colSpan = columns.length + leading;
-        const content = props.masterDetailRenderer(row);
-        content instanceof Node ? detail.appendChild(content) : detail.textContent = String(content ?? "");
-        detailRow.appendChild(detail);
-        tbody.appendChild(detailRow);
-      }
     };
 
     const editCell = (td: HTMLTableCellElement, row: RowRecord, rowIndex: number, column: Column<RowRecord>) => {
       const oldValue = rawValue(row, column);
-      const input = document.createElement("input");
-      input.value = String(oldValue ?? "");
+      const input = createEditor(column, oldValue);
       td.replaceChildren(input);
       input.focus();
       input.addEventListener("blur", () => {
-        const newValue = typeof oldValue === "number" ? Number(input.value) : input.value;
+        const newValue = input instanceof HTMLInputElement && input.type === "checkbox" ? input.checked : input.value;
         setCellValue(row, rowIndex, column, newValue);
         render();
       }, { once: true });
+    };
+
+    const createEditor = (column: Column<RowRecord>, current: unknown) => {
+      const editor = column.editor;
+      if (editor === "checkbox") {
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.checked = Boolean(current);
+        return input;
+      }
+      if (editor === "number" || editor === "date") {
+        const input = document.createElement("input");
+        input.type = editor;
+        input.value = String(current ?? "");
+        return input;
+      }
+      if (editor && typeof editor === "object" && (editor.type === "select" || editor.type === "advancedSelect")) {
+        const select = document.createElement("select");
+        (editor.values ?? []).forEach((item) => {
+          const option = document.createElement("option");
+          option.value = String(item);
+          option.textContent = String(item);
+          select.appendChild(option);
+        });
+        select.value = String(current ?? "");
+        return select;
+      }
+      const input = document.createElement("input");
+      input.value = String(current ?? "");
+      return input;
+    };
+
+    const renderContextMenu = () => {
+      const menu = document.createElement("div");
+      menu.style.cssText = `position:fixed;z-index:9999;left:${contextMenu?.x ?? 0}px;top:${contextMenu?.y ?? 0}px;display:grid;min-width:150px;padding:6px;border:1px solid #dbe3ef;border-radius:10px;background:white;box-shadow:0 18px 48px rgba(15,23,42,.18)`;
+      const row = contextMenu ? workingRows[contextMenu.rowIndex] : undefined;
+      const column = workingColumns.find((entry) => entry.id === contextMenu?.columnId);
+      menu.append(
+        button("Copy", () => void copyActiveCell()),
+        button("Paste", () => void pasteActiveCell()),
+        button("Edit cell", () => {
+          if (!row || !column || column.editable === false || !contextMenu) return;
+          const nextValue = window.prompt(`Edit ${column.headerName}`, String(rawValue(row, column) ?? ""));
+          if (nextValue != null) setCellValue(row, contextMenu.rowIndex, column, nextValue);
+          contextMenu = null;
+          render();
+        }),
+        button("Clear cell", () => {
+          if (row && column && column.editable !== false && contextMenu) setCellValue(row, contextMenu.rowIndex, column, "");
+          contextMenu = null;
+          render();
+        }),
+        button("Hide column", () => {
+          if (column) hiddenColumnIds.add(column.id);
+          contextMenu = null;
+          render();
+        }),
+      );
+      return menu;
     };
 
     const renderToolsPanel = () => {
@@ -629,6 +908,7 @@ export const GridNexaVue = defineComponent({
       () => ({ ...props }),
       () => {
         syncWorkingData();
+        localQuickFilterText = props.quickFilterText;
         render();
       },
       { deep: true },
