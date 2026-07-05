@@ -1,13 +1,21 @@
 {
   "name": "@gridnexa/javascript",
-  "version": "0.0.1",
-  "description": "Vanilla JavaScript package for GridNexa",
+  "version": "0.0.2",
+  "description": "Framework-free JavaScript and TypeScript data grid for modern UI apps with Excel-like filtering, editing, formulas, grouping, pivoting, and export.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts",
@@ -16,16 +24,40 @@
   },
   "keywords": [
     "gridnexa",
+    "javascript-grid",
+    "typescript-grid",
     "data-grid",
+    "datagrid",
+    "enterprise-grid",
+    "excel-grid",
+    "spreadsheet",
     "javascript",
     "typescript",
     "table",
-    "excel"
+    "pivot-table",
+    "tree-grid",
+    "filtering",
+    "sorting",
+    "editable-grid",
+    "csv-export",
+    "excel-export"
   ],
+  "homepage": "https://www.gridnexa.in/",
+  "bugs": {
+    "url": "https://www.gridnexa.in/help"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mhalungekar9/SmartGrid.git",
+    "directory": "packages/javascript"
+  },
   "author": "Sachin M",
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
-    "@gridnexa/core": "workspace:*"
+    "@gridnexa/core": "workspace:^"
   },
   "devDependencies": {
     "rimraf": "^6.1.3",

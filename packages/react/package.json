@@ -1,18 +1,65 @@
 {
   "name": "@gridnexa/react",
-  "version": "0.0.1",
-  "description": "React wrapper for GridNexa",
+  "version": "0.0.2",
+  "description": "Enterprise React data grid for modern UI apps with Excel-like filtering, editing, formulas, grouping, pivoting, export, and theme-ready UX.",
   "type": "module",
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./dist/index.css": "./dist/index.css"
+  },
   "files": [
-    "dist"
+    "dist",
+    "README.md"
+  ],
+  "sideEffects": [
+    "*.css"
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts",
     "dev": "tsup src/index.ts --watch",
     "clean": "rimraf dist"
+  },
+  "keywords": [
+    "gridnexa",
+    "react-grid",
+    "react-data-grid",
+    "data-grid",
+    "datagrid",
+    "enterprise-grid",
+    "excel-grid",
+    "spreadsheet",
+    "table",
+    "react-table",
+    "pivot-table",
+    "tree-grid",
+    "virtual-scroll",
+    "filtering",
+    "sorting",
+    "editable-grid",
+    "csv-export",
+    "excel-export",
+    "typescript"
+  ],
+  "homepage": "https://www.gridnexa.in/",
+  "bugs": {
+    "url": "https://www.gridnexa.in/help"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mhalungekar9/SmartGrid.git",
+    "directory": "packages/react"
+  },
+  "author": "Sachin M",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
   },
   "peerDependencies": {
     "react": ">=19",
@@ -21,7 +68,7 @@
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.19",
     "@radix-ui/react-popover": "^1.1.18",
-    "@gridnexa/core": "workspace:*",
+    "@gridnexa/core": "workspace:^",
     "lucide-react": "^1.23.0"
   },
   "devDependencies": {

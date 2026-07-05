@@ -76,7 +76,7 @@ importers:
         specifier: '>=16'
         version: 22.0.5(rxjs@7.8.2)
       '@gridnexa/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
     devDependencies:
       rimraf:
@@ -104,7 +104,7 @@ importers:
   packages/javascript:
     dependencies:
       '@gridnexa/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
     devDependencies:
       rimraf:
@@ -120,7 +120,7 @@ importers:
   packages/react:
     dependencies:
       '@gridnexa/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@radix-ui/react-dropdown-menu':
         specifier: ^2.1.19
@@ -157,7 +157,7 @@ importers:
   packages/vue:
     dependencies:
       '@gridnexa/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       vue:
         specifier: '>=3'
