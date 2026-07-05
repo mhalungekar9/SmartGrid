@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactElement } from "react";
 import type {
+  AdvancedFilterModel,
   ColumnFilterModel,
   GridOptions,
   PivotAggregation,
@@ -290,6 +291,189 @@ function getColumnFilterType<T>(column: Column<T>): ColumnFilterModel["type"] {
   }
 
   return "text";
+}
+
+function getFilterOperatorOptions(
+  filterType: ColumnFilterModel["type"],
+): ColumnFilterModel["operator"][] {
+  if (filterType === "number") {
+    return ["equals", "gt", "gte", "lt", "lte", "between", "blank", "notBlank"];
+  }
+
+  if (filterType === "date") {
+    return ["equals", "before", "after", "between", "blank", "notBlank"];
+  }
+
+  if (filterType === "set") {
+    return ["in", "blank", "notBlank"];
+  }
+
+  return ["contains", "equals", "startsWith", "endsWith", "blank", "notBlank"];
+}
+
+function createAdvancedFilterRule<T>(
+  columns: Column<T>[],
+): AdvancedFilterModel {
+  const firstColumn =
+    columns.find((column) => column.filterable !== false) ?? columns[0];
+  const filterType = firstColumn ? getColumnFilterType(firstColumn) : "text";
+
+  return {
+    id: `rule-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    kind: "rule",
+    columnId: firstColumn?.id ?? "",
+    operator:
+      filterType === "set"
+        ? "in"
+        : filterType === "number" || filterType === "date"
+          ? "equals"
+          : "contains",
+    value: "",
+  };
+}
+
+function createAdvancedFilterGroup<T>(
+  columns: Column<T>[],
+): AdvancedFilterModel {
+  return {
+    id: `group-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    kind: "group",
+    joinOperator: "and",
+    conditions: [createAdvancedFilterRule(columns)],
+  };
+}
+
+function isAdvancedFilterActive(model: AdvancedFilterModel | null): boolean {
+  if (!model) {
+    return false;
+  }
+
+  if (model.kind === "group") {
+    return model.conditions.some(isAdvancedFilterActive);
+  }
+
+  if (model.operator === "blank" || model.operator === "notBlank") {
+    return true;
+  }
+
+  if (model.operator === "in") {
+    return Boolean(model.values?.length);
+  }
+
+  return model.value != null && String(model.value).trim() !== "";
+}
+
+function countAdvancedFilterRules(model: AdvancedFilterModel | null): number {
+  if (!model) {
+    return 0;
+  }
+
+  if (model.kind === "rule") {
+    return isAdvancedFilterActive(model) ? 1 : 0;
+  }
+
+  return model.conditions.reduce(
+    (total, condition) => total + countAdvancedFilterRules(condition),
+    0,
+  );
+}
+
+function matchesAdvancedFilterModel<T>(
+  row: T,
+  columns: Column<T>[],
+  model: AdvancedFilterModel | null,
+): boolean {
+  if (!model || !isAdvancedFilterActive(model)) {
+    return true;
+  }
+
+  if (model.kind === "group") {
+    const activeConditions = model.conditions.filter(isAdvancedFilterActive);
+
+    if (!activeConditions.length) {
+      return true;
+    }
+
+    return model.joinOperator === "or"
+      ? activeConditions.some((condition) =>
+          matchesAdvancedFilterModel(row, columns, condition),
+        )
+      : activeConditions.every((condition) =>
+          matchesAdvancedFilterModel(row, columns, condition),
+        );
+  }
+
+  const column = columns.find((entry) => entry.id === model.columnId);
+
+  if (!column) {
+    return true;
+  }
+
+  return matchesColumnFilter(row, column, {
+    type: getColumnFilterType(column),
+    operator: model.operator,
+    value: model.value,
+    valueTo: model.valueTo,
+    values: model.values,
+  });
+}
+
+function updateAdvancedFilterAtPath(
+  model: AdvancedFilterModel,
+  path: number[],
+  updater: (node: AdvancedFilterModel) => AdvancedFilterModel,
+): AdvancedFilterModel {
+  if (!path.length) {
+    return updater(model);
+  }
+
+  if (model.kind !== "group") {
+    return model;
+  }
+
+  const [index, ...rest] = path;
+
+  return {
+    ...model,
+    conditions: model.conditions.map((condition, conditionIndex) =>
+      conditionIndex === index
+        ? updateAdvancedFilterAtPath(condition, rest, updater)
+        : condition,
+    ),
+  };
+}
+
+function removeAdvancedFilterAtPath(
+  model: AdvancedFilterModel,
+  path: number[],
+): AdvancedFilterModel | null {
+  if (!path.length) {
+    return null;
+  }
+
+  if (model.kind !== "group") {
+    return model;
+  }
+
+  const [index, ...rest] = path;
+
+  if (!rest.length) {
+    const conditions = model.conditions.filter(
+      (_condition, conditionIndex) => conditionIndex !== index,
+    );
+
+    return conditions.length ? { ...model, conditions } : null;
+  }
+
+  const nextConditions = model.conditions
+    .map((condition, conditionIndex) =>
+      conditionIndex === index
+        ? removeAdvancedFilterAtPath(condition, rest)
+        : condition,
+    )
+    .filter((condition): condition is AdvancedFilterModel => Boolean(condition));
+
+  return nextConditions.length ? { ...model, conditions: nextConditions } : null;
 }
 
 function formatNumber(value: number): string {
@@ -608,6 +792,8 @@ export function GridNexa<T>({
   quickFilterText: quickFilterTextProp,
   externalFilter,
   advancedFilter,
+  advancedFilterModel: advancedFilterModelProp,
+  onAdvancedFilterModelChange,
   rowNumbers = false,
   checkboxSelection = false,
   enableRangeSelection = true,
@@ -618,10 +804,11 @@ export function GridNexa<T>({
   onCellValueChange,
   onRowSelectionChange,
   onServerSideOperation,
-  groupBy,
-  pivotBy,
-  pivotValueColumns,
-  pivotAggregation = "sum",
+  groupBy: groupByProp,
+  pivotBy: pivotByProp,
+  pivotValueColumns: pivotValueColumnsProp,
+  pivotAggregation: pivotAggregationProp = "sum",
+  onPivotModelChange,
   getTreeDataPath,
   masterDetailRenderer,
   transaction,
@@ -643,6 +830,10 @@ export function GridNexa<T>({
   const [findText, setFindText] = useState("");
   const [findMatchIndex, setFindMatchIndex] = useState(0);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
+  const [advancedFilterPanelOpen, setAdvancedFilterPanelOpen] =
+    useState(false);
+  const [pivotPanelOpen, setPivotPanelOpen] = useState(false);
+  const [pivotToolSearch, setPivotToolSearch] = useState("");
   const [filterPopoverColumnId, setFilterPopoverColumnId] = useState<
     string | null
   >(null);
@@ -652,6 +843,19 @@ export function GridNexa<T>({
   const [filterModel, setFilterModel] = useState<
     Record<string, ColumnFilterModel>
   >(() => columnFilters ?? {});
+  const [advancedFilterModel, setAdvancedFilterModelState] =
+    useState<AdvancedFilterModel | null>(() => advancedFilterModelProp ?? null);
+  const [runtimeGroupBy, setRuntimeGroupBy] = useState<
+    (keyof T & string) | undefined
+  >(() => groupByProp);
+  const [runtimePivotBy, setRuntimePivotBy] = useState<
+    (keyof T & string) | undefined
+  >(() => pivotByProp);
+  const [runtimePivotValueColumns, setRuntimePivotValueColumns] = useState<
+    Array<keyof T & string>
+  >(() => pivotValueColumnsProp ?? []);
+  const [runtimePivotAggregation, setRuntimePivotAggregation] =
+    useState<PivotAggregation>(() => pivotAggregationProp);
   const [undoStack, setUndoStack] = useState<T[][]>([]);
   const [redoStack, setRedoStack] = useState<T[][]>([]);
   const [editingCell, setEditingCell] = useState<EditingCellState | null>(null);
@@ -698,6 +902,8 @@ export function GridNexa<T>({
     Record<string, number>
   >({});
   const filterPanelRef = useRef<HTMLDivElement | null>(null);
+  const advancedFilterPanelRef = useRef<HTMLDivElement | null>(null);
+  const pivotPanelRef = useRef<HTMLDivElement | null>(null);
   const chooserRef = useRef<HTMLDivElement | null>(null);
   const resizeSession = useRef<{
     columnId: string;
@@ -743,7 +949,39 @@ export function GridNexa<T>({
   }, [columnFilters]);
 
   useEffect(() => {
-    if (!filterPanelOpen && !columnChooserOpen) {
+    if (advancedFilterModelProp !== undefined) {
+      setAdvancedFilterModelState(advancedFilterModelProp);
+    }
+  }, [advancedFilterModelProp]);
+
+  useEffect(() => {
+    setRuntimeGroupBy(groupByProp);
+  }, [groupByProp]);
+
+  useEffect(() => {
+    setRuntimePivotBy(pivotByProp);
+  }, [pivotByProp]);
+
+  useEffect(() => {
+    setRuntimePivotValueColumns(pivotValueColumnsProp ?? []);
+  }, [pivotValueColumnsProp]);
+
+  useEffect(() => {
+    setRuntimePivotAggregation(pivotAggregationProp);
+  }, [pivotAggregationProp]);
+
+  const groupBy = runtimeGroupBy;
+  const pivotBy = runtimePivotBy;
+  const pivotValueColumns = runtimePivotValueColumns;
+  const pivotAggregation = runtimePivotAggregation;
+
+  useEffect(() => {
+    if (
+      !filterPanelOpen &&
+      !columnChooserOpen &&
+      !advancedFilterPanelOpen &&
+      !pivotPanelOpen
+    ) {
       return;
     }
 
@@ -758,8 +996,19 @@ export function GridNexa<T>({
         setFilterPanelOpen(false);
       }
 
+      if (
+        advancedFilterPanelOpen &&
+        !advancedFilterPanelRef.current?.contains(target)
+      ) {
+        setAdvancedFilterPanelOpen(false);
+      }
+
       if (columnChooserOpen && !chooserRef.current?.contains(target)) {
         setColumnChooserOpen(false);
+      }
+
+      if (pivotPanelOpen && !pivotPanelRef.current?.contains(target)) {
+        setPivotPanelOpen(false);
       }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -768,7 +1017,9 @@ export function GridNexa<T>({
       }
 
       setFilterPanelOpen(false);
+      setAdvancedFilterPanelOpen(false);
       setColumnChooserOpen(false);
+      setPivotPanelOpen(false);
     };
 
     document.addEventListener("pointerdown", closeFloatingPanels, true);
@@ -778,7 +1029,12 @@ export function GridNexa<T>({
       document.removeEventListener("pointerdown", closeFloatingPanels, true);
       document.removeEventListener("keydown", closeOnEscape);
     };
-  }, [columnChooserOpen, filterPanelOpen]);
+  }, [
+    advancedFilterPanelOpen,
+    columnChooserOpen,
+    filterPanelOpen,
+    pivotPanelOpen,
+  ]);
 
   const columnSignature = columns
     .map(
@@ -1028,6 +1284,10 @@ export function GridNexa<T>({
         return false;
       }
 
+      if (!matchesAdvancedFilterModel(row, columns, advancedFilterModel)) {
+        return false;
+      }
+
       const columnFiltersMatch = activeFilterEntries.every(
         ([columnId, filter]) => {
           const column = columns.find((entry) => entry.id === columnId);
@@ -1057,6 +1317,7 @@ export function GridNexa<T>({
     filterModel,
     externalFilter,
     advancedFilter,
+    advancedFilterModel,
     columns,
     orderedColumns,
   ]);
@@ -1260,6 +1521,7 @@ export function GridNexa<T>({
     onServerSideOperation?.({
       sortModel: sortModel ? [sortModel] : [],
       filterModel,
+      advancedFilterModel,
       selectedRowIds: Array.from(selectedRowIds),
       pageIndex,
       pageSize,
@@ -1272,6 +1534,7 @@ export function GridNexa<T>({
       transaction,
     });
   }, [
+    advancedFilterModel,
     filterModel,
     getRowId,
     getTreeDataPath,
@@ -2161,6 +2424,16 @@ export function GridNexa<T>({
     : 0;
   const activeFilterCount =
     Object.values(filterModel).filter(isFilterActive).length;
+  const activeAdvancedFilterCount =
+    countAdvancedFilterRules(advancedFilterModel);
+  const pivotCandidateColumns = columns;
+  const searchedPivotColumns = pivotCandidateColumns.filter((column) =>
+    column.headerName.toLowerCase().includes(pivotToolSearch.toLowerCase()),
+  );
+  const pivotValueCandidateColumns = pivotCandidateColumns.filter((column) =>
+    gridRows.some((row) => typeof getColumnValue(row, column) === "number"),
+  );
+  const pivotModeActive = Boolean(pivotBy);
   const contextColumn = cellContextMenu
     ? tableColumns[cellContextMenu.columnIndex]
     : null;
@@ -2219,6 +2492,327 @@ export function GridNexa<T>({
     Array.from(
       new Set(gridRows.map((row) => String(getColumnValue(row, column) ?? ""))),
     ).filter(Boolean);
+
+  const emitPivotModelChange = (
+    nextGroupBy: (keyof T & string) | undefined,
+    nextPivotBy: (keyof T & string) | undefined,
+    nextValueColumns: Array<keyof T & string>,
+    nextAggregation: PivotAggregation,
+  ) => {
+    onPivotModelChange?.({
+      groupBy: nextGroupBy,
+      pivotBy: nextPivotBy,
+      pivotValueColumns: nextValueColumns,
+      pivotAggregation: nextAggregation,
+    });
+  };
+
+  const updatePivotModel = (updates: {
+    groupBy?: (keyof T & string) | "";
+    pivotBy?: (keyof T & string) | "";
+    pivotValueColumns?: Array<keyof T & string>;
+    pivotAggregation?: PivotAggregation;
+  }) => {
+    const nextGroupBy =
+      updates.groupBy === ""
+        ? undefined
+        : updates.groupBy !== undefined
+          ? updates.groupBy
+          : runtimeGroupBy;
+    const nextPivotBy =
+      updates.pivotBy === ""
+        ? undefined
+        : updates.pivotBy !== undefined
+          ? updates.pivotBy
+          : runtimePivotBy;
+    const nextValueColumns =
+      updates.pivotValueColumns ?? runtimePivotValueColumns;
+    const nextAggregation = updates.pivotAggregation ?? runtimePivotAggregation;
+
+    setRuntimeGroupBy(nextGroupBy);
+    setRuntimePivotBy(nextPivotBy);
+    setRuntimePivotValueColumns(nextValueColumns);
+    setRuntimePivotAggregation(nextAggregation);
+    setPageIndex(0);
+    emitPivotModelChange(
+      nextGroupBy,
+      nextPivotBy,
+      nextValueColumns,
+      nextAggregation,
+    );
+  };
+
+  const clearPivotModel = () => {
+    updatePivotModel({
+      groupBy: "",
+      pivotBy: "",
+      pivotValueColumns: [],
+      pivotAggregation: "sum",
+    });
+  };
+
+  const setAdvancedFilterModel = (model: AdvancedFilterModel | null) => {
+    if (advancedFilterModelProp === undefined) {
+      setAdvancedFilterModelState(model);
+    }
+
+    onAdvancedFilterModelChange?.(model);
+    setPageIndex(0);
+  };
+
+  const ensureAdvancedFilterModel = () => {
+    if (!advancedFilterModel) {
+      setAdvancedFilterModel(createAdvancedFilterGroup(columns));
+    }
+  };
+
+  const updateAdvancedFilterModelAtPath = (
+    path: number[],
+    updater: (node: AdvancedFilterModel) => AdvancedFilterModel,
+  ) => {
+    setAdvancedFilterModel(
+      advancedFilterModel
+        ? updateAdvancedFilterAtPath(advancedFilterModel, path, updater)
+        : createAdvancedFilterGroup(columns),
+    );
+  };
+
+  const addAdvancedRule = (path: number[]) => {
+    updateAdvancedFilterModelAtPath(path, (node) =>
+      node.kind === "group"
+        ? {
+            ...node,
+            conditions: [...node.conditions, createAdvancedFilterRule(columns)],
+          }
+        : node,
+    );
+  };
+
+  const addAdvancedGroup = (path: number[]) => {
+    updateAdvancedFilterModelAtPath(path, (node) =>
+      node.kind === "group"
+        ? {
+            ...node,
+            conditions: [...node.conditions, createAdvancedFilterGroup(columns)],
+          }
+        : node,
+    );
+  };
+
+  const removeAdvancedNode = (path: number[]) => {
+    setAdvancedFilterModel(
+      advancedFilterModel
+        ? removeAdvancedFilterAtPath(advancedFilterModel, path)
+        : null,
+    );
+  };
+
+  const renderAdvancedFilterNode = (
+    node: AdvancedFilterModel,
+    path: number[],
+  ): ReactElement => {
+    if (node.kind === "group") {
+      return (
+        <div className="sg-advanced-filter-group" key={node.id ?? path.join(".")}>
+          <div className="sg-advanced-filter-group-header">
+            <select
+              className="sg-filter-operator"
+              value={node.joinOperator}
+              onChange={(event) =>
+                updateAdvancedFilterModelAtPath(path, (currentNode) =>
+                  currentNode.kind === "group"
+                    ? {
+                        ...currentNode,
+                        joinOperator: event.target
+                          .value as typeof currentNode.joinOperator,
+                      }
+                    : currentNode,
+                )
+              }
+            >
+              <option value="and">Match all rules</option>
+              <option value="or">Match any rule</option>
+            </select>
+            <div>
+              <button
+                className="sg-toolbar-button sg-toolbar-button--ghost"
+                type="button"
+                onClick={() => addAdvancedRule(path)}
+              >
+                Add rule
+              </button>
+              <button
+                className="sg-toolbar-button sg-toolbar-button--ghost"
+                type="button"
+                onClick={() => addAdvancedGroup(path)}
+              >
+                Add group
+              </button>
+              {path.length ? (
+                <button
+                  className="sg-toolbar-button sg-toolbar-button--ghost"
+                  type="button"
+                  onClick={() => removeAdvancedNode(path)}
+                >
+                  Remove
+                </button>
+              ) : null}
+            </div>
+          </div>
+          <div className="sg-advanced-filter-conditions">
+            {node.conditions.map((condition, index) =>
+              renderAdvancedFilterNode(condition, [...path, index]),
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const column =
+      columns.find((entry) => entry.id === node.columnId) ??
+      columns.find((entry) => entry.filterable !== false) ??
+      columns[0];
+    const filterType = column ? getColumnFilterType(column) : "text";
+    const operators = getFilterOperatorOptions(filterType);
+    const uniqueValues = column ? getColumnFilterValuesForColumn(column) : [];
+    const needsValue = node.operator !== "blank" && node.operator !== "notBlank";
+
+    return (
+      <div className="sg-advanced-filter-rule" key={node.id ?? path.join(".")}>
+        <select
+          className="sg-filter-input"
+          value={node.columnId}
+          onChange={(event) => {
+            const nextColumn = columns.find(
+              (entry) => entry.id === event.target.value,
+            );
+            const nextType = nextColumn ? getColumnFilterType(nextColumn) : "text";
+            const nextOperator =
+              nextType === "set"
+                ? "in"
+                : nextType === "number" || nextType === "date"
+                  ? "equals"
+                  : "contains";
+
+            updateAdvancedFilterModelAtPath(path, (currentNode) =>
+              currentNode.kind === "rule"
+                ? {
+                    ...currentNode,
+                    columnId: event.target.value,
+                    operator: nextOperator,
+                    value: "",
+                    valueTo: undefined,
+                    values: nextType === "set" ? [] : undefined,
+                  }
+                : currentNode,
+            );
+          }}
+        >
+          {columns
+            .filter((entry) => entry.filterable !== false)
+            .map((entry) => (
+              <option key={entry.id} value={entry.id}>
+                {entry.headerName}
+              </option>
+            ))}
+        </select>
+        <select
+          className="sg-filter-operator"
+          value={node.operator}
+          onChange={(event) =>
+            updateAdvancedFilterModelAtPath(path, (currentNode) =>
+              currentNode.kind === "rule"
+                ? {
+                    ...currentNode,
+                    operator: event.target
+                      .value as ColumnFilterModel["operator"],
+                    value: "",
+                    valueTo: undefined,
+                    values: event.target.value === "in" ? [] : undefined,
+                  }
+                : currentNode,
+            )
+          }
+        >
+          {operators.map((operator) => (
+            <option key={operator} value={operator}>
+              {operator}
+            </option>
+          ))}
+        </select>
+        {needsValue && node.operator === "in" ? (
+          <select
+            className="sg-filter-input"
+            multiple
+            value={(node.values ?? []).map(String)}
+            onChange={(event) => {
+              const values = Array.from(
+                event.currentTarget.selectedOptions,
+              ).map((option) => option.value);
+
+              updateAdvancedFilterModelAtPath(path, (currentNode) =>
+                currentNode.kind === "rule"
+                  ? { ...currentNode, values }
+                  : currentNode,
+              );
+            }}
+          >
+            {uniqueValues.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        ) : needsValue ? (
+          <>
+            <input
+              className="sg-filter-input"
+              type={
+                filterType === "number"
+                  ? "number"
+                  : filterType === "date"
+                    ? "date"
+                    : "search"
+              }
+              value={String(node.value ?? "")}
+              onChange={(event) =>
+                updateAdvancedFilterModelAtPath(path, (currentNode) =>
+                  currentNode.kind === "rule"
+                    ? { ...currentNode, value: event.target.value }
+                    : currentNode,
+                )
+              }
+              placeholder="Value"
+            />
+            {node.operator === "between" ? (
+              <input
+                className="sg-filter-input"
+                type={filterType === "date" ? "date" : "number"}
+                value={String(node.valueTo ?? "")}
+                onChange={(event) =>
+                  updateAdvancedFilterModelAtPath(path, (currentNode) =>
+                    currentNode.kind === "rule"
+                      ? { ...currentNode, valueTo: event.target.value }
+                      : currentNode,
+                  )
+                }
+                placeholder="To"
+              />
+            ) : null}
+          </>
+        ) : (
+          <span className="sg-advanced-filter-readonly">No value needed</span>
+        )}
+        <button
+          className="sg-toolbar-button sg-toolbar-button--ghost"
+          type="button"
+          onClick={() => removeAdvancedNode(path)}
+        >
+          Remove
+        </button>
+      </div>
+    );
+  };
 
   const pinColumn = (columnId: string, pinned: "left" | "right" | null) => {
     setPinnedColumnIds((current) => ({
@@ -2621,6 +3215,58 @@ export function GridNexa<T>({
               ) : null}
             </div>
 
+            <div className="sg-column-chooser" ref={advancedFilterPanelRef}>
+              <button
+                className="sg-toolbar-button sg-toolbar-button--ghost"
+                type="button"
+                onClick={() => {
+                  ensureAdvancedFilterModel();
+                  setAdvancedFilterPanelOpen((current) => !current);
+                }}
+                aria-expanded={advancedFilterPanelOpen}
+                aria-haspopup="menu"
+              >
+                Advanced
+                {activeAdvancedFilterCount ? ` (${activeAdvancedFilterCount})` : ""}
+              </button>
+
+              {advancedFilterPanelOpen ? (
+                <div
+                  className="sg-column-chooser-panel sg-advanced-filter-panel"
+                  role="menu"
+                  aria-label="Advanced filter builder"
+                >
+                  <div className="sg-advanced-filter-panel-header">
+                    <div>
+                      <strong>Advanced filter</strong>
+                      <span>Build nested AND/OR rules visually.</span>
+                    </div>
+                    <button
+                      className="sg-toolbar-button sg-toolbar-button--ghost"
+                      type="button"
+                      onClick={() => setAdvancedFilterModel(null)}
+                      disabled={!advancedFilterModel}
+                    >
+                      Clear all
+                    </button>
+                  </div>
+                  {advancedFilterModel ? (
+                    renderAdvancedFilterNode(advancedFilterModel, [])
+                  ) : (
+                    <button
+                      className="sg-toolbar-button"
+                      type="button"
+                      onClick={() =>
+                        setAdvancedFilterModel(createAdvancedFilterGroup(columns))
+                      }
+                    >
+                      Create filter
+                    </button>
+                  )}
+                </div>
+              ) : null}
+            </div>
+
             <div className="sg-column-chooser" ref={chooserRef}>
               <button
                 className="sg-toolbar-button sg-toolbar-button--ghost"
@@ -2681,75 +3327,274 @@ export function GridNexa<T>({
           </div>
         </div>
 
-        <GridRoot>
-          <GridHeader
-            columns={tableColumns}
-            widths={tableWidths}
-            mergedHeaders={mergedHeaders}
-            sortModel={sortModel}
-            onSort={handleSort}
-            onSortDirection={handleSortDirection}
-            onResizeStart={handleResizeStart}
-            onAutoSize={autoSizeColumn}
-            draggedColumnId={draggedColumnId}
-            dropTargetColumnId={dropTargetColumnId}
-            onColumnDragStart={(columnId) => {
-              setDraggedColumnId(columnId);
-              setDropTargetColumnId(null);
-              setFilterPopoverColumnId(null);
-              setColumnMenuColumnId(null);
-            }}
-            onColumnDragOver={(columnId) => {
-              if (
-                draggedColumnId &&
-                draggedColumnId !== columnId &&
-                getColumnLane(draggedColumnId) === getColumnLane(columnId)
-              ) {
-                setDropTargetColumnId(columnId);
-              }
-            }}
-            onColumnDrop={reorderColumn}
-            onColumnDragEnd={() => {
-              setDraggedColumnId(null);
-              setDropTargetColumnId(null);
-            }}
-            filterModel={filterModel}
-            getColumnFilterType={getColumnFilterType}
-            getColumnFilterValues={getColumnFilterValuesForColumn}
-            onSetColumnFilter={setColumnFilter}
-            filterPopoverColumnId={filterPopoverColumnId}
-            onFilterPopoverOpenChange={(columnId, open) => {
-              setFilterPopoverColumnId(open ? columnId : null);
-            }}
-            columnMenuColumnId={columnMenuColumnId}
-            onColumnMenuOpenChange={(columnId, open) => {
-              if (open) {
+        <div className="sg-grid-workspace">
+          <GridRoot>
+            <GridHeader
+              columns={tableColumns}
+              widths={tableWidths}
+              mergedHeaders={mergedHeaders}
+              sortModel={sortModel}
+              onSort={handleSort}
+              onSortDirection={handleSortDirection}
+              onResizeStart={handleResizeStart}
+              onAutoSize={autoSizeColumn}
+              draggedColumnId={draggedColumnId}
+              dropTargetColumnId={dropTargetColumnId}
+              onColumnDragStart={(columnId) => {
+                setDraggedColumnId(columnId);
+                setDropTargetColumnId(null);
                 setFilterPopoverColumnId(null);
-              }
+                setColumnMenuColumnId(null);
+              }}
+              onColumnDragOver={(columnId) => {
+                if (
+                  draggedColumnId &&
+                  draggedColumnId !== columnId &&
+                  getColumnLane(draggedColumnId) === getColumnLane(columnId)
+                ) {
+                  setDropTargetColumnId(columnId);
+                }
+              }}
+              onColumnDrop={reorderColumn}
+              onColumnDragEnd={() => {
+                setDraggedColumnId(null);
+                setDropTargetColumnId(null);
+              }}
+              filterModel={filterModel}
+              getColumnFilterType={getColumnFilterType}
+              getColumnFilterValues={getColumnFilterValuesForColumn}
+              onSetColumnFilter={setColumnFilter}
+              filterPopoverColumnId={filterPopoverColumnId}
+              onFilterPopoverOpenChange={(columnId, open) => {
+                setFilterPopoverColumnId(open ? columnId : null);
+              }}
+              columnMenuColumnId={columnMenuColumnId}
+              onColumnMenuOpenChange={(columnId, open) => {
+                if (open) {
+                  setFilterPopoverColumnId(null);
+                }
 
-              setColumnMenuColumnId(open ? columnId : null);
-            }}
-            onOpenFilters={openColumnFilters}
-            onClearColumnFilter={clearColumnFilter}
-            onPinColumn={pinColumn}
-            onHideColumn={(columnId) => {
-              toggleColumnVisibility(columnId);
-              setColumnMenuColumnId(null);
-            }}
-          />
-          <GridBody
-            rows={displayRows}
-            columns={tableColumns}
-            onToggleGroup={toggleGroup}
-            onToggleTreeNode={toggleTreeNode}
-            onToggleDetailRow={toggleDetailRow}
-            onReorderRow={reorderVisibleRows}
-            onMoveRow={moveVisibleRow}
-            onResetRowDragState={resetRowDragState}
-            onSetDraggedRowIndex={setDraggedRowIndex}
-            onSetDropTargetRowIndex={setDropTargetRowIndex}
-          />
-        </GridRoot>
+                setColumnMenuColumnId(open ? columnId : null);
+              }}
+              onOpenFilters={openColumnFilters}
+              onClearColumnFilter={clearColumnFilter}
+              onPinColumn={pinColumn}
+              onHideColumn={(columnId) => {
+                toggleColumnVisibility(columnId);
+                setColumnMenuColumnId(null);
+              }}
+            />
+            <GridBody
+              rows={displayRows}
+              columns={tableColumns}
+              onToggleGroup={toggleGroup}
+              onToggleTreeNode={toggleTreeNode}
+              onToggleDetailRow={toggleDetailRow}
+              onReorderRow={reorderVisibleRows}
+              onMoveRow={moveVisibleRow}
+              onResetRowDragState={resetRowDragState}
+              onSetDraggedRowIndex={setDraggedRowIndex}
+              onSetDropTargetRowIndex={setDropTargetRowIndex}
+            />
+          </GridRoot>
+
+          <aside className="sg-side-tools" ref={pivotPanelRef} aria-label="Grid tool panel">
+            <div className="sg-side-tabs" aria-label="Tool tabs">
+              <button
+                className={`sg-side-tab${pivotPanelOpen ? " sg-side-tab--active" : ""}`}
+                type="button"
+                aria-expanded={pivotPanelOpen}
+                onClick={() => setPivotPanelOpen((current) => !current)}
+              >
+                <span className="sg-side-tab-icon">▦</span>
+                <span>Columns</span>
+              </button>
+              <button
+                className="sg-side-tab"
+                type="button"
+                onClick={() => setFilterPanelOpen(true)}
+              >
+                <span className="sg-side-tab-icon">≡</span>
+                <span>Filters</span>
+              </button>
+            </div>
+
+            {pivotPanelOpen ? (
+              <div className="sg-pivot-panel">
+                <div className="sg-pivot-panel-header">
+                  <label className="sg-pivot-toggle">
+                    <input
+                      type="checkbox"
+                      checked={pivotModeActive}
+                      onChange={(event) => {
+                        if (event.target.checked) {
+                          updatePivotModel({
+                            pivotBy:
+                              pivotBy ??
+                              (pivotCandidateColumns[0]?.field as
+                                | (keyof T & string)
+                                | undefined),
+                            groupBy:
+                              groupBy ??
+                              (pivotCandidateColumns[1]?.field as
+                                | (keyof T & string)
+                                | undefined),
+                            pivotValueColumns:
+                              pivotValueColumns.length > 0
+                                ? pivotValueColumns
+                                : pivotValueCandidateColumns[0]?.field
+                                  ? [
+                                      pivotValueCandidateColumns[0]
+                                        .field as keyof T & string,
+                                    ]
+                                  : [],
+                          });
+                        } else {
+                          clearPivotModel();
+                        }
+                      }}
+                    />
+                    <span>Pivot Mode</span>
+                  </label>
+                  <button
+                    className="sg-pivot-clear"
+                    type="button"
+                    onClick={clearPivotModel}
+                    disabled={!pivotModeActive && !groupBy && !pivotValueColumns.length}
+                  >
+                    Reset
+                  </button>
+                </div>
+
+                <label className="sg-pivot-search">
+                  <span>Search columns</span>
+                  <input
+                    className="sg-filter-input"
+                    type="search"
+                    placeholder="Search..."
+                    value={pivotToolSearch}
+                    onChange={(event) => setPivotToolSearch(event.target.value)}
+                  />
+                </label>
+
+                <section className="sg-pivot-section">
+                  <h3>Columns</h3>
+                  <div className="sg-pivot-column-list">
+                    {searchedPivotColumns.map((column) => {
+                      const field = column.field as keyof T & string;
+
+                      return (
+                        <label className="sg-pivot-column-item" key={column.id}>
+                          <input
+                            type="checkbox"
+                            checked={!hiddenColumnIds.has(column.id)}
+                            onChange={() => toggleColumnVisibility(column.id)}
+                          />
+                          <span className="sg-pivot-drag">⋮⋮</span>
+                          <span>{column.headerName}</span>
+                          {pivotBy === field ? (
+                            <strong>Pivot</strong>
+                          ) : groupBy === field ? (
+                            <strong>Group</strong>
+                          ) : null}
+                        </label>
+                      );
+                    })}
+                  </div>
+                </section>
+
+                <section className="sg-pivot-section">
+                  <h3>Row Groups</h3>
+                  <select
+                    className="sg-filter-input"
+                    value={groupBy ?? ""}
+                    onChange={(event) =>
+                      updatePivotModel({
+                        groupBy: event.target.value as (keyof T & string) | "",
+                      })
+                    }
+                  >
+                    <option value="">No row group</option>
+                    {pivotCandidateColumns.map((column) => (
+                      <option key={column.id} value={column.field as string}>
+                        {column.headerName}
+                      </option>
+                    ))}
+                  </select>
+                </section>
+
+                <section className="sg-pivot-section">
+                  <h3>Pivot Columns</h3>
+                  <select
+                    className="sg-filter-input"
+                    value={pivotBy ?? ""}
+                    onChange={(event) =>
+                      updatePivotModel({
+                        pivotBy: event.target.value as (keyof T & string) | "",
+                      })
+                    }
+                  >
+                    <option value="">Pivot off</option>
+                    {pivotCandidateColumns.map((column) => (
+                      <option key={column.id} value={column.field as string}>
+                        {column.headerName}
+                      </option>
+                    ))}
+                  </select>
+                </section>
+
+                <section className="sg-pivot-section">
+                  <h3>Values</h3>
+                  <div className="sg-pivot-values">
+                    {pivotValueCandidateColumns.map((column) => {
+                      const field = column.field as keyof T & string;
+                      const checked = pivotValueColumns.includes(field);
+
+                      return (
+                        <label className="sg-pivot-value-item" key={column.id}>
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => {
+                              updatePivotModel({
+                                pivotValueColumns: checked
+                                  ? pivotValueColumns.filter(
+                                      (entry) => entry !== field,
+                                    )
+                                  : [...pivotValueColumns, field],
+                              });
+                            }}
+                          />
+                          <span>{column.headerName}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <label className="sg-pivot-aggregation">
+                    <span>Aggregation</span>
+                    <select
+                      className="sg-filter-input"
+                      value={pivotAggregation}
+                      onChange={(event) =>
+                        updatePivotModel({
+                          pivotAggregation: event.target.value as PivotAggregation,
+                        })
+                      }
+                    >
+                      {(["sum", "avg", "count", "min", "max"] as PivotAggregation[]).map(
+                        (aggregation) => (
+                          <option key={aggregation} value={aggregation}>
+                            {aggregation}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+                </section>
+              </div>
+            ) : null}
+          </aside>
+        </div>
 
         {cellContextMenu ? (
           <div
@@ -2806,7 +3651,9 @@ export function GridNexa<T>({
           <span>{selectedRowsLabel}</span>
           <span>{activeCellLabel}</span>
           <span>{rangeSize ? `${rangeSize} cells selected` : "No range"}</span>
-          <span>{activeFilterCount} filters</span>
+          <span>
+            {activeFilterCount + activeAdvancedFilterCount} filters
+          </span>
           <span>
             {sortModel ? `Sorted ${sortModel.direction}` : "Unsorted"}
           </span>

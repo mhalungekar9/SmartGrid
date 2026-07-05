@@ -27,7 +27,7 @@
     "@angular/core": ">=16"
   },
   "dependencies": {
-    "@gridnexa/javascript": "workspace:*"
+    "@gridnexa/core": "workspace:*"
   },
   "devDependencies": {
     "rimraf": "^6.1.3",

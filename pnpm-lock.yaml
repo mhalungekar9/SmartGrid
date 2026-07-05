@@ -75,9 +75,9 @@ importers:
       '@angular/core':
         specifier: '>=16'
         version: 22.0.5(rxjs@7.8.2)
-      '@gridnexa/javascript':
+      '@gridnexa/core':
         specifier: workspace:*
-        version: link:../javascript
+        version: link:../core
     devDependencies:
       rimraf:
         specifier: ^6.1.3
@@ -156,9 +156,9 @@ importers:
 
   packages/vue:
     dependencies:
-      '@gridnexa/javascript':
+      '@gridnexa/core':
         specifier: workspace:*
-        version: link:../javascript
+        version: link:../core
       vue:
         specifier: '>=3'
         version: 3.5.39(typescript@5.9.3)

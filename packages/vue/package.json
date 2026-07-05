@@ -27,7 +27,7 @@
     "vue": ">=3"
   },
   "dependencies": {
-    "@gridnexa/javascript": "workspace:*"
+    "@gridnexa/core": "workspace:*"
   },
   "devDependencies": {
     "rimraf": "^6.1.3",

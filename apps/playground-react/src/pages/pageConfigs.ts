@@ -1,4 +1,4 @@
-import type { ColumnFilterModel, Column, MergedHeader, PivotAggregation } from "@gridnexa/react";
+import type { AdvancedFilterModel, ColumnFilterModel, Column, MergedHeader, PivotAggregation } from "@gridnexa/react";
 import { compactEmployeeColumns, employeeColumns, employees, formulaEmployeeColumns, readonlyEmployeeColumns, type Employee } from "../data/employees";
 import { treeColumns, treeRows } from "../data/treeData";
 
@@ -17,6 +17,7 @@ export interface FeatureConfig {
   pageSize?: number;
   quickFilterText?: string;
   columnFilters?: Record<string, ColumnFilterModel>;
+  advancedFilterModel?: AdvancedFilterModel;
   groupBy?: keyof Employee & string;
   pivotBy?: keyof Employee & string;
   pivotValueColumns?: Array<keyof Employee & string>;
@@ -57,12 +58,47 @@ export const featureConfigs = {
   },
   filtering: {
     title: "Filtering",
-    subtitle: "Search and filters",
-    overview: "Combine quick filtering with per-column text, set, number, and date filters.",
-    notes: ["quick filter", "set filters", "number operators"],
+    subtitle: "Search, column filters, and advanced builder",
+    overview: "Combine quick filtering, per-column filters, and a visual advanced filter builder with nested AND/OR rule groups.",
+    notes: ["quick filter", "set filters", "advanced builder", "nested AND/OR"],
+    details: [
+      "Open Advanced in the grid toolbar to build grouped rules without writing predicate code.",
+      "Use Match all rules for AND logic or Match any rule for OR logic, then add rules or nested groups.",
+      "The advancedFilterModel prop is serializable, so you can save it, restore it, or send it to a server.",
+    ],
     quickFilterText: "engineering",
     columnFilters: {
       score: { type: "number", operator: "gte", value: 85 },
+    },
+    advancedFilterModel: {
+      kind: "group",
+      joinOperator: "and",
+      conditions: [
+        {
+          kind: "rule",
+          columnId: "region",
+          operator: "equals",
+          value: "EMEA",
+        },
+        {
+          kind: "group",
+          joinOperator: "or",
+          conditions: [
+            {
+              kind: "rule",
+              columnId: "active",
+              operator: "equals",
+              value: true,
+            },
+            {
+              kind: "rule",
+              columnId: "score",
+              operator: "gte",
+              value: 90,
+            },
+          ],
+        },
+      ],
     },
     code: `<GridNexa
   columns={columns}
@@ -71,6 +107,22 @@ export const featureConfigs = {
   columnFilters={{
     score: { type: "number", operator: "gte", value: 85 }
   }}
+  advancedFilterModel={{
+    kind: "group",
+    joinOperator: "and",
+    conditions: [
+      { kind: "rule", columnId: "region", operator: "equals", value: "EMEA" },
+      {
+        kind: "group",
+        joinOperator: "or",
+        conditions: [
+          { kind: "rule", columnId: "active", operator: "equals", value: true },
+          { kind: "rule", columnId: "score", operator: "gte", value: 90 }
+        ]
+      }
+    ]
+  }}
+  onAdvancedFilterModelChange={(model) => saveFilter(model)}
 />`,
   },
   pagination: {
@@ -367,12 +419,12 @@ export function FormulaGridExample() {
   aggregates: {
     title: "Pivoting & Aggregates",
     subtitle: "Cross-tab summaries",
-    overview: "Turn row-level data into a pivot table by grouping departments, splitting measures by region, and aggregating score metrics.",
-    notes: ["pivotBy region", "avg score", "dynamic columns", "groupBy department"],
+    overview: "Turn row-level data into a pivot table by grouping departments, splitting measures by region, aggregating score metrics, and letting users adjust the pivot from the right-side toolbar.",
+    notes: ["right toolbar", "pivot mode", "row groups", "values"],
     details: [
-      "Use groupBy to define the row buckets in the pivot result.",
-      "Use pivotBy to create dynamic columns from unique values such as region, status, or quarter.",
-      "Use pivotValueColumns and pivotAggregation to choose the measure and summary function.",
+      "Open the Columns tab on the right side of the grid and enable Pivot Mode.",
+      "Choose a Row Group, Pivot Column, Value fields, and aggregation without changing application code.",
+      "Use onPivotModelChange to persist user choices or send them to a server-side datasource.",
       "Supported aggregations include sum, avg, count, min, and max.",
     ],
     groupBy: "department",
@@ -400,6 +452,7 @@ const rows = [
   pivotBy="region"
   pivotValueColumns={["score"]}
   pivotAggregation={"avg" as PivotAggregation}
+  onPivotModelChange={(model) => savePivotModel(model)}
 />`,
   },
   virtualScrolling: {

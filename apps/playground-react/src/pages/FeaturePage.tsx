@@ -41,6 +41,7 @@ export function FeaturePage({ config }: FeaturePageProps) {
         pageSize={config.pageSize}
         quickFilterText={config.quickFilterText}
         columnFilters={config.columnFilters}
+        advancedFilterModel={config.advancedFilterModel}
         groupBy={config.groupBy}
         pivotBy={config.pivotBy}
         pivotValueColumns={config.pivotValueColumns}

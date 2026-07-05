@@ -26,6 +26,29 @@ export interface ColumnFilterModel {
   joinOperator?: "and" | "or";
 }
 
+export type AdvancedFilterJoinOperator = "and" | "or";
+
+export interface AdvancedFilterRuleModel {
+  id?: string;
+  kind: "rule";
+  columnId: string;
+  operator: ColumnFilterOperator;
+  value?: unknown;
+  valueTo?: unknown;
+  values?: unknown[];
+}
+
+export interface AdvancedFilterGroupModel {
+  id?: string;
+  kind: "group";
+  joinOperator: AdvancedFilterJoinOperator;
+  conditions: AdvancedFilterModel[];
+}
+
+export type AdvancedFilterModel =
+  | AdvancedFilterRuleModel
+  | AdvancedFilterGroupModel;
+
 export type AdvancedFilter<T = unknown> = (row: T) => boolean;
 export type ExternalFilter<T = unknown> = (row: T) => boolean;
 export type PivotAggregation = "sum" | "avg" | "count" | "min" | "max";
@@ -33,6 +56,7 @@ export type PivotAggregation = "sum" | "avg" | "count" | "min" | "max";
 export interface ServerSideOperationState<T = unknown> {
   sortModel?: Array<{ columnId: string; direction: "asc" | "desc" }>;
   filterModel?: Record<string, ColumnFilterModel>;
+  advancedFilterModel?: AdvancedFilterModel | null;
   selectedRowIds?: Array<string | number>;
   pageIndex?: number;
   pageSize?: number;
@@ -66,6 +90,8 @@ export interface GridOptions<T = unknown> {
   quickFilterText?: string;
   externalFilter?: ExternalFilter<T>;
   advancedFilter?: AdvancedFilter<T>;
+  advancedFilterModel?: AdvancedFilterModel | null;
+  onAdvancedFilterModelChange?: (model: AdvancedFilterModel | null) => void;
   rowNumbers?: boolean;
   checkboxSelection?: boolean;
   enableRangeSelection?: boolean;
@@ -77,6 +103,12 @@ export interface GridOptions<T = unknown> {
   pivotBy?: keyof T & string;
   pivotValueColumns?: Array<keyof T & string>;
   pivotAggregation?: PivotAggregation;
+  onPivotModelChange?: (model: {
+    groupBy?: keyof T & string;
+    pivotBy?: keyof T & string;
+    pivotValueColumns: Array<keyof T & string>;
+    pivotAggregation: PivotAggregation;
+  }) => void;
   getTreeDataPath?: (row: T) => string[];
   masterDetailRenderer?: (row: T) => unknown;
   transaction?: GridTransaction<T>;

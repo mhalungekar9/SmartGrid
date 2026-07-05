@@ -3,7 +3,7 @@ interface CodeViewerProps {
 }
 
 const tokenPattern =
-  /(".*?"|'.*?'|`[\s\S]*?`|\b(?:const|let|return|rows|columns|GridNexa|true|false|undefined|console|log|fetchRows|setSelectedRows)\b|[{}[\]()<>=/]+|\b\d+\b)/g;
+  /(".*?"|'.*?'|`[\s\S]*?`|\b(?:import|from|type|interface|class|export|function|const|let|return|new|template|selector|standalone|imports|rows|columns|GridNexa|GridNexaVue|GridNexaAngularComponent|createGridNexa|Component|true|false|undefined|console|log|fetchRows|setSelectedRows)\b|[{}[\]()<>=/!:.]+|\b\d+\b)/g;
 
 function getTokenClass(token: string) {
   if (/^["'`]/.test(token)) {
