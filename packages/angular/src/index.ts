@@ -214,7 +214,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   @Input({ required: true }) columns: Column<T>[] = [];
   @Input({ required: true }) rows: T[] = [];
   @Input() className: string | undefined;
-  @Input() theme: GridNexaAngularOptions<T>["theme"] = "light";
+  @Input() theme: GridNexaAngularOptions<T>["theme"] = "dark";
   @Input() density: GridNexaAngularOptions<T>["density"] = "standard";
   @Input() unstyled = false;
   @Input() classNames: GridNexaAngularOptions<T>["classNames"] = {};
@@ -692,7 +692,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     root.className = ["gridnexa-angular-grid", this.className]
       .filter(Boolean)
       .join(" ");
-    root.dataset.gnxTheme = this.theme ?? "light";
+    root.dataset.gnxTheme = this.theme ?? "dark";
     root.dataset.gnxDensity = this.density ?? "standard";
     root.append(this.renderToolbar(columns, pivot.rows), this.renderTable(columns, displayRows));
     if (this.toolsOpen) root.appendChild(this.renderToolsPanel());

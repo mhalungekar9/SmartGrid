@@ -75,6 +75,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   min-height: 0;
+  overflow: hidden;
 }
 
 .sg-side-tools {
@@ -82,8 +83,10 @@
   display: flex;
   align-items: stretch;
   min-height: 360px;
+  max-width: min(420px, 42vw);
   border-left: 1px solid rgba(148, 163, 184, 0.16);
   background: rgba(15, 23, 42, 0.86);
+  overflow: hidden;
 }
 
 .sg-side-tabs {
@@ -126,6 +129,7 @@
 
 .sg-pivot-panel {
   width: min(360px, calc(100vw - 72px));
+  max-width: 100%;
   max-height: min(620px, calc(100vh - 160px));
   overflow: auto;
   padding: 16px;
@@ -141,6 +145,22 @@
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 14px;
+}
+
+.sg-pivot-panel-header strong,
+.sg-pivot-panel-header span {
+  display: block;
+}
+
+.sg-pivot-panel-header strong {
+  color: #ffffff;
+  font-size: 0.96rem;
+}
+
+.sg-pivot-panel-header span {
+  margin-top: 2px;
+  color: rgba(203, 213, 225, 0.78);
+  font-size: 0.78rem;
 }
 
 .sg-pivot-toggle,
@@ -223,8 +243,18 @@
   min-height: 34px;
   padding: 6px 8px;
   border-radius: 8px;
+  background: rgba(15, 23, 42, 0.34);
   color: rgba(226, 232, 240, 0.94);
   font-size: 0.86rem;
+}
+
+.sg-pivot-column-item span:not(.sg-pivot-drag),
+.sg-pivot-value-item span {
+  min-width: 0;
+  color: rgba(248, 250, 252, 0.96);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sg-pivot-column-item:hover,
@@ -247,8 +277,57 @@
   font-weight: 900;
 }
 
+.sg-side-filter-list {
+  display: grid;
+  gap: 12px;
+}
+
+.sg-side-filter-section {
+  margin-top: 0;
+  padding: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.46);
+}
+
+.sg-side-filter-section .sg-filter-input,
+.sg-side-filter-section .sg-filter-operator {
+  width: 100%;
+}
+
+.sg-column-chooser {
+  position: relative;
+}
+
+.sg-column-chooser-panel,
+.sg-header-menu,
+.sg-context-menu {
+  position: absolute;
+  z-index: 40;
+  min-width: 220px;
+  padding: 10px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  border-radius: 12px;
+  background: #111827;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.28);
+  color: rgba(248, 250, 252, 0.96);
+}
+
+.sg-column-chooser-panel--align-end {
+  right: 0;
+  left: auto;
+}
+
+.sg-filter-panel {
+  width: min(720px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: min(620px, calc(100vh - 120px));
+  overflow: auto;
+}
+
 .sg-advanced-filter-panel {
   width: min(860px, calc(100vw - 48px));
+  max-width: calc(100vw - 32px);
   max-height: min(620px, calc(100vh - 140px));
   overflow: auto;
 }

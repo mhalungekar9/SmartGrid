@@ -2,13 +2,11 @@ import { GridNexa } from "@gridnexa/react";
 import { ExampleLayout } from "../components/ExampleLayout";
 import { Toolbar } from "../components/Toolbar";
 import {
-  compactEmployeeColumns,
   employeeColumns,
   employees,
   employeeTransaction,
-  readonlyEmployeeColumns,
 } from "../data/employees";
-import { getEmployeeTreePath, treeRows } from "../data/treeData";
+import { getEmployeeTreePath } from "../data/treeData";
 import type { FeatureConfig } from "./pageConfigs";
 
 interface FeaturePageProps {
@@ -72,11 +70,3 @@ export function FeaturePage({ config }: FeaturePageProps) {
     </ExampleLayout>
   );
 }
-
-export const presets = {
-  compactEmployeeColumns,
-  employeeColumns,
-  employees,
-  readonlyEmployeeColumns,
-  treeRows,
-};

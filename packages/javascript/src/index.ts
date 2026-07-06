@@ -642,7 +642,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     root.className = ["gnx-grid", this.options.className]
       .filter(Boolean)
       .join(" ");
-    root.dataset.gnxTheme = this.options.theme ?? "light";
+    root.dataset.gnxTheme = this.options.theme ?? "dark";
     root.dataset.gnxDensity = this.options.density ?? "standard";
     const main = document.createElement("div");
     main.className = "gnx-main";

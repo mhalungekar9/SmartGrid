@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { GridNexa, type Column, type MergedHeader } from "@gridnexa/react";
+import { useTheme } from "../../hooks/useTheme";
 import { navigateTo } from "../../utils/navigation";
 import gridNexaWordmark from "../../assets/GridNexa-With-Text-logo-transparent-cropped.png";
 
@@ -153,6 +154,7 @@ const supportedTechnologies = [
 ];
 
 export function Home() {
+  const { theme } = useTheme();
   const [rows, setRows] = useState(marketRows);
   const [pulse, setPulse] = useState(0);
   const liveVolume = useMemo(
@@ -284,9 +286,17 @@ export function Home() {
         <GridNexa
           columns={marketColumns}
           rows={rows}
+          theme={theme}
           mergedHeaders={mergedHeaders}
           rowNumbers
           checkboxSelection
+          classNames={{
+            shell: "site-preview-grid-shell",
+            gridWorkspace: "site-preview-grid-workspace",
+            gridRoot: "site-preview-grid-root",
+            sideTools: "site-preview-side-tools",
+            panel: "site-preview-grid-panel",
+          }}
           getRowId={(row) => row.id}
         />
         <div className="ai-home-panel" aria-label="GridNexa AI command preview">
@@ -454,7 +464,7 @@ export function Home() {
             planning a custom workflow, they can connect for guidance and support.
           </p>
           <div className="support-actions">
-            <a href="mailto:support@gridnexa.com">support@gridnexa.com</a>
+            <a href="mailto:mhalungekar9@gmail.com">mhalungekar9@gmail.com</a>
             <button type="button" onClick={() => navigateTo("/docs/events")}>View events docs</button>
           </div>
         </article>

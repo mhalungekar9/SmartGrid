@@ -138,6 +138,36 @@ export function GridRow<T>({
   const rowSelectionId = getRowSelectionId(row, rowIndex);
   const isSelected =
     selectedRowIndex === rowIndex || selectedRowIds.has(rowSelectionId);
+  const rowReorderControls = (
+    <span className="sg-row-reorder-controls" aria-label="Move row">
+      <button
+        className="sg-row-reorder-button"
+        type="button"
+        title="Move row up"
+        aria-label={`Move row ${rowIndex + 1} up`}
+        disabled={rowIndex === 0}
+        onClick={(event) => {
+          event.stopPropagation();
+          onMoveRow(rowIndex, -1);
+        }}
+      >
+        ^
+      </button>
+      <button
+        className="sg-row-reorder-button"
+        type="button"
+        title="Move row down"
+        aria-label={`Move row ${rowIndex + 1} down`}
+        disabled={rowIndex >= contextRows.length - 1}
+        onClick={(event) => {
+          event.stopPropagation();
+          onMoveRow(rowIndex, 1);
+        }}
+      >
+        v
+      </button>
+    </span>
+  );
 
   return (
     <div
@@ -188,34 +218,6 @@ export function GridRow<T>({
         gridTemplateColumns: columnTemplate,
       }}
     >
-      <div className="sg-row-reorder-controls" aria-label="Move row">
-        <button
-          className="sg-row-reorder-button"
-          type="button"
-          title="Move row up"
-          aria-label={`Move row ${rowIndex + 1} up`}
-          disabled={rowIndex === 0}
-          onClick={(event) => {
-            event.stopPropagation();
-            onMoveRow(rowIndex, -1);
-          }}
-        >
-          ↑
-        </button>
-        <button
-          className="sg-row-reorder-button"
-          type="button"
-          title="Move row down"
-          aria-label={`Move row ${rowIndex + 1} down`}
-          disabled={rowIndex >= contextRows.length - 1}
-          onClick={(event) => {
-            event.stopPropagation();
-            onMoveRow(rowIndex, 1);
-          }}
-        >
-          ↓
-        </button>
-      </div>
       {checkboxSelection ? (
         <div className="sg-selection-cell">
           <input
@@ -233,8 +235,8 @@ export function GridRow<T>({
         .filter((column) => !column.hidden)
         .map((column, columnIndex) => {
           const isFirstColumn = columnIndex === 0;
-          const leadingAction =
-            isFirstColumn && dataItem.hasChildren && dataItem.treeKey ? (
+          const treeAction =
+            dataItem.hasChildren && dataItem.treeKey ? (
               <button
                 className="sg-tree-toggle"
                 type="button"
@@ -248,12 +250,18 @@ export function GridRow<T>({
               >
                 {dataItem.expanded ? "v" : ">"}
               </button>
-            ) : isFirstColumn && dataItem.depth ? (
+            ) : dataItem.depth ? (
               <span
                 className="sg-tree-indent"
                 style={{ width: `${dataItem.depth * 16 + 24}px` }}
               />
             ) : undefined;
+          const leadingAction = isFirstColumn ? (
+            <>
+              {rowReorderControls}
+              {treeAction}
+            </>
+          ) : undefined;
 
           return (
             <GridCell

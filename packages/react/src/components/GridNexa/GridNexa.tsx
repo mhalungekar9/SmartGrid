@@ -793,7 +793,7 @@ export function GridNexa<T>({
   rows,
   columns,
   className,
-  theme = "light",
+  theme = "dark",
   density = "standard",
   unstyled = false,
   classNames = {},
@@ -857,6 +857,7 @@ export function GridNexa<T>({
   const [advancedFilterPanelOpen, setAdvancedFilterPanelOpen] =
     useState(false);
   const [pivotPanelOpen, setPivotPanelOpen] = useState(false);
+  const [sideFilterPanelOpen, setSideFilterPanelOpen] = useState(false);
   const [pivotToolSearch, setPivotToolSearch] = useState("");
   const [filterPopoverColumnId, setFilterPopoverColumnId] = useState<
     string | null
@@ -1004,7 +1005,8 @@ export function GridNexa<T>({
       !filterPanelOpen &&
       !columnChooserOpen &&
       !advancedFilterPanelOpen &&
-      !pivotPanelOpen
+      !pivotPanelOpen &&
+      !sideFilterPanelOpen
     ) {
       return;
     }
@@ -1034,6 +1036,10 @@ export function GridNexa<T>({
       if (pivotPanelOpen && !pivotPanelRef.current?.contains(target)) {
         setPivotPanelOpen(false);
       }
+
+      if (sideFilterPanelOpen && !pivotPanelRef.current?.contains(target)) {
+        setSideFilterPanelOpen(false);
+      }
     };
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key !== "Escape") {
@@ -1044,6 +1050,7 @@ export function GridNexa<T>({
       setAdvancedFilterPanelOpen(false);
       setColumnChooserOpen(false);
       setPivotPanelOpen(false);
+      setSideFilterPanelOpen(false);
     };
 
     document.addEventListener("pointerdown", closeFloatingPanels, true);
@@ -1058,6 +1065,7 @@ export function GridNexa<T>({
     columnChooserOpen,
     filterPanelOpen,
     pivotPanelOpen,
+    sideFilterPanelOpen,
   ]);
 
   const columnSignature = columns
@@ -3358,7 +3366,10 @@ export function GridNexa<T>({
 
               {filterPanelOpen ? (
                 <div
-                  className={cx("sg-column-chooser-panel sg-filter-panel", mergedClassNames.panel)}
+                  className={cx(
+                    "sg-column-chooser-panel sg-column-chooser-panel--align-end sg-filter-panel",
+                    mergedClassNames.panel,
+                  )}
                   role="menu"
                   aria-label="Column filters"
                 >
@@ -3517,7 +3528,10 @@ export function GridNexa<T>({
 
               {advancedFilterPanelOpen ? (
                 <div
-                  className={cx("sg-column-chooser-panel sg-advanced-filter-panel", mergedClassNames.panel)}
+                  className={cx(
+                    "sg-column-chooser-panel sg-column-chooser-panel--align-end sg-advanced-filter-panel",
+                    mergedClassNames.panel,
+                  )}
                   role="menu"
                   aria-label="Advanced filter builder"
                 >
@@ -3697,15 +3711,26 @@ export function GridNexa<T>({
                 )}
                 type="button"
                 aria-expanded={pivotPanelOpen}
-                onClick={() => setPivotPanelOpen((current) => !current)}
+                onClick={() => {
+                  setSideFilterPanelOpen(false);
+                  setPivotPanelOpen((current) => !current);
+                }}
               >
                 <span className="sg-side-tab-icon">▦</span>
                 <span>Columns</span>
               </button>
               <button
-                className={cx("sg-side-tab", mergedClassNames.sideTab)}
+                className={cx(
+                  "sg-side-tab",
+                  sideFilterPanelOpen && "sg-side-tab--active",
+                  mergedClassNames.sideTab,
+                )}
                 type="button"
-                onClick={() => setFilterPanelOpen(true)}
+                aria-expanded={sideFilterPanelOpen}
+                onClick={() => {
+                  setPivotPanelOpen(false);
+                  setSideFilterPanelOpen((current) => !current);
+                }}
               >
                 <span className="sg-side-tab-icon">≡</span>
                 <span>Filters</span>
@@ -3884,6 +3909,162 @@ export function GridNexa<T>({
                     </select>
                   </label>
                 </section>
+              </div>
+            ) : null}
+
+            {sideFilterPanelOpen ? (
+              <div className={cx("sg-pivot-panel sg-side-filter-panel", mergedClassNames.panel)}>
+                <div className="sg-pivot-panel-header">
+                  <div>
+                    <strong>Filters</strong>
+                    <span>Filter visible columns inside the grid.</span>
+                  </div>
+                  <button
+                    className="sg-pivot-clear"
+                    type="button"
+                    onClick={() => setFilterModel({})}
+                    disabled={!activeFilterCount}
+                  >
+                    Clear all
+                  </button>
+                </div>
+
+                <div className="sg-side-filter-list">
+                  {columns
+                    .filter((column) => column.filterable !== false)
+                    .map((column) => {
+                      const filterType = getColumnFilterType(column);
+                      const filter = filterModel[column.id] ?? {
+                        type: filterType,
+                        operator:
+                          filterType === "set"
+                            ? "in"
+                            : filterType === "number" || filterType === "date"
+                              ? "equals"
+                              : "contains",
+                        value: "",
+                      };
+                      const uniqueValues = Array.from(
+                        new Set(
+                          gridRows.map((row) =>
+                            String(getColumnValue(row, column) ?? ""),
+                          ),
+                        ),
+                      ).filter(Boolean);
+
+                      return (
+                        <section className="sg-pivot-section sg-side-filter-section" key={column.id}>
+                          <h3>{column.headerName}</h3>
+                          {filterType === "set" ? (
+                            <select
+                              className={cx("sg-filter-input", mergedClassNames.input)}
+                              multiple
+                              value={(filter.values ?? []).map(String)}
+                              onChange={(event) => {
+                                const values = Array.from(
+                                  event.currentTarget.selectedOptions,
+                                ).map((option) => option.value);
+
+                                setColumnFilter(
+                                  column.id,
+                                  values.length
+                                    ? { type: "set", operator: "in", values }
+                                    : null,
+                                );
+                              }}
+                            >
+                              {uniqueValues.map((value) => (
+                                <option key={value} value={value}>
+                                  {value}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <>
+                              <select
+                                className={cx("sg-filter-operator", mergedClassNames.input)}
+                                value={filter.operator}
+                                onChange={(event) =>
+                                  setColumnFilter(column.id, {
+                                    ...filter,
+                                    type: filterType,
+                                    operator: event.target
+                                      .value as ColumnFilterModel["operator"],
+                                  })
+                                }
+                              >
+                                {(filterType === "number"
+                                  ? [
+                                      "equals",
+                                      "gt",
+                                      "gte",
+                                      "lt",
+                                      "lte",
+                                      "between",
+                                    ]
+                                  : filterType === "date"
+                                    ? ["equals", "before", "after", "between"]
+                                    : [
+                                        "contains",
+                                        "equals",
+                                        "startsWith",
+                                        "endsWith",
+                                      ]
+                                ).map((operator) => (
+                                  <option key={operator} value={operator}>
+                                    {operator}
+                                  </option>
+                                ))}
+                              </select>
+                              <input
+                                className={cx("sg-filter-input", mergedClassNames.input)}
+                                type={
+                                  filterType === "number"
+                                    ? "number"
+                                    : filterType === "date"
+                                      ? "date"
+                                      : "search"
+                                }
+                                value={String(filter.value ?? "")}
+                                onChange={(event) =>
+                                  setColumnFilter(column.id, {
+                                    ...filter,
+                                    type: filterType,
+                                    value: event.target.value,
+                                  })
+                                }
+                                placeholder="Filter value"
+                              />
+                              {filter.operator === "between" ? (
+                                <input
+                                  className={cx("sg-filter-input", mergedClassNames.input)}
+                                  type={
+                                    filterType === "date" ? "date" : "number"
+                                  }
+                                  value={String(filter.valueTo ?? "")}
+                                  onChange={(event) =>
+                                    setColumnFilter(column.id, {
+                                      ...filter,
+                                      type: filterType,
+                                      valueTo: event.target.value,
+                                    })
+                                  }
+                                  placeholder="To"
+                                />
+                              ) : null}
+                            </>
+                          )}
+                          <button
+                            className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                            type="button"
+                            onClick={() => setColumnFilter(column.id, null)}
+                          >
+                            Clear
+                          </button>
+                        </section>
+                      );
+                    })}
+                </div>
               </div>
             ) : null}
           </aside>

@@ -1,5 +1,6 @@
 packages:
   - packages/*
   - apps/*
+  - react-test
 allowBuilds:
   esbuild: true

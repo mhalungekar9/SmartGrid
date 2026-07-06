@@ -200,7 +200,7 @@ export const GridNexaVue = defineComponent({
     columns: { type: Array as PropType<Column<RowRecord>[]>, required: true },
     rows: { type: Array as PropType<RowRecord[]>, required: true },
     className: { type: String, default: undefined },
-    theme: { type: String as PropType<GridNexaVueOptions<RowRecord>["theme"]>, default: "light" },
+    theme: { type: String as PropType<GridNexaVueOptions<RowRecord>["theme"]>, default: "dark" },
     density: { type: String as PropType<GridNexaVueOptions<RowRecord>["density"]>, default: "standard" },
     unstyled: { type: Boolean, default: false },
     classNames: { type: Object as PropType<GridNexaVueOptions<RowRecord>["classNames"]>, default: () => ({}) },
@@ -608,7 +608,7 @@ export const GridNexaVue = defineComponent({
       const displayRows = pivot.active ? pageRows.map((row) => ({ kind: "data" as const, row, rowIndex: pivot.rows.indexOf(row) })) : makeDisplayRows(pageRows);
       const root = document.createElement("div");
       root.className = ["gridnexa-vue-grid", props.className].filter(Boolean).join(" ");
-      root.dataset.gnxTheme = props.theme ?? "light";
+      root.dataset.gnxTheme = props.theme ?? "dark";
       root.dataset.gnxDensity = props.density ?? "standard";
       root.append(renderToolbar(columns, pivot.rows), renderTable(columns, displayRows));
       if (toolsOpen) root.appendChild(renderToolsPanel());

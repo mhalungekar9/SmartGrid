@@ -173,6 +173,28 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  react-test:
+    dependencies:
+      '@gridnexa/react':
+        specifier: workspace:*
+        version: link:../packages/react
+      react:
+        specifier: ^19.2.7
+        version: 19.2.7
+      react-dom:
+        specifier: ^19.2.7
+        version: 19.2.7(react@19.2.7)
+    devDependencies:
+      '@vitejs/plugin-react':
+        specifier: ^6.0.2
+        version: 6.0.3(vite@8.1.0(@types/node@24.13.2)(esbuild@0.27.7))
+      typescript:
+        specifier: ~6.0.2
+        version: 6.0.3
+      vite:
+        specifier: ^8.1.0
+        version: 8.1.0(@types/node@24.13.2)(esbuild@0.27.7)
+
 packages:
 
   '@angular/core@22.0.5':
