@@ -1,6 +1,12 @@
 import { createContext, useContext } from "react";
 import type { CSSProperties } from "react";
-import type { Column, GridNexaClassName, GridNexaSlotClassNames } from "@gridnexa/core";
+import type {
+  Column,
+  GridNexaClassName,
+  GridNexaRowReorderPosition,
+  GridNexaSlotClassNames,
+  GridNexaTheme,
+} from "@gridnexa/core";
 
 export function cx(...values: GridNexaClassName[]): string {
   return values
@@ -12,10 +18,12 @@ export function cx(...values: GridNexaClassName[]): string {
 export interface GridContextValue<T> {
   rows: T[];
   columns: Column<T>[];
+  theme: GridNexaTheme;
   classNames: GridNexaSlotClassNames;
   columnTemplate: string;
   selectedRowIndex: number | null;
   onRowSelect: (rowIndex: number) => void;
+  emitRowDoubleClick: (rowIndex: number) => void;
   selectedRowIds: Set<string | number>;
   checkboxSelection: boolean;
   allVisibleRowsSelected: boolean;
@@ -24,6 +32,8 @@ export interface GridContextValue<T> {
   toggleRowSelection: (row: T, rowIndex: number) => void;
   toggleAllRowsSelection: () => void;
   rowNumbers: boolean;
+  enableRowReorder: boolean;
+  rowReorderPosition: GridNexaRowReorderPosition;
   getColumnStyle: (columnId: string) => CSSProperties;
   getRowClassName: (params: {
     row: T;
@@ -42,6 +52,8 @@ export interface GridContextValue<T> {
     column: Column<T>;
     columnIndex: number;
   }) => GridNexaClassName;
+  emitCellClick: (rowIndex: number, columnIndex: number) => void;
+  emitCellDoubleClick: (rowIndex: number, columnIndex: number) => void;
   activeCell: { rowIndex: number; columnIndex: number } | null;
   selectionAnchor: { rowIndex: number; columnIndex: number } | null;
   setActiveCell: (rowIndex: number, columnIndex: number) => void;

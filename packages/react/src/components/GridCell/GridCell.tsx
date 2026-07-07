@@ -11,6 +11,7 @@ interface Props<T> {
   column: Column<T>;
   leadingAction?: ReactNode;
   detailAction?: ReactNode;
+  trailingAction?: ReactNode;
 }
 
 function normalizeSelectOption(
@@ -36,6 +37,7 @@ export function GridCell<T>({
   column,
   leadingAction,
   detailAction,
+  trailingAction,
 }: Props<T>) {
   const {
     getColumnStyle,
@@ -55,6 +57,8 @@ export function GridCell<T>({
     selectedRowIds,
     getRowSelectionId,
     getCellClassName,
+    emitCellClick,
+    emitCellDoubleClick,
   } = useGridContext<T>();
   const value = getColumnValue(row, column);
   const rawValue = getRawColumnValue(row, column);
@@ -253,12 +257,15 @@ export function GridCell<T>({
       onClick={(event) => {
         if (event.shiftKey && activeCell) {
           setSelectionAnchor(rowIndex, columnIndex);
+          emitCellClick(rowIndex, columnIndex);
           return;
         }
 
         setActiveCell(rowIndex, columnIndex);
+        emitCellClick(rowIndex, columnIndex);
       }}
       onDoubleClick={() => {
+        emitCellDoubleClick(rowIndex, columnIndex);
         if (column.editable) {
           startCellEdit(rowIndex, column.id, String(rawValue ?? ""));
         }
@@ -279,6 +286,7 @@ export function GridCell<T>({
       {leadingAction}
       {detailAction}
       {renderedValue}
+      {trailingAction}
     </div>
   );
 }

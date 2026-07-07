@@ -213,6 +213,8 @@ export const GridNexaVue = defineComponent({
     enableRangeSelection: { type: Boolean, default: true },
     enableFillHandle: { type: Boolean, default: true },
     enableUndoRedo: { type: Boolean, default: true },
+    enableRowReorder: { type: Boolean, default: false },
+    rowReorderPosition: { type: String as PropType<GridNexaVueOptions<RowRecord>["rowReorderPosition"]>, default: "right" },
     quickFilterText: { type: String, default: "" },
     columnFilters: { type: Object as PropType<Record<string, ColumnFilterModel>>, default: undefined },
     externalFilter: { type: Function as PropType<GridNexaVueOptions<RowRecord>["externalFilter"]>, default: undefined },
@@ -232,10 +234,24 @@ export const GridNexaVue = defineComponent({
   },
   emits: [
     "rowSelectionChange",
+    "selectionChanged",
+    "rowSelected",
+    "selectedRowChange",
+    "rowOrderChange",
     "cellClick",
+    "cellDoubleClick",
+    "cellEditStart",
+    "cellEditStop",
     "advancedFilterModelChange",
     "pivotModelChange",
     "cellValueChange",
+    "sortChanged",
+    "filterChanged",
+    "columnMoved",
+    "columnResized",
+    "columnVisible",
+    "columnPinned",
+    "saveAll",
     "serverSideOperation",
   ],
   setup(props, { emit }) {
@@ -305,6 +321,7 @@ export const GridNexaVue = defineComponent({
       }
       row[column.field] = newValue;
       emit("cellValueChange", { row, rowIndex, column, oldValue, newValue });
+      emit("cellEditStop", { row, rowIndex, column, oldValue, newValue });
     };
 
     const undo = () => {
@@ -386,6 +403,7 @@ export const GridNexaVue = defineComponent({
       if (nextIndex < 0 || nextIndex >= workingRows.length) return;
       const [row] = workingRows.splice(rowIndex, 1);
       workingRows.splice(nextIndex, 0, row);
+      emit("rowOrderChange", { rows: workingRows, movedRow: row, sourceIndex: rowIndex, targetIndex: nextIndex });
       render();
     };
 
@@ -393,6 +411,7 @@ export const GridNexaVue = defineComponent({
       if (sourceIndex === targetIndex || sourceIndex < 0 || targetIndex < 0 || sourceIndex >= workingRows.length || targetIndex >= workingRows.length) return;
       const [row] = workingRows.splice(sourceIndex, 1);
       workingRows.splice(targetIndex, 0, row);
+      emit("rowOrderChange", { rows: workingRows, movedRow: row, sourceIndex, targetIndex });
       render();
     };
 
@@ -403,6 +422,12 @@ export const GridNexaVue = defineComponent({
       if (sourceIndex < 0 || targetIndex < 0) return;
       const [column] = workingColumns.splice(sourceIndex, 1);
       workingColumns.splice(targetIndex, 0, column);
+      emit("columnMoved", {
+        columnId: column.id,
+        sourceIndex,
+        targetIndex,
+        columnIds: workingColumns.map((entry) => entry.id),
+      });
       render();
     };
 
@@ -754,6 +779,7 @@ export const GridNexaVue = defineComponent({
         th.addEventListener("click", () => {
           if (column.sortable === false) return;
           sortState = sortState?.columnId !== column.id ? { columnId: column.id, direction: "asc" } : sortState.direction === "asc" ? { columnId: column.id, direction: "desc" } : null;
+          emit("sortChanged", sortState ? [sortState] : []);
           render();
         });
         if (column.resizable !== false) {
@@ -829,12 +855,16 @@ export const GridNexaVue = defineComponent({
         props.classNames?.row,
         props.getRowClassName?.({ row, rowIndex, selected: rowSelected }),
       );
-      tr.draggable = true;
+      tr.draggable = props.enableRowReorder;
       tr.addEventListener("dragstart", () => {
+        if (!props.enableRowReorder) return;
         draggedRowIndex = rowIndex;
       });
-      tr.addEventListener("dragover", (event) => event.preventDefault());
+      tr.addEventListener("dragover", (event) => {
+        if (props.enableRowReorder) event.preventDefault();
+      });
       tr.addEventListener("drop", (event) => {
+        if (!props.enableRowReorder) return;
         event.preventDefault();
         if (draggedRowIndex != null) reorderRow(draggedRowIndex, rowIndex);
         draggedRowIndex = null;
@@ -846,7 +876,10 @@ export const GridNexaVue = defineComponent({
         checkbox.checked = selected.has(rowId(row, rowIndex));
         checkbox.addEventListener("change", () => {
           checkbox.checked ? selected.add(rowId(row, rowIndex)) : selected.delete(rowId(row, rowIndex));
-          emit("rowSelectionChange", props.rows.filter((entry, index) => selected.has(rowId(entry, index))));
+          const selectedRows = props.rows.filter((entry, index) => selected.has(rowId(entry, index)));
+          emit("rowSelectionChange", selectedRows);
+          emit("selectionChanged", { selectedRows, selectedRowIds: Array.from(selected) });
+          emit("rowSelected", { row, rowIndex, selected: checkbox.checked, selectedRows });
           render();
         });
         td.appendChild(checkbox);
@@ -854,11 +887,13 @@ export const GridNexaVue = defineComponent({
       }
       if (props.rowNumbers) {
         const rowNumber = cell(String(rowIndex + 1));
-        const up = button("↑", () => moveRow(rowIndex, -1));
-        up.disabled = rowIndex <= 0;
-        const down = button("↓", () => moveRow(rowIndex, 1));
-        down.disabled = rowIndex >= workingRows.length - 1;
-        rowNumber.append(" ", up, down);
+        if (props.enableRowReorder) {
+          const up = button("↑", () => moveRow(rowIndex, -1));
+          up.disabled = rowIndex <= 0;
+          const down = button("↓", () => moveRow(rowIndex, 1));
+          down.disabled = rowIndex >= workingRows.length - 1;
+          rowNumber.append(" ", up, down);
+        }
         tr.appendChild(rowNumber);
       }
       columns.forEach((column, columnIndex) => {
@@ -913,6 +948,11 @@ export const GridNexaVue = defineComponent({
             rangeAnchor = { rowIndex, columnId: column.id };
             rangeEnd = { rowIndex, columnId: column.id };
           }
+          emit("selectedRowChange", {
+            row,
+            rowIndex,
+            selectedRows: props.rows.filter((entry, index) => selected.has(rowId(entry, index))),
+          });
           emit("cellClick", { row, rowIndex, column });
           render();
         });
@@ -922,7 +962,10 @@ export const GridNexaVue = defineComponent({
           contextMenu = { x: event.clientX, y: event.clientY, rowIndex, columnId: column.id };
           render();
         });
-        if (column.editable) td.addEventListener("dblclick", () => editCell(td, row, rowIndex, column));
+        td.addEventListener("dblclick", () => {
+          emit("cellDoubleClick", { row, rowIndex, column });
+          if (column.editable) editCell(td, row, rowIndex, column);
+        });
         tr.appendChild(td);
       });
       tbody.appendChild(tr);
@@ -931,6 +974,7 @@ export const GridNexaVue = defineComponent({
     const editCell = (td: HTMLTableCellElement, row: RowRecord, rowIndex: number, column: Column<RowRecord>) => {
       const oldValue = rawValue(row, column);
       const input = createEditor(column, oldValue);
+      emit("cellEditStart", { row, rowIndex, column, value: oldValue });
       td.replaceChildren(input);
       input.focus();
       input.addEventListener("blur", () => {

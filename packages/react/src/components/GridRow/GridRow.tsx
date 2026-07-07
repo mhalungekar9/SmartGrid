@@ -67,9 +67,12 @@ export function GridRow<T>({
     checkboxSelection,
     getRowSelectionId,
     onRowSelect,
+    emitRowDoubleClick,
     dropTargetRowIndex,
     rowNumbers,
     toggleRowSelection,
+    enableRowReorder,
+    rowReorderPosition,
     classNames,
     getRowClassName,
   } = useGridContext<T>();
@@ -139,7 +142,13 @@ export function GridRow<T>({
   const isSelected =
     selectedRowIndex === rowIndex || selectedRowIds.has(rowSelectionId);
   const rowReorderControls = (
-    <span className="sg-row-reorder-controls" aria-label="Move row">
+    <span
+      className={cx(
+        "sg-row-reorder-controls",
+        rowReorderPosition === "right" && "sg-row-reorder-controls--right",
+      )}
+      aria-label="Move row"
+    >
       <button
         className="sg-row-reorder-button"
         type="button"
@@ -168,11 +177,13 @@ export function GridRow<T>({
       </button>
     </span>
   );
+  const visibleColumns = columns.filter((column) => !column.hidden);
 
   return (
     <div
       className={cx(
         "sg-row sg-row--data",
+        enableRowReorder && "sg-row--reorderable",
         dropTargetRowIndex === rowIndex && "sg-row--drop-target",
         classNames.row,
         getRowClassName({ row, rowIndex, selected: isSelected }),
@@ -180,9 +191,15 @@ export function GridRow<T>({
       data-selected={isSelected ? "true" : "false"}
       role="row"
       aria-selected={isSelected}
-      draggable
+      draggable={enableRowReorder}
       onClick={() => onRowSelect(rowIndex)}
+      onDoubleClick={() => emitRowDoubleClick(rowIndex)}
       onDragStart={(event) => {
+        if (!enableRowReorder) {
+          event.preventDefault();
+          return;
+        }
+
         const target = event.target as HTMLElement | null;
 
         if (target?.closest("button, input, select, textarea")) {
@@ -195,13 +212,25 @@ export function GridRow<T>({
         onSetDraggedRowIndex(rowIndex);
       }}
       onDragOver={(event) => {
+        if (!enableRowReorder) {
+          return;
+        }
+
         event.preventDefault();
         onSetDropTargetRowIndex(rowIndex);
       }}
       onDragLeave={() => {
+        if (!enableRowReorder) {
+          return;
+        }
+
         onSetDropTargetRowIndex(null);
       }}
       onDrop={(event) => {
+        if (!enableRowReorder) {
+          return;
+        }
+
         event.preventDefault();
         const sourceRowIndex = Number(event.dataTransfer.getData("text/plain"));
 
@@ -231,10 +260,10 @@ export function GridRow<T>({
         </div>
       ) : null}
       {rowNumbers ? <div className="sg-row-number">{rowIndex + 1}</div> : null}
-      {columns
-        .filter((column) => !column.hidden)
+      {visibleColumns
         .map((column, columnIndex) => {
           const isFirstColumn = columnIndex === 0;
+          const isLastColumn = columnIndex === visibleColumns.length - 1;
           const treeAction =
             dataItem.hasChildren && dataItem.treeKey ? (
               <button
@@ -258,10 +287,16 @@ export function GridRow<T>({
             ) : undefined;
           const leadingAction = isFirstColumn ? (
             <>
-              {rowReorderControls}
+              {enableRowReorder && rowReorderPosition === "left"
+                ? rowReorderControls
+                : null}
               {treeAction}
             </>
           ) : undefined;
+          const trailingAction =
+            enableRowReorder && rowReorderPosition === "right" && isLastColumn
+              ? rowReorderControls
+              : undefined;
 
           return (
             <GridCell
@@ -271,6 +306,7 @@ export function GridRow<T>({
               columnIndex={columnIndex}
               column={column}
               leadingAction={leadingAction}
+              trailingAction={trailingAction}
               detailAction={
                 isFirstColumn && dataItem.hasDetail ? (
                   <button

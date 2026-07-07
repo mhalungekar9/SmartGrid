@@ -77,7 +77,22 @@ export function GridHeaderCell<T>({
   onPinColumn,
   onHideColumn,
 }: Props<T>) {
-  const { classNames, getColumnStyle, getHeaderClassName } = useGridContext<T>();
+  const { classNames, getColumnStyle, getHeaderClassName, theme } =
+    useGridContext<T>();
+  const popupThemeClass = `sg-popup-theme-${theme}`;
+  const selectedSetValues = (filter?.values ?? []).map(String);
+  const toggleSetFilterValue = (value: string) => {
+    const nextValues = selectedSetValues.includes(value)
+      ? selectedSetValues.filter((entry) => entry !== value)
+      : [...selectedSetValues, value];
+
+    onSetFilter(
+      column.id,
+      nextValues.length
+        ? { type: "set", operator: "in", values: nextValues }
+        : null,
+    );
+  };
   const sortLabel =
     sortDirection === "asc"
       ? "Sort descending"
@@ -180,7 +195,10 @@ export function GridHeaderCell<T>({
 
           <Popover.Portal>
             <Popover.Content
-              className="sg-header-menu sg-column-filter-popover"
+              className={cx(
+                "sg-header-menu sg-column-filter-popover",
+                popupThemeClass,
+              )}
               align="end"
               side="bottom"
               sideOffset={8}
@@ -195,29 +213,18 @@ export function GridHeaderCell<T>({
               </div>
 
               {filterType === "set" ? (
-                <select
-                  className="sg-column-filter-input"
-                  multiple
-                  value={(filter?.values ?? []).map(String)}
-                  onChange={(event) => {
-                    const values = Array.from(
-                      event.currentTarget.selectedOptions,
-                    ).map((option) => option.value);
-
-                    onSetFilter(
-                      column.id,
-                      values.length
-                        ? { type: "set", operator: "in", values }
-                        : null,
-                    );
-                  }}
-                >
+                <div className="sg-column-filter-set" role="group">
                   {filterValues.map((value) => (
-                    <option key={value} value={value}>
-                      {value}
-                    </option>
+                    <label className="sg-column-filter-option" key={value}>
+                      <input
+                        type="checkbox"
+                        checked={selectedSetValues.includes(value)}
+                        onChange={() => toggleSetFilterValue(value)}
+                      />
+                      <span>{value}</span>
+                    </label>
                   ))}
-                </select>
+                </div>
               ) : (
                 <>
                   <select
@@ -314,6 +321,7 @@ export function GridHeaderCell<T>({
         </button>
 
         <DropdownMenu.Root
+          modal={false}
           open={menuOpen}
           onOpenChange={(open) => onMenuOpenChange(column.id, open)}
         >
@@ -331,7 +339,7 @@ export function GridHeaderCell<T>({
 
           <DropdownMenu.Portal>
             <DropdownMenu.Content
-              className="sg-header-menu"
+              className={cx("sg-header-menu", popupThemeClass)}
               align="end"
               side="bottom"
               sideOffset={8}

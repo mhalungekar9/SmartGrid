@@ -21,6 +21,8 @@ export interface GridNexaJavaScriptOptions<T = Record<string, unknown>>
     row: T;
     rowIndex: number;
     column: Column<T>;
+    columnIndex: number;
+    value: unknown;
   }) => void;
 }
 
@@ -584,19 +586,25 @@ export class GridNexaGrid<T = Record<string, unknown>> {
   private moveRow(rowIndex: number, direction: -1 | 1) {
     const nextIndex = rowIndex + direction;
     if (nextIndex < 0 || nextIndex >= this.options.rows.length) return;
-    const rows = [...this.options.rows];
+    const previousRows = this.options.rows;
+    const rows = [...previousRows];
     const [row] = rows.splice(rowIndex, 1);
     rows.splice(nextIndex, 0, row);
     this.options = { ...this.options, rows };
+    this.options.onRowsChange?.({ rows, previousRows, reason: "rowReorder" });
+    this.options.onRowOrderChange?.({ rows, movedRow: row, sourceIndex: rowIndex, targetIndex: nextIndex });
     this.render();
   }
 
   private reorderRow(sourceIndex: number, targetIndex: number) {
     if (sourceIndex === targetIndex || sourceIndex < 0 || targetIndex < 0 || sourceIndex >= this.options.rows.length || targetIndex >= this.options.rows.length) return;
-    const rows = [...this.options.rows];
+    const previousRows = this.options.rows;
+    const rows = [...previousRows];
     const [row] = rows.splice(sourceIndex, 1);
     rows.splice(targetIndex, 0, row);
     this.options = { ...this.options, rows };
+    this.options.onRowsChange?.({ rows, previousRows, reason: "rowReorder" });
+    this.options.onRowOrderChange?.({ rows, movedRow: row, sourceIndex, targetIndex });
     this.render();
   }
 
@@ -626,6 +634,8 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     const [source] = order.splice(sourceIndex, 1);
     order.splice(targetIndex, 0, source);
     this.columnOrder = order;
+    this.options.onColumnOrderChange?.(order);
+    this.options.onColumnMoved?.({ columnId: source, sourceIndex, targetIndex, columnIds: order });
     this.render();
   }
 
@@ -904,6 +914,9 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       th.addEventListener("click", () => {
         if (column.sortable === false) return;
         this.sortState = this.sortState?.columnId !== column.id ? { columnId: column.id, direction: "asc" } : this.sortState.direction === "asc" ? { columnId: column.id, direction: "desc" } : null;
+        const model = this.sortState ? [this.sortState] : [];
+        this.options.onSortModelChange?.(model);
+        this.options.onSortChanged?.(model);
         this.render();
       });
       if (column.resizable !== false) {
@@ -998,12 +1011,16 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       this.options.classNames?.row,
       this.options.getRowClassName?.({ row, rowIndex, selected: rowSelected }),
     );
-    tr.draggable = true;
+    tr.draggable = Boolean(this.options.enableRowReorder);
     tr.addEventListener("dragstart", () => {
+      if (!this.options.enableRowReorder) return;
       this.draggedRowIndex = rowIndex;
     });
-    tr.addEventListener("dragover", (event) => event.preventDefault());
+    tr.addEventListener("dragover", (event) => {
+      if (this.options.enableRowReorder) event.preventDefault();
+    });
     tr.addEventListener("drop", (event) => {
+      if (!this.options.enableRowReorder) return;
       event.preventDefault();
       if (this.draggedRowIndex != null) this.reorderRow(this.draggedRowIndex, rowIndex);
       this.draggedRowIndex = null;
@@ -1017,7 +1034,10 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       checkbox.checked = this.selectedIds.has(rowId);
       checkbox.addEventListener("change", () => {
         checkbox.checked ? this.selectedIds.add(rowId) : this.selectedIds.delete(rowId);
-        this.options.onRowSelectionChange?.(this.options.rows.filter((entry, index) => this.selectedIds.has(this.getRowId(entry, index))));
+        const selectedRows = this.options.rows.filter((entry, index) => this.selectedIds.has(this.getRowId(entry, index)));
+        this.options.onRowSelectionChange?.(selectedRows);
+        this.options.onSelectionChanged?.({ selectedRows, selectedRowIds: Array.from(this.selectedIds) });
+        this.options.onRowSelected?.({ row, rowIndex, selected: checkbox.checked, selectedRows });
       });
       td.appendChild(checkbox);
       tr.appendChild(td);
@@ -1025,6 +1045,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     if (this.options.rowNumbers) {
       const rowNumber = cell(String(rowIndex + 1));
       rowNumber.className = "gnx-control";
+      if (this.options.enableRowReorder) {
       const tools = document.createElement("span");
       tools.className = "gnx-row-tools";
       const up = document.createElement("button");
@@ -1045,6 +1066,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       });
       tools.append(up, down);
       rowNumber.append(" ", tools);
+      }
       tr.appendChild(rowNumber);
     }
     columns.forEach((column, columnIndex) => {
@@ -1109,7 +1131,9 @@ export class GridNexaGrid<T = Record<string, unknown>> {
           this.rangeAnchor = { rowIndex, columnId: column.id };
           this.rangeEnd = { rowIndex, columnId: column.id };
         }
-        this.options.onCellClick?.({ row, rowIndex, column });
+        this.options.onRowClick?.({ row, rowIndex });
+        this.options.onSelectedRowChange?.({ row, rowIndex, selectedRows: this.options.rows.filter((entry, index) => this.selectedIds.has(this.getRowId(entry, index))) });
+        this.options.onCellClick?.({ row, rowIndex, column, columnIndex, value: cellValue });
         this.render();
       });
       td.addEventListener("contextmenu", (event) => {
@@ -1118,7 +1142,11 @@ export class GridNexaGrid<T = Record<string, unknown>> {
         this.contextMenu = { x: event.clientX, y: event.clientY, rowIndex, columnId: column.id };
         this.render();
       });
-      if (column.editable) td.addEventListener("dblclick", () => this.editCell(td, row, rowIndex, column));
+      td.addEventListener("dblclick", () => {
+        this.options.onRowDoubleClick?.({ row, rowIndex });
+        this.options.onCellDoubleClick?.({ row, rowIndex, column, columnIndex, value: cellValue });
+        if (column.editable) this.editCell(td, row, rowIndex, column);
+      });
       tr.appendChild(td);
     });
     tbody.appendChild(tr);

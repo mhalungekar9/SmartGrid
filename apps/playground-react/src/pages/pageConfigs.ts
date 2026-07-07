@@ -14,6 +14,7 @@ export interface FeatureConfig {
   mergedHeaders?: MergedHeader[];
   checkboxSelection?: boolean;
   rowNumbers?: boolean;
+  enableRowReorder?: boolean;
   pageSize?: number;
   quickFilterText?: string;
   columnFilters?: Record<string, ColumnFilterModel>;
@@ -167,12 +168,15 @@ export const featureConfigs = {
     ],
     checkboxSelection: true,
     rowNumbers: true,
+    enableRowReorder: true,
     code: `<GridNexa
   columns={columns}
   rows={rows}
   rowNumbers
   checkboxSelection
+  enableRowReorder
   getRowId={(row) => row.id}
+  onRowOrderChange={(event) => saveRowOrder(event.rows)}
 />
 
 // Users can drag rows, or hover a row and use the up/down buttons.`,
@@ -567,17 +571,43 @@ export function ThemedGrid() {
   events: {
     title: "Events",
     subtitle: "Callbacks",
-    overview: "React to edits, selection, and server-side operation state from parent components.",
-    notes: ["onCellValueChange", "onRowSelectionChange", "console events"],
+    overview: "React to row, cell, selection, column, filter, sort, export, save, and server-side operation events from parent components.",
+    notes: ["selection events", "cell lifecycle", "save all", "column state"],
     checkboxSelection: true,
+    rowNumbers: true,
+    enableRowReorder: true,
     cellEvents: true,
     serverEvents: true,
     code: `<GridNexa
   columns={columns}
   rows={rows}
   checkboxSelection
+  rowNumbers
+  enableRowReorder
+  toolbar={{ saveAll: true }}
+  getRowId={(row) => row.id}
+  onSelectedRowChange={({ row }) => console.log("selected row", row)}
+  onRowSelected={(event) => console.log("row selected", event)}
+  onSelectionChanged={(event) => console.log("selection", event)}
+  onRowClick={(event) => console.log("row click", event)}
+  onRowDoubleClick={(event) => console.log("row double click", event)}
+  onRowOrderChange={(event) => console.log("row order", event.rows)}
+  onCellClick={(event) => console.log("cell click", event)}
+  onCellDoubleClick={(event) => console.log("cell double click", event)}
+  onCellEditStart={(event) => console.log("edit start", event)}
+  onCellEditStop={(event) => console.log("edit stop", event)}
   onCellValueChange={(event) => console.log(event)}
-  onRowSelectionChange={(rows) => console.log(rows)}
+  onRowSelectionChange={(rows) => console.log("selected rows", rows)}
+  onSortChanged={(model) => console.log("sort", model)}
+  onFilterChanged={(model) => console.log("filters", model)}
+  onColumnMoved={(event) => console.log("column moved", event)}
+  onColumnResized={(event) => console.log("column resized", event)}
+  onColumnVisible={(event) => console.log("column visible", event)}
+  onColumnPinned={(event) => console.log("column pinned", event)}
+  onCopy={(event) => console.log("copy", event)}
+  onPaste={(event) => console.log("paste", event)}
+  onExport={(event) => console.log("export", event)}
+  onSaveAll={(event) => console.log("save all", event.rows)}
   onServerSideOperation={(state) => console.log(state)}
 />`,
   },

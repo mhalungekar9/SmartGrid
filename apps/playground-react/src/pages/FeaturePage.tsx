@@ -36,6 +36,8 @@ export function FeaturePage({ config }: FeaturePageProps) {
         getRowId={(row) => row.id}
         checkboxSelection={config.checkboxSelection}
         rowNumbers={config.rowNumbers}
+        enableRowReorder={config.enableRowReorder}
+        toolbar={config.cellEvents ? { saveAll: true } : undefined}
         pageSize={config.pageSize}
         quickFilterText={config.quickFilterText}
         columnFilters={config.columnFilters}
@@ -64,6 +66,26 @@ export function FeaturePage({ config }: FeaturePageProps) {
         onCellValueChange={
           config.cellEvents
             ? (event) => console.info("Cell changed", event)
+            : undefined
+        }
+        onSelectedRowChange={
+          config.cellEvents
+            ? (event) => console.info("Selected row changed", event)
+            : undefined
+        }
+        onSelectionChanged={
+          config.cellEvents
+            ? (event) => console.info("Selection changed", event)
+            : undefined
+        }
+        onRowOrderChange={
+          config.enableRowReorder
+            ? (event) => console.info("Row order changed", event)
+            : undefined
+        }
+        onSaveAll={
+          config.cellEvents
+            ? (event) => console.info("Save all requested", event)
             : undefined
         }
       />

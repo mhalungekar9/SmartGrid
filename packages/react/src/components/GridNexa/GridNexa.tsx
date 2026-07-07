@@ -24,9 +24,153 @@ import type { Column } from "@gridnexa/core";
 
 export interface GridNexaProps<T> extends GridOptions<T> {}
 
-export interface GridNexaExtendedProps<T> extends GridOptions<T> {
+type GridNexaRowsChangeReason =
+  | "edit"
+  | "fill"
+  | "paste"
+  | "clear"
+  | "rowReorder"
+  | "transaction"
+  | "undo"
+  | "redo";
+
+interface GridNexaEventProps<T> {
+  onGridReady?: (params: { rows: T[]; columns: Column<T>[] }) => void;
+  onRowsChange?: (params: {
+    rows: T[];
+    previousRows: T[];
+    reason: GridNexaRowsChangeReason;
+  }) => void;
+  onSaveAll?: (params: {
+    rows: T[];
+    selectedRows: T[];
+    visibleRows: T[];
+    reason: "toolbar" | "api";
+  }) => void;
+  onRowClick?: (params: { row: T; rowIndex: number }) => void;
+  onRowDoubleClick?: (params: { row: T; rowIndex: number }) => void;
+  onRowSelected?: (params: {
+    row: T;
+    rowIndex: number;
+    selected: boolean;
+    selectedRows: T[];
+  }) => void;
+  onSelectedRowChange?: (params: {
+    row: T | null;
+    rowIndex: number | null;
+    selectedRows: T[];
+  }) => void;
+  onSelectionChanged?: (params: {
+    selectedRows: T[];
+    selectedRowIds: Array<string | number>;
+  }) => void;
+  onRowOrderChange?: (params: {
+    rows: T[];
+    movedRow: T;
+    sourceIndex: number;
+    targetIndex: number;
+  }) => void;
+  onRowDragStart?: (params: { row: T; rowIndex: number }) => void;
+  onRowDragEnd?: (params: { row: T | null; rowIndex: number | null }) => void;
+  onCellClick?: (params: {
+    row: T;
+    rowIndex: number;
+    column: Column<T>;
+    columnIndex: number;
+    value: unknown;
+  }) => void;
+  onCellDoubleClick?: (params: {
+    row: T;
+    rowIndex: number;
+    column: Column<T>;
+    columnIndex: number;
+    value: unknown;
+  }) => void;
+  onCellEditStart?: (params: {
+    row: T;
+    rowIndex: number;
+    column: Column<T>;
+    value: unknown;
+  }) => void;
+  onCellEditStop?: (params: {
+    row: T;
+    rowIndex: number;
+    column: Column<T>;
+    oldValue: unknown;
+    newValue: unknown;
+  }) => void;
+  onRangeSelectionChange?: (range: {
+    startRow: number;
+    endRow: number;
+    startColumn: number;
+    endColumn: number;
+  } | null) => void;
+  onSortModelChange?: (
+    model: Array<{ columnId: string; direction: "asc" | "desc" }>,
+  ) => void;
+  onSortChanged?: (
+    model: Array<{ columnId: string; direction: "asc" | "desc" }>,
+  ) => void;
+  onFilterModelChange?: (model: Record<string, ColumnFilterModel>) => void;
+  onFilterChanged?: (model: Record<string, ColumnFilterModel>) => void;
+  onQuickFilterChange?: (value: string) => void;
+  onPageChange?: (params: { pageIndex: number; pageSize?: number }) => void;
+  onColumnOrderChange?: (columnIds: string[]) => void;
+  onColumnMoved?: (params: {
+    columnId: string;
+    sourceIndex: number;
+    targetIndex: number;
+    columnIds: string[];
+  }) => void;
+  onColumnResize?: (params: { columnId: string; width: number }) => void;
+  onColumnResized?: (params: { columnId: string; width: number }) => void;
+  onColumnVisibilityChange?: (params: {
+    columnId: string;
+    hidden: boolean;
+    hiddenColumnIds: string[];
+  }) => void;
+  onColumnVisible?: (params: {
+    columnId: string;
+    visible: boolean;
+    hiddenColumnIds: string[];
+  }) => void;
+  onColumnPin?: (params: {
+    columnId: string;
+    pinned: "left" | "right" | null;
+  }) => void;
+  onColumnPinned?: (params: {
+    columnId: string;
+    pinned: "left" | "right" | null;
+  }) => void;
+  onCopy?: (params: {
+    text: string;
+    range: {
+      startRow: number;
+      endRow: number;
+      startColumn: number;
+      endColumn: number;
+    } | null;
+  }) => void;
+  onPaste?: (params: { text: string }) => void;
+  onFill?: (params: {
+    range: {
+      startRow: number;
+      endRow: number;
+      startColumn: number;
+      endColumn: number;
+    };
+    value: unknown;
+  }) => void;
+  onExport?: (params: { format: "csv" | "excel"; rows: T[] }) => void;
+}
+
+export interface GridNexaExtendedProps<T>
+  extends Omit<GridOptions<T>, "toolbar">,
+    GridNexaEventProps<T> {
   groupBy?: keyof T & string;
   pageSize?: number;
+  toolbar?: GridOptions<T>["toolbar"] | (Record<string, boolean> & { saveAll?: boolean });
+  rowReorderPosition?: "left" | "right";
 }
 
 type SortDirection = "asc" | "desc";
@@ -812,10 +956,47 @@ export function GridNexa<T>({
   enableRangeSelection = true,
   enableFillHandle = true,
   enableUndoRedo = true,
+  enableRowReorder = false,
+  rowReorderPosition = "right",
+  toolbar,
   localeText,
   getRowId,
+  onGridReady,
+  onRowsChange,
+  onRowClick,
+  onRowDoubleClick,
+  onRowSelected,
+  onSelectedRowChange,
   onCellValueChange,
+  onCellClick,
+  onCellDoubleClick,
+  onCellEditStart,
+  onCellEditStop,
   onRowSelectionChange,
+  onSelectionChanged,
+  onRowOrderChange,
+  onRowDragStart,
+  onRowDragEnd,
+  onRangeSelectionChange,
+  onSortModelChange,
+  onSortChanged,
+  onFilterModelChange,
+  onFilterChanged,
+  onQuickFilterChange,
+  onPageChange,
+  onColumnOrderChange,
+  onColumnMoved,
+  onColumnResize,
+  onColumnResized,
+  onColumnVisibilityChange,
+  onColumnVisible,
+  onColumnPin,
+  onColumnPinned,
+  onCopy,
+  onPaste,
+  onFill,
+  onExport,
+  onSaveAll,
   onServerSideOperation,
   groupBy: groupByProp,
   pivotBy: pivotByProp,
@@ -935,6 +1116,16 @@ export function GridNexa<T>({
     startX: number;
     startWidth: number;
   } | null>(null);
+  const readyEmittedRef = useRef(false);
+
+  useEffect(() => {
+    if (readyEmittedRef.current) {
+      return;
+    }
+
+    readyEmittedRef.current = true;
+    onGridReady?.({ rows: gridRows, columns });
+  }, [columns, gridRows, onGridReady]);
 
   useEffect(() => {
     setGridRows(rows);
@@ -964,7 +1155,7 @@ export function GridNexa<T>({
         .map((row, index) => updateRows.get(getId(row, index)) ?? row);
 
       return [...nextRows, ...(transaction.add ?? [])];
-    });
+    }, "transaction");
   }, [getRowId, transaction]);
 
   useEffect(() => {
@@ -1218,6 +1409,9 @@ export function GridNexa<T>({
         (column) => column.id === columnId,
       );
 
+      onColumnResize?.({ columnId, width: nextWidth });
+      onColumnResized?.({ columnId, width: nextWidth });
+
       if (sourceColumnIndex >= 0) {
         setColumnWidths((currentWidths) =>
           currentWidths.map((width, index) =>
@@ -1244,9 +1438,12 @@ export function GridNexa<T>({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
     };
-  }, [columns]);
+  }, [columns, onColumnResize, onColumnResized]);
 
-  const replaceGridRows = (updater: (currentRows: T[]) => T[]) => {
+  const replaceGridRows = (
+    updater: (currentRows: T[]) => T[],
+    reason: GridNexaRowsChangeReason,
+  ) => {
     setGridRows((currentRows) => {
       const nextRows = updater(currentRows);
 
@@ -1262,6 +1459,8 @@ export function GridNexa<T>({
         setRedoStack([]);
       }
 
+      onRowsChange?.({ rows: nextRows, previousRows: currentRows, reason });
+
       return nextRows;
     });
   };
@@ -1276,6 +1475,11 @@ export function GridNexa<T>({
 
       setRedoStack((currentRedo) => [gridRows, ...currentRedo.slice(0, 19)]);
       setGridRows(previousRows);
+      onRowsChange?.({
+        rows: previousRows,
+        previousRows: gridRows,
+        reason: "undo",
+      });
 
       return currentStack.slice(0, -1);
     });
@@ -1291,6 +1495,7 @@ export function GridNexa<T>({
 
       setUndoStack((currentUndo) => [...currentUndo.slice(-19), gridRows]);
       setGridRows(nextRows);
+      onRowsChange?.({ rows: nextRows, previousRows: gridRows, reason: "redo" });
 
       return currentStack.slice(1);
     });
@@ -1460,17 +1665,29 @@ export function GridNexa<T>({
     visibleSelectedRowIds.every((rowId) => selectedRowIds.has(rowId));
   const someVisibleRowsSelected =
     visibleSelectedRowIds.some((rowId) => selectedRowIds.has(rowId));
+  const getSelectedRowsForIds = (ids: Set<string | number>) =>
+    tableRows.filter((row, rowIndex) =>
+      ids.has(getRowSelectionId(row, rowIndex)),
+    );
   const toggleRowSelection = (row: T, rowIndex: number) => {
     const rowId = getRowSelectionId(row, rowIndex);
 
     setSelectedRowIds((current) => {
       const next = new Set(current);
+      const selected = !next.has(rowId);
 
-      if (next.has(rowId)) {
-        next.delete(rowId);
-      } else {
+      if (selected) {
         next.add(rowId);
+      } else {
+        next.delete(rowId);
       }
+
+      onRowSelected?.({
+        row,
+        rowIndex,
+        selected,
+        selectedRows: getSelectedRowsForIds(next),
+      });
 
       return next;
     });
@@ -1775,6 +1992,13 @@ export function GridNexa<T>({
   };
 
   const resetRowDragState = () => {
+    const row =
+      draggedRowIndex == null ? null : (visibleDataRows[draggedRowIndex] ?? null);
+
+    onRowDragEnd?.({
+      row,
+      rowIndex: row == null ? null : draggedRowIndex,
+    });
     setDraggedRowIndex(null);
     setDropTargetRowIndex(null);
   };
@@ -1813,8 +2037,15 @@ export function GridNexa<T>({
 
       nextRows.splice(targetOriginalIndex, 0, movedRow);
 
+      onRowOrderChange?.({
+        rows: nextRows,
+        movedRow,
+        sourceIndex: sourceOriginalIndex,
+        targetIndex: targetOriginalIndex,
+      });
+
       return nextRows;
-    });
+    }, "rowReorder");
   };
 
   const moveVisibleRow = (rowIndex: number, direction: -1 | 1) => {
@@ -1838,7 +2069,42 @@ export function GridNexa<T>({
 
   useEffect(() => {
     onRowSelectionChange?.(selectedTableRows);
-  }, [onRowSelectionChange, selectedTableRows]);
+    onSelectionChanged?.({
+      selectedRows: selectedTableRows,
+      selectedRowIds: Array.from(selectedRowIds),
+    });
+  }, [onRowSelectionChange, onSelectionChanged, selectedRowIds, selectedTableRows]);
+
+  useEffect(() => {
+    const row =
+      selectedRowIndex == null ? null : (tableRows[selectedRowIndex] ?? null);
+
+    onSelectedRowChange?.({
+      row,
+      rowIndex: row == null ? null : selectedRowIndex,
+      selectedRows: selectedTableRows,
+    });
+  }, [onSelectedRowChange, selectedRowIndex, selectedTableRows, tableRows]);
+
+  useEffect(() => {
+    const model = sortModel ? [sortModel] : [];
+
+    onSortModelChange?.(model);
+    onSortChanged?.(model);
+  }, [onSortChanged, onSortModelChange, sortModel]);
+
+  useEffect(() => {
+    onFilterModelChange?.(filterModel);
+    onFilterChanged?.(filterModel);
+  }, [filterModel, onFilterChanged, onFilterModelChange]);
+
+  useEffect(() => {
+    onQuickFilterChange?.(quickFilterTextProp ?? quickFilterText);
+  }, [onQuickFilterChange, quickFilterText, quickFilterTextProp]);
+
+  useEffect(() => {
+    onPageChange?.({ pageIndex, pageSize });
+  }, [onPageChange, pageIndex, pageSize]);
 
   useEffect(() => {
     if (!pageSize || pageSize <= 0) {
@@ -1899,7 +2165,14 @@ export function GridNexa<T>({
     };
   };
 
-  const cellRange = getCellRange();
+  const cellRange = useMemo(
+    () => getCellRange(),
+    [activeCell, enableRangeSelection, selectionAnchor],
+  );
+
+  useEffect(() => {
+    onRangeSelectionChange?.(cellRange);
+  }, [cellRange, onRangeSelectionChange]);
 
   const parsePastedValue = (rawValue: string, currentValue: unknown) => {
     if (typeof currentValue === "number") {
@@ -1960,6 +2233,7 @@ export function GridNexa<T>({
     }
 
     await navigator.clipboard.writeText(text);
+    onCopy?.({ text, range: cellRange });
   };
 
   const exportVisibleRowsToCsv = () => {
@@ -1988,6 +2262,7 @@ export function GridNexa<T>({
     link.click();
 
     URL.revokeObjectURL(downloadUrl);
+    onExport?.({ format: "csv", rows: tableRows });
   };
 
   const pasteSelection = (text: string) => {
@@ -2069,7 +2344,8 @@ export function GridNexa<T>({
       });
 
       return nextRows;
-    });
+    }, "paste");
+    onPaste?.({ text });
   };
 
   const openCellContextMenu = (
@@ -2124,6 +2400,7 @@ export function GridNexa<T>({
         currentRows.map((entry, index) =>
           index === originalIndex ? { ...entry, [column.field]: "" } : entry,
         ),
+        "clear",
       );
     }
 
@@ -2205,9 +2482,17 @@ export function GridNexa<T>({
           [column.field]: parsedValue,
         };
       }),
+      "edit",
     );
 
     onCellValueChange?.({
+      row,
+      rowIndex: editingCell.rowIndex,
+      column,
+      oldValue: row[column.field],
+      newValue: parsedValue,
+    });
+    onCellEditStop?.({
       row,
       rowIndex: editingCell.rowIndex,
       column,
@@ -2220,8 +2505,9 @@ export function GridNexa<T>({
 
   const startCellEdit = (rowIndex: number, columnId: string, value: string) => {
     const column = columns.find((entry) => entry.id === columnId);
+    const row = tableRows[rowIndex];
 
-    if (!column || column.editable === false) {
+    if (!row || !column || column.editable === false) {
       return;
     }
 
@@ -2229,6 +2515,12 @@ export function GridNexa<T>({
       rowIndex,
       columnId,
       draftValue: value,
+    });
+    onCellEditStart?.({
+      row,
+      rowIndex,
+      column,
+      value,
     });
   };
 
@@ -2286,6 +2578,9 @@ export function GridNexa<T>({
     );
     const originalIndex = columns.findIndex((entry) => entry.id === columnId);
 
+    onColumnResize?.({ columnId, width: nextWidth });
+    onColumnResized?.({ columnId, width: nextWidth });
+
     if (originalIndex < 0) {
       setDynamicColumnWidths((currentWidths) => ({
         ...currentWidths,
@@ -2304,6 +2599,58 @@ export function GridNexa<T>({
   const setActiveCell = (rowIndex: number, columnIndex: number) => {
     setActiveCellState({ rowIndex, columnIndex });
     setSelectedRowIndex(rowIndex);
+  };
+
+  const handleRowSelect = (rowIndex: number) => {
+    const row = tableRows[rowIndex];
+
+    setSelectedRowIndex(rowIndex);
+
+    if (row) {
+      onRowClick?.({ row, rowIndex });
+    }
+  };
+
+  const emitRowDoubleClick = (rowIndex: number) => {
+    const row = tableRows[rowIndex];
+
+    if (row) {
+      onRowDoubleClick?.({ row, rowIndex });
+    }
+  };
+
+  const emitCellClick = (rowIndex: number, columnIndex: number) => {
+    const row = tableRows[rowIndex];
+    const column = tableColumns[columnIndex];
+
+    if (!row || !column) {
+      return;
+    }
+
+    onCellClick?.({
+      row,
+      rowIndex,
+      column,
+      columnIndex,
+      value: getColumnValue(row, column),
+    });
+  };
+
+  const emitCellDoubleClick = (rowIndex: number, columnIndex: number) => {
+    const row = tableRows[rowIndex];
+    const column = tableColumns[columnIndex];
+
+    if (!row || !column) {
+      return;
+    }
+
+    onCellDoubleClick?.({
+      row,
+      rowIndex,
+      column,
+      columnIndex,
+      value: getColumnValue(row, column),
+    });
   };
 
   const setSelectionAnchor = (rowIndex: number, columnIndex: number) => {
@@ -2404,7 +2751,8 @@ export function GridNexa<T>({
       }
 
       return nextRows;
-    });
+    }, "fill");
+    onFill?.({ range: cellRange, value: sourceValue });
   };
 
   const handleSortDirection = (
@@ -2439,6 +2787,23 @@ export function GridNexa<T>({
     ? `${tableRows.length} pivot rows from ${filteredRows.length} rows`
     : `${tableRows.length} of ${filteredRows.length} rows shown`;
   const t = (key: string, fallback: string) => localeText?.[key] ?? fallback;
+  const toolbarOptions = {
+    summary: true,
+    pagination: true,
+    quickFilter: true,
+    find: true,
+    undoRedo: true,
+    fillHandle: true,
+    filters: true,
+    advancedFilter: true,
+    columns: true,
+    exportCsv: true,
+    exportExcel: true,
+    saveAll: Boolean(onSaveAll),
+    ai: true,
+    ...(typeof toolbar === "object" ? toolbar : {}),
+  };
+  const toolbarVisible = toolbar !== false;
   const activeColumn = activeCell ? tableColumns[activeCell.columnIndex] : null;
   const activeCellLabel =
     activeCell && activeColumn
@@ -2469,6 +2834,14 @@ export function GridNexa<T>({
   const contextColumn = cellContextMenu
     ? tableColumns[cellContextMenu.columnIndex]
     : null;
+  const saveAllRows = () => {
+    onSaveAll?.({
+      rows: gridRows,
+      selectedRows: selectedTableRows,
+      visibleRows: tableRows,
+      reason: "toolbar",
+    });
+  };
 
   const setColumnFilter = (
     columnId: string,
@@ -2851,6 +3224,8 @@ export function GridNexa<T>({
       ...current,
       [columnId]: pinned,
     }));
+    onColumnPin?.({ columnId, pinned });
+    onColumnPinned?.({ columnId, pinned });
     setColumnMenuColumnId(null);
   };
 
@@ -2890,6 +3265,13 @@ export function GridNexa<T>({
       const insertIndex = sourceIndex < targetIndex ? targetIndex : targetIndex;
 
       nextOrder.splice(insertIndex, 0, movedColumnId);
+      onColumnOrderChange?.(nextOrder);
+      onColumnMoved?.({
+        columnId: movedColumnId,
+        sourceIndex,
+        targetIndex: insertIndex,
+        columnIds: nextOrder,
+      });
 
       return nextOrder;
     });
@@ -2928,6 +3310,7 @@ export function GridNexa<T>({
     link.click();
 
     URL.revokeObjectURL(downloadUrl);
+    onExport?.({ format: "excel", rows: tableRows });
   };
 
   const toggleColumnVisibility = (columnId: string) => {
@@ -2939,6 +3322,20 @@ export function GridNexa<T>({
       } else {
         next.add(columnId);
       }
+
+      const hiddenColumnIds = Array.from(next);
+      const hidden = next.has(columnId);
+
+      onColumnVisibilityChange?.({
+        columnId,
+        hidden,
+        hiddenColumnIds,
+      });
+      onColumnVisible?.({
+        columnId,
+        visible: !hidden,
+        hiddenColumnIds,
+      });
 
       return next;
     });
@@ -3139,10 +3536,12 @@ export function GridNexa<T>({
       value={{
         rows: tableRows,
         columns: tableColumns,
+        theme,
         classNames: mergedClassNames,
         columnTemplate: template,
         selectedRowIndex,
-        onRowSelect: setSelectedRowIndex,
+        onRowSelect: handleRowSelect,
+        emitRowDoubleClick,
         selectedRowIds,
         checkboxSelection,
         allVisibleRowsSelected,
@@ -3151,10 +3550,14 @@ export function GridNexa<T>({
         toggleRowSelection,
         toggleAllRowsSelection,
         rowNumbers,
+        enableRowReorder,
+        rowReorderPosition,
         getColumnStyle: (columnId: string) => tableColumnStyles[columnId] ?? {},
         getRowClassName: (params) => getRowClassName?.(params),
         getCellClassName: (params) => getCellClassName?.(params),
         getHeaderClassName: (params) => getHeaderClassName?.(params),
+        emitCellClick,
+        emitCellDoubleClick,
         activeCell,
         selectionAnchor,
         setActiveCell,
@@ -3185,17 +3588,17 @@ export function GridNexa<T>({
         data-gnx-density={density}
         onClick={closeCellContextMenu}
       >
+        {toolbarVisible ? (
         <div className={cx("sg-toolbar", mergedClassNames.toolbar)}>
+          {toolbarOptions.summary ? (
           <div className="sg-toolbar-copy">
-            <div className={cx("sg-toolbar-title", mergedClassNames.toolbarTitle)}>
-              GridNexa
-            </div>
             <div className={cx("sg-toolbar-subtitle", mergedClassNames.toolbarSubtitle)}>
               {rowCountLabel}
             </div>
           </div>
+          ) : null}
 
-          {aiEnabled ? (
+          {toolbarOptions.ai && aiEnabled ? (
             <div className="sg-ai-command" onClick={(event) => event.stopPropagation()}>
               <form
                 className="sg-ai-command-form"
@@ -3259,7 +3662,7 @@ export function GridNexa<T>({
           ) : null}
 
           <div className={cx("sg-toolbar-actions", mergedClassNames.toolbarActions)}>
-            {pageSize && pageSize > 0 ? (
+            {toolbarOptions.pagination && pageSize && pageSize > 0 ? (
               <div className="sg-pager">
                 <button
                   className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
@@ -3283,6 +3686,7 @@ export function GridNexa<T>({
               </div>
             ) : null}
 
+            {toolbarOptions.quickFilter ? (
             <label className="sg-filter">
               <span className="sg-filter-label">
                 {t("quickFilter", "Quick filter")}
@@ -3296,7 +3700,10 @@ export function GridNexa<T>({
                 disabled={quickFilterTextProp != null}
               />
             </label>
+            ) : null}
 
+            {toolbarOptions.find ? (
+            <>
             <label className="sg-filter">
               <span className="sg-filter-label">{t("find", "Find")}</span>
               <input
@@ -3320,8 +3727,10 @@ export function GridNexa<T>({
             >
               Next
             </button>
+            </>
+            ) : null}
 
-            {enableUndoRedo ? (
+            {toolbarOptions.undoRedo && enableUndoRedo ? (
               <>
                 <button
                   className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
@@ -3342,7 +3751,7 @@ export function GridNexa<T>({
               </>
             ) : null}
 
-            {enableFillHandle ? (
+            {toolbarOptions.fillHandle && enableFillHandle ? (
               <button
                 className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
                 type="button"
@@ -3353,6 +3762,7 @@ export function GridNexa<T>({
               </button>
             ) : null}
 
+            {toolbarOptions.filters ? (
             <div className="sg-column-chooser" ref={filterPanelRef}>
               <button
                 className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
@@ -3510,7 +3920,9 @@ export function GridNexa<T>({
                 </div>
               ) : null}
             </div>
+            ) : null}
 
+            {toolbarOptions.advancedFilter ? (
             <div className="sg-column-chooser" ref={advancedFilterPanelRef}>
               <button
                 className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
@@ -3565,7 +3977,9 @@ export function GridNexa<T>({
                 </div>
               ) : null}
             </div>
+            ) : null}
 
+            {toolbarOptions.columns ? (
             <div className="sg-column-chooser" ref={chooserRef}>
               <button
                 className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
@@ -3607,7 +4021,20 @@ export function GridNexa<T>({
                 </div>
               ) : null}
             </div>
+            ) : null}
 
+            {toolbarOptions.saveAll ? (
+            <button
+              className={cx("sg-toolbar-button", mergedClassNames.button)}
+              type="button"
+              onClick={saveAllRows}
+              disabled={!onSaveAll}
+            >
+              Save all
+            </button>
+            ) : null}
+
+            {toolbarOptions.exportCsv ? (
             <button
               className={cx("sg-toolbar-button", mergedClassNames.button)}
               type="button"
@@ -3615,7 +4042,9 @@ export function GridNexa<T>({
             >
               Export CSV
             </button>
+            ) : null}
 
+            {toolbarOptions.exportExcel ? (
             <button
               className={cx("sg-toolbar-button", mergedClassNames.button)}
               type="button"
@@ -3623,8 +4052,10 @@ export function GridNexa<T>({
             >
               Export Excel
             </button>
+            ) : null}
           </div>
         </div>
+        ) : null}
 
         <div className={cx("sg-grid-workspace", mergedClassNames.gridWorkspace)}>
           <GridRoot>
@@ -3692,7 +4123,17 @@ export function GridNexa<T>({
               onReorderRow={reorderVisibleRows}
               onMoveRow={moveVisibleRow}
               onResetRowDragState={resetRowDragState}
-              onSetDraggedRowIndex={setDraggedRowIndex}
+              onSetDraggedRowIndex={(rowIndex) => {
+                setDraggedRowIndex(rowIndex);
+
+                if (rowIndex != null) {
+                  const row = visibleDataRows[rowIndex];
+
+                  if (row) {
+                    onRowDragStart?.({ row, rowIndex });
+                  }
+                }
+              }}
               onSetDropTargetRowIndex={setDropTargetRowIndex}
             />
           </GridRoot>

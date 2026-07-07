@@ -55,6 +55,24 @@ export type ExternalFilter<T = unknown> = (row: T) => boolean;
 export type PivotAggregation = "sum" | "avg" | "count" | "min" | "max";
 export type GridNexaTheme = "light" | "dark" | "system";
 export type GridNexaDensity = "compact" | "standard" | "comfortable";
+export type GridNexaRowReorderPosition = "left" | "right";
+export type GridNexaToolbarOptions =
+  | boolean
+  | Partial<{
+      summary: boolean;
+      pagination: boolean;
+      quickFilter: boolean;
+      find: boolean;
+      undoRedo: boolean;
+      fillHandle: boolean;
+      filters: boolean;
+      advancedFilter: boolean;
+      columns: boolean;
+      exportCsv: boolean;
+      exportExcel: boolean;
+      saveAll: boolean;
+      ai: boolean;
+    }>;
 export type GridNexaSlotClassNames = Partial<{
   shell: GridNexaClassName;
   toolbar: GridNexaClassName;
@@ -107,6 +125,28 @@ export interface MergedHeader {
   align?: "left" | "center" | "right";
 }
 
+export type GridNexaRowsChangeReason =
+  | "edit"
+  | "fill"
+  | "paste"
+  | "clear"
+  | "rowReorder"
+  | "transaction"
+  | "undo"
+  | "redo";
+
+export interface GridNexaCellPosition {
+  rowIndex: number;
+  columnIndex: number;
+}
+
+export interface GridNexaCellRange {
+  startRow: number;
+  endRow: number;
+  startColumn: number;
+  endColumn: number;
+}
+
 export interface GridOptions<T = unknown> {
   columns: Column<T>[];
   rows: T[];
@@ -141,9 +181,118 @@ export interface GridOptions<T = unknown> {
   enableRangeSelection?: boolean;
   enableFillHandle?: boolean;
   enableUndoRedo?: boolean;
+  enableRowReorder?: boolean;
+  rowReorderPosition?: GridNexaRowReorderPosition;
+  toolbar?: GridNexaToolbarOptions;
   localeText?: Record<string, string>;
   getRowId?: (row: T, index: number) => string | number;
+  onGridReady?: (params: { rows: T[]; columns: Column<T>[] }) => void;
+  onRowsChange?: (params: {
+    rows: T[];
+    previousRows: T[];
+    reason: GridNexaRowsChangeReason;
+  }) => void;
+  onSaveAll?: (params: {
+    rows: T[];
+    selectedRows: T[];
+    visibleRows: T[];
+    reason: "toolbar" | "api";
+  }) => void;
+  onRowClick?: (params: { row: T; rowIndex: number }) => void;
+  onRowDoubleClick?: (params: { row: T; rowIndex: number }) => void;
+  onRowSelected?: (params: {
+    row: T;
+    rowIndex: number;
+    selected: boolean;
+    selectedRows: T[];
+  }) => void;
+  onSelectedRowChange?: (params: {
+    row: T | null;
+    rowIndex: number | null;
+    selectedRows: T[];
+  }) => void;
   onRowSelectionChange?: (selectedRows: T[]) => void;
+  onSelectionChanged?: (params: {
+    selectedRows: T[];
+    selectedRowIds: Array<string | number>;
+  }) => void;
+  onRowOrderChange?: (params: {
+    rows: T[];
+    movedRow: T;
+    sourceIndex: number;
+    targetIndex: number;
+  }) => void;
+  onRowDragStart?: (params: { row: T; rowIndex: number }) => void;
+  onRowDragEnd?: (params: { row: T | null; rowIndex: number | null }) => void;
+  onCellClick?: (params: {
+    row: T;
+    rowIndex: number;
+    column: Column<T>;
+    columnIndex: number;
+    value: unknown;
+  }) => void;
+  onCellDoubleClick?: (params: {
+    row: T;
+    rowIndex: number;
+    column: Column<T>;
+    columnIndex: number;
+    value: unknown;
+  }) => void;
+  onCellEditStart?: (params: {
+    row: T;
+    rowIndex: number;
+    column: Column<T>;
+    value: unknown;
+  }) => void;
+  onCellEditStop?: (params: {
+    row: T;
+    rowIndex: number;
+    column: Column<T>;
+    oldValue: unknown;
+    newValue: unknown;
+  }) => void;
+  onRangeSelectionChange?: (range: GridNexaCellRange | null) => void;
+  onSortModelChange?: (
+    model: Array<{ columnId: string; direction: "asc" | "desc" }>,
+  ) => void;
+  onSortChanged?: (
+    model: Array<{ columnId: string; direction: "asc" | "desc" }>,
+  ) => void;
+  onFilterModelChange?: (model: Record<string, ColumnFilterModel>) => void;
+  onFilterChanged?: (model: Record<string, ColumnFilterModel>) => void;
+  onQuickFilterChange?: (value: string) => void;
+  onPageChange?: (params: { pageIndex: number; pageSize?: number }) => void;
+  onColumnOrderChange?: (columnIds: string[]) => void;
+  onColumnMoved?: (params: {
+    columnId: string;
+    sourceIndex: number;
+    targetIndex: number;
+    columnIds: string[];
+  }) => void;
+  onColumnResize?: (params: { columnId: string; width: number }) => void;
+  onColumnResized?: (params: { columnId: string; width: number }) => void;
+  onColumnVisibilityChange?: (params: {
+    columnId: string;
+    hidden: boolean;
+    hiddenColumnIds: string[];
+  }) => void;
+  onColumnVisible?: (params: {
+    columnId: string;
+    visible: boolean;
+    hiddenColumnIds: string[];
+  }) => void;
+  onColumnPin?: (params: {
+    columnId: string;
+    pinned: "left" | "right" | null;
+  }) => void;
+  onColumnPinned?: (params: {
+    columnId: string;
+    pinned: "left" | "right" | null;
+  }) => void;
+  onCopy?: (params: { text: string; range: GridNexaCellRange | null }) => void;
+  onPaste?: (params: { text: string }) => void;
+  onFill?: (params: { range: GridNexaCellRange; value: unknown }) => void;
+  onExport?: (params: { format: "csv" | "excel"; rows: T[] }) => void;
   pivotBy?: keyof T & string;
   pivotValueColumns?: Array<keyof T & string>;
   pivotAggregation?: PivotAggregation;

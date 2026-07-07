@@ -227,6 +227,8 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   @Input() enableRangeSelection = true;
   @Input() enableFillHandle = true;
   @Input() enableUndoRedo = true;
+  @Input() enableRowReorder = false;
+  @Input() rowReorderPosition: GridNexaAngularOptions<T>["rowReorderPosition"] = "right";
   @Input() quickFilterText = "";
   @Input() columnFilters: Record<string, ColumnFilterModel> | undefined;
   @Input() externalFilter: GridNexaAngularOptions<T>["externalFilter"];
@@ -245,7 +247,29 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   @Input() ai: GridNexaAiOptions | undefined;
 
   @Output() rowSelectionChange = new EventEmitter<T[]>();
+  @Output() selectionChanged = new EventEmitter<{
+    selectedRows: T[];
+    selectedRowIds: Array<string | number>;
+  }>();
+  @Output() rowSelected = new EventEmitter<{
+    row: T;
+    rowIndex: number;
+    selected: boolean;
+    selectedRows: T[];
+  }>();
+  @Output() selectedRowChange = new EventEmitter<{
+    row: T | null;
+    rowIndex: number | null;
+    selectedRows: T[];
+  }>();
+  @Output() rowOrderChange = new EventEmitter<{
+    rows: T[];
+    movedRow: T;
+    sourceIndex: number;
+    targetIndex: number;
+  }>();
   @Output() cellClick = new EventEmitter<{ row: T; rowIndex: number; column: Column<T> }>();
+  @Output() cellDoubleClick = new EventEmitter<{ row: T; rowIndex: number; column: Column<T> }>();
   @Output() cellValueChange = new EventEmitter<{
     row: T;
     rowIndex: number;
@@ -253,6 +277,33 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     oldValue: unknown;
     newValue: unknown;
   }>();
+  @Output() cellEditStart = new EventEmitter<{ row: T; rowIndex: number; column: Column<T>; value: unknown }>();
+  @Output() cellEditStop = new EventEmitter<{
+    row: T;
+    rowIndex: number;
+    column: Column<T>;
+    oldValue: unknown;
+    newValue: unknown;
+  }>();
+  @Output() sortChanged = new EventEmitter<Array<{ columnId: string; direction: "asc" | "desc" }>>();
+  @Output() filterChanged = new EventEmitter<Record<string, ColumnFilterModel>>();
+  @Output() columnMoved = new EventEmitter<{
+    columnId: string;
+    sourceIndex: number;
+    targetIndex: number;
+    columnIds: string[];
+  }>();
+  @Output() columnResized = new EventEmitter<{ columnId: string; width: number }>();
+  @Output() columnVisible = new EventEmitter<{
+    columnId: string;
+    visible: boolean;
+    hiddenColumnIds: string[];
+  }>();
+  @Output() columnPinned = new EventEmitter<{
+    columnId: string;
+    pinned: "left" | "right" | null;
+  }>();
+  @Output() saveAll = new EventEmitter<{ rows: T[]; selectedRows: T[]; visibleRows: T[]; reason: "toolbar" | "api" }>();
   @Output() advancedFilterModelChange = new EventEmitter<AdvancedFilterModel | null>();
   @Output() pivotModelChange = new EventEmitter<{
     groupBy?: keyof T & string;
@@ -358,6 +409,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
 
     (row as Record<string, unknown>)[column.field] = newValue;
     this.cellValueChange.emit({ row, rowIndex, column, oldValue, newValue });
+    this.cellEditStop.emit({ row, rowIndex, column, oldValue, newValue });
   }
 
   private undo() {
@@ -441,6 +493,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const [row] = rows.splice(rowIndex, 1);
     rows.splice(nextIndex, 0, row);
     this.rows = rows;
+    this.rowOrderChange.emit({ rows, movedRow: row, sourceIndex: rowIndex, targetIndex: nextIndex });
     this.render();
   }
 
@@ -450,6 +503,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const [row] = rows.splice(sourceIndex, 1);
     rows.splice(targetIndex, 0, row);
     this.rows = rows;
+    this.rowOrderChange.emit({ rows, movedRow: row, sourceIndex, targetIndex });
     this.render();
   }
 
@@ -462,6 +516,12 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const [column] = columns.splice(sourceIndex, 1);
     columns.splice(targetIndex, 0, column);
     this.columns = columns;
+    this.columnMoved.emit({
+      columnId: column.id,
+      sourceIndex,
+      targetIndex,
+      columnIds: columns.map((entry) => entry.id),
+    });
     this.render();
   }
 
@@ -516,7 +576,9 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const startX = event.clientX;
     const startWidth = this.columnWidths.get(column.id) ?? column.width ?? 150;
     const move = (moveEvent: MouseEvent) => {
-      this.columnWidths.set(column.id, Math.max(72, startWidth + moveEvent.clientX - startX));
+      const width = Math.max(72, startWidth + moveEvent.clientX - startX);
+      this.columnWidths.set(column.id, width);
+      this.columnResized.emit({ columnId: column.id, width });
       this.render();
     };
     const up = () => {
@@ -546,6 +608,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     };
     this.advancedFilterModel = model;
     this.advancedFilterModelChange.emit(model);
+    this.filterChanged.emit(this.columnFilters ?? {});
     this.render();
   }
 
@@ -838,6 +901,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       th.addEventListener("click", () => {
         if (column.sortable === false) return;
         this.sortState = this.sortState?.columnId !== column.id ? { columnId: column.id, direction: "asc" } : this.sortState.direction === "asc" ? { columnId: column.id, direction: "desc" } : null;
+        this.sortChanged.emit(this.sortState ? [this.sortState] : []);
         this.render();
       });
       if (column.resizable !== false) {
@@ -913,12 +977,16 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       this.classNames?.row,
       this.getRowClassName?.({ row, rowIndex, selected: rowSelected }),
     );
-    tr.draggable = true;
+    tr.draggable = this.enableRowReorder;
     tr.addEventListener("dragstart", () => {
+      if (!this.enableRowReorder) return;
       this.draggedRowIndex = rowIndex;
     });
-    tr.addEventListener("dragover", (event) => event.preventDefault());
+    tr.addEventListener("dragover", (event) => {
+      if (this.enableRowReorder) event.preventDefault();
+    });
     tr.addEventListener("drop", (event) => {
+      if (!this.enableRowReorder) return;
       event.preventDefault();
       if (this.draggedRowIndex != null) this.reorderRow(this.draggedRowIndex, rowIndex);
       this.draggedRowIndex = null;
@@ -930,7 +998,10 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       checkbox.checked = this.selected.has(this.rowId(row, rowIndex));
       checkbox.addEventListener("change", () => {
         checkbox.checked ? this.selected.add(this.rowId(row, rowIndex)) : this.selected.delete(this.rowId(row, rowIndex));
-        this.rowSelectionChange.emit(this.rows.filter((entry, index) => this.selected.has(this.rowId(entry, index))));
+        const selectedRows = this.rows.filter((entry, index) => this.selected.has(this.rowId(entry, index)));
+        this.rowSelectionChange.emit(selectedRows);
+        this.selectionChanged.emit({ selectedRows, selectedRowIds: Array.from(this.selected) });
+        this.rowSelected.emit({ row, rowIndex, selected: checkbox.checked, selectedRows });
         this.render();
       });
       td.appendChild(checkbox);
@@ -938,11 +1009,13 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     }
     if (this.rowNumbers) {
       const rowNumber = cell(String(rowIndex + 1));
-      const up = this.button("↑", () => this.moveRow(rowIndex, -1));
-      up.disabled = rowIndex <= 0;
-      const down = this.button("↓", () => this.moveRow(rowIndex, 1));
-      down.disabled = rowIndex >= this.rows.length - 1;
-      rowNumber.append(" ", up, down);
+      if (this.enableRowReorder) {
+        const up = this.button("↑", () => this.moveRow(rowIndex, -1));
+        up.disabled = rowIndex <= 0;
+        const down = this.button("↓", () => this.moveRow(rowIndex, 1));
+        down.disabled = rowIndex >= this.rows.length - 1;
+        rowNumber.append(" ", up, down);
+      }
       tr.appendChild(rowNumber);
     }
     columns.forEach((column, columnIndex) => {
@@ -997,6 +1070,11 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
           this.rangeAnchor = { rowIndex, columnId: column.id };
           this.rangeEnd = { rowIndex, columnId: column.id };
         }
+        this.selectedRowChange.emit({
+          row,
+          rowIndex,
+          selectedRows: this.rows.filter((entry, index) => this.selected.has(this.rowId(entry, index))),
+        });
         this.cellClick.emit({ row, rowIndex, column });
         this.render();
       });
@@ -1006,7 +1084,10 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
         this.contextMenu = { x: event.clientX, y: event.clientY, rowIndex, columnId: column.id };
         this.render();
       });
-      if (column.editable) td.addEventListener("dblclick", () => this.editCell(td, row, rowIndex, column));
+      td.addEventListener("dblclick", () => {
+        this.cellDoubleClick.emit({ row, rowIndex, column });
+        if (column.editable) this.editCell(td, row, rowIndex, column);
+      });
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -1015,6 +1096,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   private editCell(td: HTMLTableCellElement, row: T, rowIndex: number, column: Column<T>) {
     const oldValue = rawValue(row, column);
     const input = this.createEditor(column, oldValue);
+    this.cellEditStart.emit({ row, rowIndex, column, value: oldValue });
     td.replaceChildren(input);
     input.focus();
     input.addEventListener("blur", () => {
@@ -1095,6 +1177,11 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       checkbox.checked = !this.hiddenColumnIds.has(column.id);
       checkbox.addEventListener("change", () => {
         checkbox.checked ? this.hiddenColumnIds.delete(column.id) : this.hiddenColumnIds.add(column.id);
+        this.columnVisible.emit({
+          columnId: column.id,
+          visible: checkbox.checked,
+          hiddenColumnIds: Array.from(this.hiddenColumnIds),
+        });
         this.render();
       });
       label.append(checkbox, column.headerName);
