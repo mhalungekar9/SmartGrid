@@ -308,7 +308,7 @@ function resolveToolOptions(
 }
 
 function clampColumnWidth(column: Column<unknown>, width: number) {
-  const minWidth = column.minWidth ?? 72;
+  const minWidth = column.minWidth ?? 132;
   const maxWidth = column.maxWidth ?? Number.POSITIVE_INFINITY;
 
   return Math.min(maxWidth, Math.max(minWidth, Math.ceil(width)));
@@ -316,6 +316,22 @@ function clampColumnWidth(column: Column<unknown>, width: number) {
 
 function estimateTextWidth(value: unknown) {
   return String(value ?? "").length * 8 + 44;
+}
+
+function estimateHeaderToolsWidth(
+  column: Column<unknown>,
+  tools: Record<string, boolean>,
+) {
+  const actionCount =
+    Number(Boolean(tools.sort)) +
+    Number(Boolean(tools.filter && column.filterable !== false)) +
+    Number(Boolean(tools.filterPanel && column.filterable !== false)) +
+    Number(Boolean(tools.menu));
+  const actionWidth = actionCount ? actionCount * 30 + Math.max(0, actionCount - 1) * 4 : 0;
+  const resizeWidth = tools.resize && column.resizable !== false ? 12 : 0;
+  const dragHandleWidth = tools.menu ? 18 : 0;
+
+  return 28 + dragHandleWidth + actionWidth + resizeWidth;
 }
 
 function renderGridIcon(icon: unknown, fallback?: ReactNode) {
@@ -1550,12 +1566,6 @@ export function GridNexa<T>({
     return [...pinnedLeft, ...center, ...pinnedRight];
   }, [visibleColumns]);
 
-  const orderedWidths = orderedColumns.map((column, index) => {
-    const originalIndex = columns.findIndex((entry) => entry.id === column.id);
-
-    return columnWidths[originalIndex] ?? column.width ?? columnWidths[index];
-  });
-
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
       if (!resizeSession.current) {
@@ -1873,13 +1883,9 @@ export function GridNexa<T>({
     setSelectedRowIndex(tableRows.length ? 0 : null);
   };
   const tableWidths = tableColumns.map((column, index) => {
-    const orderedIndex = orderedColumns.findIndex(
-      (entry) => entry.id === column.id,
-    );
     const originalIndex = columns.findIndex((entry) => entry.id === column.id);
     const explicitWidth =
       dynamicColumnWidths[column.id] ??
-      (orderedIndex >= 0 ? orderedWidths[orderedIndex] : undefined) ??
       (originalIndex >= 0 ? columnWidths[originalIndex] : undefined) ??
       column.width;
 
@@ -1887,7 +1893,13 @@ export function GridNexa<T>({
       return clampColumnWidth(column as Column<unknown>, explicitWidth);
     }
 
-    const headerWidth = estimateTextWidth(column.headerName) + 72;
+    const tools = resolveToolOptions(
+      columnTools,
+      (column as GridNexaColumn<T>).tools,
+    );
+    const headerWidth =
+      estimateTextWidth(column.headerName) +
+      estimateHeaderToolsWidth(column as Column<unknown>, tools);
     const contentWidth = tableRows.slice(0, 100).reduce((maxWidth, row) => {
       const width = estimateTextWidth(getColumnValue(row, column));
 
@@ -2341,13 +2353,7 @@ export function GridNexa<T>({
     }
 
     return tableColumns
-      .map((column, index) => {
-        const width = tableWidths[index] ?? column.width ?? 150;
-
-        return index === tableColumns.length - 1
-          ? `minmax(${width}px, 1fr)`
-          : `${width}px`;
-      })
+      .map((column, index) => `${tableWidths[index] ?? column.width ?? 150}px`)
       .join(" ");
   }, [renderer, tableColumns, tableWidths]);
   const leadingTemplate = [
@@ -3628,26 +3634,32 @@ export function GridNexa<T>({
 
     setColumnOrder((currentOrder) => {
       const knownIds = new Set(columns.map((column) => column.id));
-      const nextOrder = [
+      const normalizedOrder = [
         ...currentOrder.filter((columnId) => knownIds.has(columnId)),
         ...columns
           .map((column) => column.id)
           .filter((columnId) => !currentOrder.includes(columnId)),
       ];
-      const sourceIndex = nextOrder.indexOf(sourceColumnId);
-      const targetIndex = nextOrder.indexOf(targetColumnId);
+      const sourceIndex = normalizedOrder.indexOf(sourceColumnId);
+      const targetIndex = normalizedOrder.indexOf(targetColumnId);
 
       if (sourceIndex < 0 || targetIndex < 0) {
         return currentOrder;
       }
 
-      const [movedColumnId] = nextOrder.splice(sourceIndex, 1);
-      const insertIndex = sourceIndex < targetIndex ? targetIndex : targetIndex;
+      const nextOrder = normalizedOrder.filter(
+        (columnId) => columnId !== sourceColumnId,
+      );
+      const insertIndex = nextOrder.indexOf(targetColumnId);
 
-      nextOrder.splice(insertIndex, 0, movedColumnId);
+      if (insertIndex < 0) {
+        return currentOrder;
+      }
+
+      nextOrder.splice(insertIndex, 0, sourceColumnId);
       onColumnOrderChange?.(nextOrder);
       onColumnMoved?.({
-        columnId: movedColumnId,
+        columnId: sourceColumnId,
         sourceIndex,
         targetIndex: insertIndex,
         columnIds: nextOrder,

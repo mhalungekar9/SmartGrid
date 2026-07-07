@@ -1,6 +1,6 @@
 {
   "name": "@gridnexa/react",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Enterprise React data grid for modern UI apps with Excel-like filtering, editing, formulas, grouping, pivoting, export, and theme-ready UX.",
   "type": "module",
   "main": "./dist/index.js",
@@ -12,6 +12,7 @@
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
+    "./index.css": "./dist/index.css",
     "./dist/index.css": "./dist/index.css"
   },
   "files": [

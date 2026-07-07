@@ -139,6 +139,7 @@ export function GridHeaderCell<T>({
       )}
       role="columnheader"
       draggable={tools.menu}
+      data-gnx-draggable={tools.menu ? "true" : undefined}
       aria-sort={
         sortDirection
           ? sortDirection === "asc"
@@ -180,6 +181,7 @@ export function GridHeaderCell<T>({
       }}
       onDragEnd={onColumnDragEnd}
     >
+      {tools.menu ? <span className="sg-column-drag-handle" aria-hidden="true" /> : null}
       <span className="sg-header-label">{column.headerName}</span>
 
       <div className="sg-header-actions">
