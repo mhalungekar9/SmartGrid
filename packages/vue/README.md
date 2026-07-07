@@ -136,13 +136,15 @@ Keep AI provider keys on your backend. GridNexa receives only safe action-plan J
 
 Use `className`, `classNames`, `getRowClassName`, `getCellClassName`, `getHeaderClassName`, and column class callbacks to connect Vue apps to Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS.
 
+If you compare behavior with an installed React app, import `@gridnexa/react/index.css` once in that app entry. The CSS export includes the shared header layout, drag handles, drop indicators, pinned-column rules, popovers, scrollbars, and theme variables used by the playground.
+
 ## Feature Highlights
 
 - Native Vue component with TypeScript column models
 - Sorting, pagination, quick filter, column filters, external filters, and advanced filter model
 - Selection, row numbers, copy/paste, fill, find, undo, and redo
 - Inline editing, formulas, CSV export, and Excel export
-- Merged headers, column resize, reorder, hide/show, pinning, and row reorder
+- Merged headers, column resize, aligned reorder, hide/show, pinning, and row reorder
 - Grouping, pivoting, tree data, master/detail, transactions, and server-side operation events
 - AI command bar with safe action plans
 

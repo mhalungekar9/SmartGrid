@@ -1326,6 +1326,9 @@ export function GridNexa<T>({
   const [dropTargetColumnId, setDropTargetColumnId] = useState<string | null>(
     null,
   );
+  const [dropTargetColumnPosition, setDropTargetColumnPosition] = useState<
+    "before" | "after"
+  >("before");
   const [columnChooserOpen, setColumnChooserOpen] = useState(false);
   const [dynamicColumnWidths, setDynamicColumnWidths] = useState<
     Record<string, number>
@@ -3621,7 +3624,11 @@ export function GridNexa<T>({
     return column?.pinned ?? null;
   };
 
-  const reorderColumn = (sourceColumnId: string, targetColumnId: string) => {
+  const reorderColumn = (
+    sourceColumnId: string,
+    targetColumnId: string,
+    position: "before" | "after" = "before",
+  ) => {
     if (sourceColumnId === targetColumnId) {
       return;
     }
@@ -3629,6 +3636,7 @@ export function GridNexa<T>({
     if (getColumnLane(sourceColumnId) !== getColumnLane(targetColumnId)) {
       setDraggedColumnId(null);
       setDropTargetColumnId(null);
+      setDropTargetColumnPosition("before");
       return;
     }
 
@@ -3650,12 +3658,14 @@ export function GridNexa<T>({
       const nextOrder = normalizedOrder.filter(
         (columnId) => columnId !== sourceColumnId,
       );
-      const insertIndex = nextOrder.indexOf(targetColumnId);
+      const targetInsertIndex = nextOrder.indexOf(targetColumnId);
 
-      if (insertIndex < 0) {
+      if (targetInsertIndex < 0) {
         return currentOrder;
       }
 
+      const insertIndex =
+        position === "after" ? targetInsertIndex + 1 : targetInsertIndex;
       nextOrder.splice(insertIndex, 0, sourceColumnId);
       onColumnOrderChange?.(nextOrder);
       onColumnMoved?.({
@@ -3669,6 +3679,7 @@ export function GridNexa<T>({
     });
     setDraggedColumnId(null);
     setDropTargetColumnId(null);
+    setDropTargetColumnPosition("before");
   };
 
   const exportVisibleRowsToExcel = () => {
@@ -4532,25 +4543,29 @@ export function GridNexa<T>({
               onAutoSize={autoSizeColumn}
               draggedColumnId={draggedColumnId}
               dropTargetColumnId={dropTargetColumnId}
+              dropTargetColumnPosition={dropTargetColumnPosition}
               onColumnDragStart={(columnId) => {
                 setDraggedColumnId(columnId);
                 setDropTargetColumnId(null);
+                setDropTargetColumnPosition("before");
                 setFilterPopoverColumnId(null);
                 setColumnMenuColumnId(null);
               }}
-              onColumnDragOver={(columnId) => {
+              onColumnDragOver={(columnId, position) => {
                 if (
                   draggedColumnId &&
                   draggedColumnId !== columnId &&
                   getColumnLane(draggedColumnId) === getColumnLane(columnId)
                 ) {
                   setDropTargetColumnId(columnId);
+                  setDropTargetColumnPosition(position);
                 }
               }}
               onColumnDrop={reorderColumn}
               onColumnDragEnd={() => {
                 setDraggedColumnId(null);
                 setDropTargetColumnId(null);
+                setDropTargetColumnPosition("before");
               }}
               filterModel={filterModel}
               getColumnFilterType={getColumnFilterType}

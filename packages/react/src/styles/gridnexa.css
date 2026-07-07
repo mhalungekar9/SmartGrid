@@ -74,6 +74,7 @@
 
 .sg-header-cell {
   gap: 8px;
+  position: relative;
 }
 
 .sg-header-cell[data-gnx-draggable="true"] {
@@ -82,6 +83,32 @@
 
 .sg-header-cell--dragging {
   cursor: grabbing;
+}
+
+.sg-header-cell--drop-target::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--gnx-primary, #60a5fa);
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.18);
+}
+
+.sg-header-cell--drop-after::before {
+  right: 0;
+  left: auto;
+}
+
+.sg-header-cell--drag-preview {
+  width: max-content;
+  max-width: none;
+  border: 1px solid var(--gnx-primary, #60a5fa);
+  border-radius: 8px;
+  background: var(--gnx-header-bg, #0b1220);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.28);
 }
 
 .sg-header-label {

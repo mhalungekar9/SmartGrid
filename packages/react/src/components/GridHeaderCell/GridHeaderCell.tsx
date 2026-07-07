@@ -44,9 +44,14 @@ interface Props<T> {
   onAutoSize: (columnId: string) => void;
   isDragging: boolean;
   isDropTarget: boolean;
+  dropTargetPosition: "before" | "after";
   onColumnDragStart: (columnId: string) => void;
-  onColumnDragOver: (columnId: string) => void;
-  onColumnDrop: (sourceColumnId: string, targetColumnId: string) => void;
+  onColumnDragOver: (columnId: string, position: "before" | "after") => void;
+  onColumnDrop: (
+    sourceColumnId: string,
+    targetColumnId: string,
+    position: "before" | "after",
+  ) => void;
   onColumnDragEnd: () => void;
   hasFilter: boolean;
   filter: ColumnFilterModel | undefined;
@@ -74,6 +79,7 @@ export function GridHeaderCell<T>({
   onAutoSize,
   isDragging,
   isDropTarget,
+  dropTargetPosition,
   onColumnDragStart,
   onColumnDragOver,
   onColumnDrop,
@@ -131,6 +137,7 @@ export function GridHeaderCell<T>({
         "sg-header-cell",
         isDragging && "sg-header-cell--dragging",
         isDropTarget && "sg-header-cell--drop-target",
+        isDropTarget && `sg-header-cell--drop-${dropTargetPosition}`,
         classNames.headerCell,
         typeof column.headerClassName === "function"
           ? column.headerClassName({ column })
@@ -164,19 +171,41 @@ export function GridHeaderCell<T>({
 
         event.dataTransfer.effectAllowed = "move";
         event.dataTransfer.setData("text/plain", column.id);
+
+        const rect = event.currentTarget.getBoundingClientRect();
+        const dragImage = event.currentTarget.cloneNode(true) as HTMLElement;
+        dragImage.style.position = "fixed";
+        dragImage.style.top = "-1000px";
+        dragImage.style.left = "-1000px";
+        dragImage.style.width = `${rect.width}px`;
+        dragImage.style.height = `${rect.height}px`;
+        dragImage.style.pointerEvents = "none";
+        dragImage.style.opacity = "0.92";
+        dragImage.classList.add("sg-header-cell--drag-preview");
+        document.body.appendChild(dragImage);
+        event.dataTransfer.setDragImage(
+          dragImage,
+          Math.max(0, event.clientX - rect.left),
+          Math.max(0, event.clientY - rect.top),
+        );
+        window.setTimeout(() => dragImage.remove(), 0);
         onColumnDragStart(column.id);
       }}
       onDragOver={(event) => {
         event.preventDefault();
         event.dataTransfer.dropEffect = "move";
-        onColumnDragOver(column.id);
+        const rect = event.currentTarget.getBoundingClientRect();
+        const position = event.clientX > rect.left + rect.width / 2 ? "after" : "before";
+        onColumnDragOver(column.id, position);
       }}
       onDrop={(event) => {
         event.preventDefault();
         const sourceColumnId = event.dataTransfer.getData("text/plain");
 
         if (sourceColumnId) {
-          onColumnDrop(sourceColumnId, column.id);
+          const rect = event.currentTarget.getBoundingClientRect();
+          const position = event.clientX > rect.left + rect.width / 2 ? "after" : "before";
+          onColumnDrop(sourceColumnId, column.id, position);
         }
       }}
       onDragEnd={onColumnDragEnd}

@@ -39,8 +39,8 @@ export const featureConfigs = {
   basicGrid: {
     title: "Basic Grid",
     subtitle: "Foundation",
-    overview: "Render typed rows and columns with sorting, filtering metadata, pinned columns, and value formatting.",
-    notes: ["all toolbar tools", "column tools", "add/delete rows", "scrollbar", "ellipsis tooltip"],
+    overview: "Render typed rows and columns with sorting, filtering metadata, pinned columns, value formatting, and package CSS loaded like an external app.",
+    notes: ["import index.css", "all toolbar tools", "column tools", "drag reorder", "add/delete rows", "scrollbar", "ellipsis tooltip"],
     columns: compactEmployeeColumns.map((column) =>
       column.id === "name"
         ? { ...column, width: undefined, minWidth: 180, textDisplay: { overflow: "ellipsis", showTooltip: true } }
@@ -92,7 +92,10 @@ export const featureConfigs = {
       manager: "Unassigned",
       adjustedScore: "=score * 1.05",
     }),
-    code: `const toolbar = {
+    code: `import { GridNexa, type Column } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+
+const toolbar = {
   saveAll: true,
   undoRedo: true,
   filters: true,
@@ -148,6 +151,7 @@ export const featureConfigs = {
   onRowDelete={(event) => console.info("Row deleted", event)}
   onRowsDelete={(event) => console.info("Rows deleted", event)}
   onDataChange={(event) => console.info("Data changed", event)}
+  onColumnMoved={(event) => console.info("Column moved", event)}
 />`,
   },
   sorting: {
@@ -320,15 +324,21 @@ export const featureConfigs = {
     title: "Column Reorder",
     subtitle: "Drag and drop",
     overview: "Drag a column header and drop it on another header to reorder columns directly in the grid.",
-    notes: ["drag header", "drop to reorder", "pin-aware lanes"],
+    notes: ["import package CSS", "drag header", "aligned preview", "before/after drop", "pin-aware lanes"],
     details: [
+      "External React apps should import @gridnexa/react/index.css so drag handles, header layout, and drop indicators match the playground.",
       "Users can drag from the header label area without disturbing sort, filter, menu, or resize controls.",
+      "The drag preview uses the real header cell dimensions and the drop indicator tracks before or after the target header.",
       "Pinned-left, center, and pinned-right columns reorder within their current lane.",
       "The rendered cells, header, export order, and column chooser all follow the updated order.",
     ],
-    code: `<GridNexa
+    code: `import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+
+<GridNexa
   columns={columns}
   rows={rows}
+  onColumnMoved={(event) => console.info("Column moved", event)}
 />
 
 // Drag the Name, Department, City, or Score header to change column order.

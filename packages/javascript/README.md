@@ -136,13 +136,15 @@ The browser sends grid state to your endpoint. Your server can use OpenAI, Azure
 
 Use `className`, `classNames`, `getRowClassName`, `getCellClassName`, `getHeaderClassName`, and column-level class hooks to plug into Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS.
 
+When testing the React package in an external app, import `@gridnexa/react/index.css` once in the app entry. The CSS export contains the shared header layout, drag handles, drop indicators, pinned-column rules, popovers, scrollbars, and theme variables that make installed-package behavior match the playground.
+
 ## Feature Highlights
 
 - Framework-free DOM mounting with typed options
 - Sorting, pagination, quick filter, column filters, external filters, and advanced filters
 - Selection, row numbers, copy/paste, find, fill, undo, and redo
 - Inline editing, formulas, CSV export, and Excel export
-- Merged headers, column resize, drag reorder, hide/show, pinning, and row reorder
+- Merged headers, column resize, aligned drag reorder, hide/show, pinning, and row reorder
 - Grouping, pivoting, tree data, master/detail, transactions, and server-side operation callbacks
 - AI command bar with safe action plans
 

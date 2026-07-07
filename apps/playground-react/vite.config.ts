@@ -6,10 +6,19 @@ import { fileURLToPath, URL } from "node:url";
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    alias: {
-      "@gridnexa/react": fileURLToPath(
-        new URL("../../packages/react/src/index.ts", import.meta.url),
-      ),
-    },
+    alias: [
+      {
+        find: "@gridnexa/react/index.css",
+        replacement: fileURLToPath(
+          new URL("../../packages/react/src/styles/gridnexa.css", import.meta.url),
+        ),
+      },
+      {
+        find: "@gridnexa/react",
+        replacement: fileURLToPath(
+          new URL("../../packages/react/src/index.ts", import.meta.url),
+        ),
+      },
+    ],
   },
 });

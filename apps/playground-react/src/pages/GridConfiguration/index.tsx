@@ -92,6 +92,26 @@ const toolbarCode = `<GridNexa
   }}
 />`;
 
+const externalAppCode = `import { GridNexa, type Column } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+
+const columns: Column<Employee>[] = [
+  { id: "name", field: "name", headerName: "Name" },
+  { id: "department", field: "department", headerName: "Department" },
+  { id: "score", field: "score", headerName: "Score" }
+];
+
+<GridNexa
+  columns={columns}
+  rows={rows}
+  rowNumbers
+  checkboxSelection
+  onColumnMoved={(event) => console.info("Column moved", event)}
+/>;
+
+// The CSS import keeps header layout, drag handles, drop indicators,
+// popovers, pinned columns, and scrollbars aligned in installed apps.`;
+
 const columnToolsCode = `<GridNexa
   columns={[
     { id: "name", field: "name", headerName: "Name", tools: { menu: false } },
@@ -260,6 +280,18 @@ export function GridConfiguration() {
       </div>
 
       <div className="example-grid">
+        <DemoCard title="External React app setup" description="Import the package CSS in installed apps so drag handles, drop indicators, header layout, popovers, and pinned columns render exactly like the playground.">
+          <GridNexa
+            columns={columns}
+            rows={rows}
+            theme={theme}
+            rowNumbers
+            checkboxSelection
+            onColumnMoved={(event) => console.info("Column moved", event)}
+          />
+          <CodeViewer code={externalAppCode} />
+        </DemoCard>
+
         <DemoCard title="Toolbar tools" description="Enable save, undo/redo, filters, exports, find, fill, add row, and delete row with one object.">
           <GridNexa columns={columns} rows={rows} theme={theme} checkboxSelection toolbar={{ saveAll: true, undoRedo: true, filters: true, advancedFilter: true, columnSelector: true, quickFilter: true, exportCsv: true, exportExcel: true, prevNextPage: true, find: true, columns: true, fill: true, addRow: true, deleteRow: true, deleteSelectedRows: true }} createRow={rowFactory} />
           <CodeViewer code={toolbarCode} />

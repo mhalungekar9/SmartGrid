@@ -15,9 +15,14 @@ interface Props<T> {
   onAutoSize: (columnId: string) => void;
   draggedColumnId: string | null;
   dropTargetColumnId: string | null;
+  dropTargetColumnPosition: "before" | "after";
   onColumnDragStart: (columnId: string) => void;
-  onColumnDragOver: (columnId: string) => void;
-  onColumnDrop: (sourceColumnId: string, targetColumnId: string) => void;
+  onColumnDragOver: (columnId: string, position: "before" | "after") => void;
+  onColumnDrop: (
+    sourceColumnId: string,
+    targetColumnId: string,
+    position: "before" | "after",
+  ) => void;
   onColumnDragEnd: () => void;
   filterModel: Record<string, ColumnFilterModel>;
   getColumnFilterType: (column: Column<T>) => ColumnFilterModel["type"];
@@ -47,6 +52,7 @@ export function GridHeader<T>({
   onAutoSize,
   draggedColumnId,
   dropTargetColumnId,
+  dropTargetColumnPosition,
   onColumnDragStart,
   onColumnDragOver,
   onColumnDrop,
@@ -178,6 +184,7 @@ export function GridHeader<T>({
             onAutoSize={onAutoSize}
             isDragging={draggedColumnId === column.id}
             isDropTarget={dropTargetColumnId === column.id}
+            dropTargetPosition={dropTargetColumnPosition}
             onColumnDragStart={onColumnDragStart}
             onColumnDragOver={onColumnDragOver}
             onColumnDrop={onColumnDrop}

@@ -84,6 +84,8 @@ Core includes the typed contracts used by all framework packages:
 - `icons` provides global icon replacement, while `column.icons` can override icons for a specific column.
 - `toolbar` enables or hides quick filter, find, filters, advanced filter, columns, exports, add/delete rows, undo/redo, fill, and save-all tools.
 
+React consumers should import `@gridnexa/react/index.css` once in the app entry. That exported CSS carries the shared header layout, drag/reorder indicators, pinned-column rules, popovers, scrollbars, and theme variables needed for installed apps to match the playground.
+
 ## Framework Packages
 
 - `@gridnexa/react` for React UI applications

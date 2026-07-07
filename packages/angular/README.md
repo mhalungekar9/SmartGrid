@@ -147,12 +147,14 @@ Keep provider keys on your backend. GridNexa accepts safe action plans from Open
 
 Use `className`, `classNames`, `getRowClassName`, `getCellClassName`, `getHeaderClassName`, and column-level `className`, `cellClassName`, and `headerClassName` to connect Bootstrap, utility classes, CSS Modules, SCSS, Less, or plain CSS.
 
+If you compare behavior with an installed React app, import `@gridnexa/react/index.css` once in that app entry. The CSS export includes the shared header layout, drag handles, drop indicators, pinned-column rules, popovers, scrollbars, and theme variables used by the playground.
+
 ## Feature Highlights
 
 - Sorting, pagination, quick filter, column filters, external filters, and advanced filter model
 - Selection, row numbers, clipboard operations, fill, find, undo, and redo
 - Inline editing, formulas, CSV export, and Excel export
-- Merged headers, column resize, drag reorder, hide/show, pinning, and row reorder
+- Merged headers, column resize, aligned drag reorder, hide/show, pinning, and row reorder
 - Grouping, pivoting, tree data, master/detail, transactions, and server-side operation events
 - AI command bar with safe action plans
 

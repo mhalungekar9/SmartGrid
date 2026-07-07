@@ -30,6 +30,7 @@ pnpm add @gridnexa/react
 
 ```tsx
 import { GridNexa, type Column } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
 
 interface Employee {
   id: number;
@@ -72,7 +73,19 @@ export function App() {
 }
 ```
 
-GridNexa ships with runtime styles, so the grid looks usable immediately. You can still import `@gridnexa/react/dist/index.css` for extracted CSS workflows or pass `unstyled` when your design system owns every rule.
+GridNexa ships with runtime styles, but installed React apps should also import `@gridnexa/react/index.css`. That CSS export keeps header layout, drag handles, column reorder drop indicators, pinned columns, popovers, scrollbars, and default themes identical to the playground. You can pass `unstyled` when your design system owns every rule.
+
+## External React App Checklist
+
+```tsx
+import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+```
+
+- Rebuild and reinstall the package after upgrading so the external app receives the latest `dist/index.css`.
+- Keep the CSS import once in your app entry file, such as `main.tsx`, `App.tsx`, or your design-system wrapper.
+- Column drag/reorder works from the header label area. The preview uses the real header width, and the drop indicator tracks whether the column will move before or after the target.
+- Pinned-left, center, and pinned-right columns reorder within their current lane.
 
 ## Toolbar, Header Tools, Footer, And Icons
 
@@ -189,7 +202,7 @@ Use Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS through `classNam
 - Row selection, checkbox selection, row numbers, range selection, fill handle, find, undo, and redo
 - Inline editors for text, number, date, checkbox, select, large text, and advanced select
 - Formulas, clipboard operations, CSV export, and Excel export
-- Column resize, drag reorder, hide/show, pin/freeze, column menu, and merged headers
+- Column resize, aligned drag reorder, hide/show, pin/freeze, column menu, and merged headers
 - Row grouping, aggregation, pivoting, tree data, master/detail, and transactions
 - Server-side operation callbacks for sorting, filtering, selection, pagination, grouping, pivoting, tree data, and transactions
 
