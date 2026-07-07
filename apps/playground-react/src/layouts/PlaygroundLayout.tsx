@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from "react";
 import { useEffect, useState } from "react";
-import { useTheme } from "../hooks/useTheme";
+import { AppThemeContext, useTheme } from "../hooks/useTheme";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 
@@ -27,6 +27,7 @@ export function PlaygroundLayout({ children }: PropsWithChildren) {
   }
 
   return (
+    <AppThemeContext.Provider value={theme}>
     <div className={`app-shell${sidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <Sidebar
         collapsed={sidebarCollapsed}
@@ -46,5 +47,6 @@ export function PlaygroundLayout({ children }: PropsWithChildren) {
         <main className="app-content">{children}</main>
       </div>
     </div>
+    </AppThemeContext.Provider>
   );
 }

@@ -99,6 +99,14 @@ export function GridHeaderCell<T>({
       : sortDirection === "desc"
         ? "Clear sort"
         : "Sort ascending";
+  const columnStyle = getColumnStyle(column.id);
+  const pinnedSide =
+    column.pinned ??
+    (columnStyle.left !== undefined
+      ? "left"
+      : columnStyle.right !== undefined
+        ? "right"
+        : undefined);
 
   return (
     <div
@@ -121,7 +129,8 @@ export function GridHeaderCell<T>({
             : "descending"
           : "none"
       }
-      style={getColumnStyle(column.id)}
+      data-gnx-pinned={pinnedSide}
+      style={columnStyle}
       onDragStart={(event) => {
         const target = event.target as HTMLElement | null;
 

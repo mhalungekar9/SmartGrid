@@ -112,6 +112,14 @@ export function GridCell<T>({
             .includes(editingCell?.draftValue.toLowerCase() ?? ""),
         )
       : selectOptions;
+  const columnStyle = getColumnStyle(column.id);
+  const pinnedSide =
+    column.pinned ??
+    (columnStyle.left !== undefined
+      ? "left"
+      : columnStyle.right !== undefined
+        ? "right"
+        : undefined);
 
   if (isEditing) {
     const commonEditorProps = {
@@ -156,7 +164,8 @@ export function GridCell<T>({
             : column.cellClassName,
           getCellClassName({ value, row, rowIndex, column, columnIndex, selected: isSelected }),
         )}
-        style={getColumnStyle(column.id)}
+        data-gnx-pinned={pinnedSide}
+        style={columnStyle}
       >
         {editorType === "largeText" ? (
           <textarea {...commonEditorProps} />
@@ -252,7 +261,8 @@ export function GridCell<T>({
           : column.cellClassName,
         getCellClassName({ value, row, rowIndex, column, columnIndex, selected: isSelected }),
       )}
-      style={getColumnStyle(column.id)}
+      data-gnx-pinned={pinnedSide}
+      style={columnStyle}
       tabIndex={column.editable ? 0 : -1}
       onClick={(event) => {
         if (event.shiftKey && activeCell) {

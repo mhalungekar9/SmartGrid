@@ -1,6 +1,12 @@
-import { useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 export type AppTheme = "light" | "dark";
+
+export const AppThemeContext = createContext<AppTheme>("dark");
+
+export function useAppTheme() {
+  return useContext(AppThemeContext);
+}
 
 const storageKey = "gridnexa-playground-theme";
 

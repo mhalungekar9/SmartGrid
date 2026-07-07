@@ -21,6 +21,7 @@ export interface GridContextValue<T> {
   theme: GridNexaTheme;
   classNames: GridNexaSlotClassNames;
   columnTemplate: string;
+  tableMinWidth: number;
   selectedRowIndex: number | null;
   onRowSelect: (rowIndex: number) => void;
   emitRowDoubleClick: (rowIndex: number) => void;
@@ -35,6 +36,8 @@ export interface GridContextValue<T> {
   enableRowReorder: boolean;
   rowReorderPosition: GridNexaRowReorderPosition;
   getColumnStyle: (columnId: string) => CSSProperties;
+  selectionColumnStyle: CSSProperties | undefined;
+  rowNumberColumnStyle: CSSProperties | undefined;
   getRowClassName: (params: {
     row: T;
     rowIndex: number;

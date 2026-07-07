@@ -8,7 +8,7 @@ export default defineConfig({
   resolve: {
     alias: {
       "@gridnexa/react": fileURLToPath(
-        new URL("../../packages/react", import.meta.url),
+        new URL("../../packages/react/src/index.ts", import.meta.url),
       ),
     },
   },

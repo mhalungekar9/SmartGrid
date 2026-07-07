@@ -71,17 +71,24 @@ export function GridBody<T>({
       return;
     }
 
+    const scrollContainer =
+      element.closest<HTMLElement>(".sg-grid-root") ?? element;
     const syncViewport = () => {
-      setViewportHeight(element.clientHeight);
+      const bodyOffsetTop = element.offsetTop;
+
+      setViewportHeight(scrollContainer.clientHeight);
+      setScrollTop(Math.max(0, scrollContainer.scrollTop - bodyOffsetTop));
     };
 
     syncViewport();
 
     const resizeObserver = new ResizeObserver(syncViewport);
-    resizeObserver.observe(element);
+    resizeObserver.observe(scrollContainer);
+    scrollContainer.addEventListener("scroll", syncViewport, { passive: true });
 
     return () => {
       resizeObserver.disconnect();
+      scrollContainer.removeEventListener("scroll", syncViewport);
     };
   }, []);
 
@@ -125,7 +132,6 @@ export function GridBody<T>({
     <div
       className="sg-body"
       ref={bodyRef}
-      onScroll={(event) => setScrollTop(event.currentTarget.scrollTop)}
     >
       <div style={{ height: topSpacerHeight }} />
       {visibleRows.map((row) => (

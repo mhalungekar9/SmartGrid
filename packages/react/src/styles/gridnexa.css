@@ -6,6 +6,64 @@
   box-sizing: border-box;
 }
 
+.sg-header-cell[data-gnx-pinned],
+.sg-cell[data-gnx-pinned],
+.sg-selection-header[data-gnx-pinned],
+.sg-row-number-header[data-gnx-pinned],
+.sg-selection-cell[data-gnx-pinned],
+.sg-row-number[data-gnx-pinned] {
+  position: sticky !important;
+  background: var(--gnx-pinned-bg, var(--gnx-bg, #fff)) !important;
+}
+
+.sg-header-cell[data-gnx-pinned],
+.sg-selection-header[data-gnx-pinned],
+.sg-row-number-header[data-gnx-pinned] {
+  z-index: 7 !important;
+}
+
+.sg-cell[data-gnx-pinned],
+.sg-selection-cell[data-gnx-pinned],
+.sg-row-number[data-gnx-pinned] {
+  z-index: 4 !important;
+}
+
+.sg-cell[data-gnx-pinned="left"],
+.sg-selection-cell[data-gnx-pinned="left"],
+.sg-row-number[data-gnx-pinned="left"] {
+  box-shadow: inset -1px 0 0 var(--gnx-border, rgba(148, 163, 184, 0.2));
+}
+
+.sg-cell[data-gnx-pinned="right"] {
+  box-shadow: inset 1px 0 0 var(--gnx-border, rgba(148, 163, 184, 0.2));
+}
+
+.sg-grid-root {
+  overflow: auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.sg-header {
+  align-self: flex-start;
+  width: 100%;
+  min-width: var(--gnx-table-min-width, max-content);
+}
+
+.sg-body {
+  min-width: var(--gnx-table-min-width, max-content);
+  width: 100%;
+  overflow: visible;
+  flex: 0 0 auto;
+}
+
+.sg-row,
+.sg-column-header-row,
+.sg-merged-header-row {
+  width: 100%;
+  min-width: var(--gnx-table-min-width, max-content);
+}
+
 .sg-context-menu {
   position: fixed;
   z-index: 1200;
@@ -387,16 +445,33 @@
 
 .sg-filter-panel {
   width: min(720px, calc(100vw - 32px));
-  max-width: calc(100vw - 32px);
+  max-width: min(720px, calc(100vw - 32px));
   max-height: min(620px, calc(100vh - 120px));
   overflow: auto;
+  overflow-x: hidden;
 }
 
 .sg-advanced-filter-panel {
   width: min(860px, calc(100vw - 48px));
-  max-width: calc(100vw - 32px);
+  max-width: min(860px, calc(100vw - 32px));
   max-height: min(620px, calc(100vh - 140px));
   overflow: auto;
+  overflow-x: hidden;
+}
+
+.sg-filter-panel-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 160px) repeat(
+      auto-fit,
+      minmax(150px, 1fr)
+    );
+  gap: 8px;
+  align-items: start;
+}
+
+.sg-filter-panel-row .sg-filter-input[multiple] {
+  min-width: 0;
+  width: 100%;
 }
 
 .sg-advanced-filter-panel-header {
@@ -460,14 +535,9 @@
 
 .sg-advanced-filter-rule {
   display: grid;
-  grid-template-columns:
-    minmax(140px, 1.1fr)
-    minmax(120px, 0.8fr)
-    minmax(140px, 1fr)
-    minmax(100px, 0.7fr)
-    auto;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 8px;
-  align-items: center;
+  align-items: start;
   padding: 10px;
   border: 1px solid rgba(148, 163, 184, 0.14);
   border-radius: 10px;
@@ -589,6 +659,35 @@
   --gnx-primary: #2563eb;
   --gnx-row-hover: #eff6ff;
   --gnx-shadow: 0 22px 56px rgba(15, 23, 42, 0.18);
+}
+
+.sg-header-menu.sg-popup-theme-light,
+.sg-column-filter-popover.sg-popup-theme-light,
+.sg-column-filter-popover.sg-popup-theme-light .sg-column-filter-set,
+.sg-column-filter-popover.sg-popup-theme-light .sg-column-filter-input {
+  background: var(--gnx-panel, #ffffff) !important;
+  color: var(--gnx-text, #0f172a) !important;
+  border-color: var(--gnx-border, #cbd8ea) !important;
+}
+
+.sg-column-filter-popover.sg-popup-theme-light .sg-column-filter-set,
+.sg-column-filter-popover.sg-popup-theme-light .sg-column-filter-input {
+  background: var(--gnx-panel-strong, #f8fafc) !important;
+}
+
+.sg-header-menu.sg-popup-theme-light .sg-header-menu-item,
+.sg-column-filter-popover.sg-popup-theme-light .sg-column-filter-title,
+.sg-column-filter-popover.sg-popup-theme-light .sg-column-filter-option,
+.sg-column-filter-popover.sg-popup-theme-light .sg-column-filter-button {
+  color: var(--gnx-text, #0f172a) !important;
+}
+
+.sg-header-menu.sg-popup-theme-light .sg-header-menu-item:disabled,
+.sg-header-menu.sg-popup-theme-light [aria-disabled="true"],
+.sg-header-menu.sg-popup-theme-light [data-disabled],
+.sg-column-filter-popover.sg-popup-theme-light .sg-column-filter-button:disabled {
+  color: var(--gnx-muted, #64748b) !important;
+  opacity: 0.72;
 }
 
 .sg-header-menu.sg-popup-theme-dark,
@@ -904,6 +1003,10 @@
   }
 
   .sg-advanced-filter-rule {
+    grid-template-columns: 1fr;
+  }
+
+  .sg-filter-panel-row {
     grid-template-columns: 1fr;
   }
 }

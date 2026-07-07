@@ -1352,51 +1352,6 @@ export function GridNexa<T>({
     );
   });
 
-  const columnStyles = useMemo(() => {
-    const styles: Record<string, CSSProperties> = {};
-    let leftOffset = 0;
-
-    orderedColumns.forEach((column, index) => {
-      const width = orderedWidths[index] ?? 150;
-
-      if (column.pinned === "left") {
-        styles[column.id] = {
-          position: "sticky",
-          left: leftOffset,
-          zIndex: 3,
-          background: "var(--sg-pinned-bg, rgba(8, 12, 24, 0.98))",
-          boxShadow:
-            "inset -1px 0 0 var(--sg-pinned-border, rgba(255, 255, 255, 0.08))",
-        };
-
-        leftOffset += width;
-      }
-    });
-
-    let rightOffset = 0;
-
-    for (let index = orderedColumns.length - 1; index >= 0; index -= 1) {
-      const column = orderedColumns[index];
-      const width = orderedWidths[index] ?? 150;
-
-      if (column.pinned === "right") {
-        styles[column.id] = {
-          ...styles[column.id],
-          position: "sticky",
-          right: rightOffset,
-          zIndex: 3,
-          background: "var(--sg-pinned-bg, rgba(8, 12, 24, 0.98))",
-          boxShadow:
-            "inset 1px 0 0 var(--sg-pinned-border, rgba(255, 255, 255, 0.08))",
-        };
-
-        rightOffset += width;
-      }
-    }
-
-    return styles;
-  }, [orderedColumns, orderedWidths]);
-
   useEffect(() => {
     const handlePointerMove = (event: PointerEvent) => {
       if (!resizeSession.current) {
@@ -1721,9 +1676,30 @@ export function GridNexa<T>({
       (index === 0 ? 180 : 140)
     );
   });
+  const selectionColumnWidth = checkboxSelection ? 44 : 0;
+  const rowNumberColumnWidth = rowNumbers ? 52 : 0;
+  const leadingPinnedOffset = selectionColumnWidth + rowNumberColumnWidth;
+  const leadingColumnBaseStyle: CSSProperties = {
+    position: "sticky",
+    zIndex: 4,
+    background: "var(--gnx-pinned-bg, var(--gnx-panel-strong, #fff))",
+    boxShadow: "inset -1px 0 0 var(--gnx-border, rgba(148, 163, 184, 0.2))",
+  };
+  const selectionColumnStyle = checkboxSelection
+    ? {
+        ...leadingColumnBaseStyle,
+        left: 0,
+      }
+    : undefined;
+  const rowNumberColumnStyle = rowNumbers
+    ? {
+        ...leadingColumnBaseStyle,
+        left: selectionColumnWidth,
+      }
+    : undefined;
   const tableColumnStyles = useMemo(() => {
     const styles: Record<string, CSSProperties> = {};
-    let leftOffset = 0;
+    let leftOffset = leadingPinnedOffset;
 
     tableColumns.forEach((column, index) => {
       const width = tableWidths[index] ?? 150;
@@ -1733,9 +1709,9 @@ export function GridNexa<T>({
           position: "sticky",
           left: leftOffset,
           zIndex: 3,
-          background: "var(--sg-pinned-bg, rgba(8, 12, 24, 0.98))",
+          background: "var(--gnx-pinned-bg, var(--gnx-bg, #fff))",
           boxShadow:
-            "inset -1px 0 0 var(--sg-pinned-border, rgba(255, 255, 255, 0.08))",
+            "inset -1px 0 0 var(--gnx-border, rgba(148, 163, 184, 0.2))",
         };
 
         leftOffset += width;
@@ -1754,9 +1730,9 @@ export function GridNexa<T>({
           position: "sticky",
           right: rightOffset,
           zIndex: 3,
-          background: "var(--sg-pinned-bg, rgba(8, 12, 24, 0.98))",
+          background: "var(--gnx-pinned-bg, var(--gnx-bg, #fff))",
           boxShadow:
-            "inset 1px 0 0 var(--sg-pinned-border, rgba(255, 255, 255, 0.08))",
+            "inset 1px 0 0 var(--gnx-border, rgba(148, 163, 184, 0.2))",
         };
 
         rightOffset += width;
@@ -1764,7 +1740,7 @@ export function GridNexa<T>({
     }
 
     return styles;
-  }, [tableColumns, tableWidths]);
+  }, [leadingPinnedOffset, tableColumns, tableWidths]);
 
   useEffect(() => {
     onServerSideOperation?.({
@@ -2139,15 +2115,33 @@ export function GridNexa<T>({
     () => new GridRenderer(tableColumns, tableWidths),
     [tableColumns, tableWidths],
   );
+  const dataColumnTemplate = useMemo(() => {
+    if (!tableColumns.length) {
+      return renderer.getTemplate();
+    }
+
+    return tableColumns
+      .map((column, index) => {
+        const width = tableWidths[index] ?? column.width ?? 150;
+
+        return index === tableColumns.length - 1
+          ? `minmax(${width}px, 1fr)`
+          : `${width}px`;
+      })
+      .join(" ");
+  }, [renderer, tableColumns, tableWidths]);
   const leadingTemplate = [
     checkboxSelection ? "44px" : null,
     rowNumbers ? "52px" : null,
   ]
     .filter(Boolean)
     .join(" ");
+  const tableMinWidth =
+    leadingPinnedOffset +
+    tableWidths.reduce((total, width) => total + (width ?? 150), 0);
   const template = leadingTemplate
-    ? `${leadingTemplate} ${renderer.getTemplate()}`
-    : renderer.getTemplate();
+    ? `${leadingTemplate} ${dataColumnTemplate}`
+    : dataColumnTemplate;
 
   const getCellRange = () => {
     if (!enableRangeSelection || !activeCell || !selectionAnchor) {
@@ -3539,6 +3533,7 @@ export function GridNexa<T>({
         theme,
         classNames: mergedClassNames,
         columnTemplate: template,
+        tableMinWidth,
         selectedRowIndex,
         onRowSelect: handleRowSelect,
         emitRowDoubleClick,
@@ -3553,6 +3548,8 @@ export function GridNexa<T>({
         enableRowReorder,
         rowReorderPosition,
         getColumnStyle: (columnId: string) => tableColumnStyles[columnId] ?? {},
+        selectionColumnStyle,
+        rowNumberColumnStyle,
         getRowClassName: (params) => getRowClassName?.(params),
         getCellClassName: (params) => getCellClassName?.(params),
         getHeaderClassName: (params) => getHeaderClassName?.(params),

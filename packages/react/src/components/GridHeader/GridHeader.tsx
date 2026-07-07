@@ -70,6 +70,8 @@ export function GridHeader<T>({
     columnTemplate,
     classNames,
     rowNumbers,
+    rowNumberColumnStyle,
+    selectionColumnStyle,
     someVisibleRowsSelected,
     toggleAllRowsSelection,
   } = useGridContext<T>();
@@ -128,6 +130,8 @@ export function GridHeader<T>({
             className={cx("sg-header-cell sg-selection-header", classNames.headerCell)}
             role="columnheader"
             aria-label="Select rows"
+            data-gnx-pinned="left"
+            style={selectionColumnStyle}
           >
             <input
               className="sg-selection-checkbox"
@@ -153,6 +157,8 @@ export function GridHeader<T>({
           <div
             className={cx("sg-header-cell sg-row-number-header", classNames.headerCell)}
             role="columnheader"
+            data-gnx-pinned="left"
+            style={rowNumberColumnStyle}
           >
             #
           </div>

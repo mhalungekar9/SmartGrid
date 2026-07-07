@@ -75,6 +75,8 @@ export function GridRow<T>({
     rowReorderPosition,
     classNames,
     getRowClassName,
+    selectionColumnStyle,
+    rowNumberColumnStyle,
   } = useGridContext<T>();
   const leadingColumnCount = (checkboxSelection ? 1 : 0) + (rowNumbers ? 1 : 0);
 
@@ -248,7 +250,11 @@ export function GridRow<T>({
       }}
     >
       {checkboxSelection ? (
-        <div className="sg-selection-cell">
+        <div
+          className="sg-selection-cell"
+          data-gnx-pinned="left"
+          style={selectionColumnStyle}
+        >
           <input
             className="sg-selection-checkbox"
             type="checkbox"
@@ -259,7 +265,15 @@ export function GridRow<T>({
           />
         </div>
       ) : null}
-      {rowNumbers ? <div className="sg-row-number">{rowIndex + 1}</div> : null}
+      {rowNumbers ? (
+        <div
+          className="sg-row-number"
+          data-gnx-pinned="left"
+          style={rowNumberColumnStyle}
+        >
+          {rowIndex + 1}
+        </div>
+      ) : null}
       {visibleColumns
         .map((column, columnIndex) => {
           const isFirstColumn = columnIndex === 0;

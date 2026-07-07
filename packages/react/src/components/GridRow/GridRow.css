@@ -2,6 +2,8 @@
   display: grid;
   position: relative;
   align-items: center;
+  width: 100%;
+  min-width: var(--gnx-table-min-width, max-content);
   min-height: 42px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   transition: background 120ms ease;

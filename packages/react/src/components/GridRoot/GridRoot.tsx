@@ -16,6 +16,7 @@ export function GridRoot({ children }: PropsWithChildren) {
     pasteSelection,
     moveActiveCell,
     classNames,
+    tableMinWidth,
   } = useGridContext<any>();
 
   const firstEditableColumn = columns.find(
@@ -123,6 +124,7 @@ export function GridRoot({ children }: PropsWithChildren) {
   return (
     <div
       className={cx("sg-grid-root", classNames.gridRoot)}
+      style={{ "--gnx-table-min-width": `${tableMinWidth}px` } as React.CSSProperties}
       tabIndex={0}
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}

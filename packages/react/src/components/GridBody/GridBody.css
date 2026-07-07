@@ -1,9 +1,10 @@
 .sg-body {
   display: flex;
   flex-direction: column;
-  overflow: auto;
-  flex: 1;
+  overflow: visible;
+  flex: 0 0 auto;
   background: rgba(7, 11, 24, 0.72);
   position: relative;
-  contain: layout paint;
+  min-width: var(--gnx-table-min-width, max-content);
+  width: 100%;
 }

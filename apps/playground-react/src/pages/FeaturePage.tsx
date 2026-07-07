@@ -7,6 +7,7 @@ import {
   employeeTransaction,
 } from "../data/employees";
 import { getEmployeeTreePath } from "../data/treeData";
+import { useAppTheme } from "../hooks/useTheme";
 import type { FeatureConfig } from "./pageConfigs";
 
 interface FeaturePageProps {
@@ -20,6 +21,8 @@ const defaultDetails = [
 ];
 
 export function FeaturePage({ config }: FeaturePageProps) {
+  const theme = useAppTheme();
+
   return (
     <ExampleLayout
       title={config.title}
@@ -32,6 +35,7 @@ export function FeaturePage({ config }: FeaturePageProps) {
       <GridNexa
         columns={config.columns ?? employeeColumns}
         rows={config.rows ?? employees}
+        theme={theme}
         mergedHeaders={config.mergedHeaders}
         getRowId={(row) => row.id}
         checkboxSelection={config.checkboxSelection}
