@@ -8,6 +8,7 @@ A focused examples site for GridNexa React. Each page demonstrates one grid capa
 - Sorting and filtering
 - Pagination and selection
 - Column resizing, pinning, aligned header drag/reorder, and templates
+- Configurable right-side Columns/Pivot and Filters tools with mobile/tablet examples
 - Editing, formulas, tree grid, grouping, pivoting, export, events, and performance examples
 - Light and dark themes
 

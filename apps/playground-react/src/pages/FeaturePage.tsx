@@ -47,6 +47,7 @@ export function FeaturePage({ config }: FeaturePageProps) {
         textDisplay={config.textDisplay}
         createRow={config.createRow}
         toolbar={toolbar}
+        sidePanel={config.sidePanel}
         pageSize={config.pageSize}
         quickFilterText={config.quickFilterText}
         columnFilters={config.columnFilters}

@@ -105,6 +105,16 @@ export type GridNexaFooterOptions =
         pageCount: number;
       }) => unknown;
     }>;
+export type GridNexaSidePanelActivePanel = "columns" | "pivot" | "filters";
+export type GridNexaSidePanelOptions =
+  | boolean
+  | Partial<{
+      enabled: boolean;
+      columns: boolean;
+      pivot: boolean;
+      filters: boolean;
+      defaultActivePanel: GridNexaSidePanelActivePanel | null;
+    }>;
 export interface GridNexaIconSet {
   sortAsc?: unknown;
   sortDesc?: unknown;
@@ -270,6 +280,7 @@ export interface GridOptions<T = unknown> {
   rowReorderPosition?: GridNexaRowReorderPosition;
   toolbar?: GridNexaToolbarOptions;
   footer?: GridNexaFooterOptions;
+  sidePanel?: GridNexaSidePanelOptions;
   localeText?: Record<string, string>;
   getRowId?: (row: T, index: number) => string | number;
   onGridReady?: (params: { rows: T[]; columns: Column<T>[] }) => void;

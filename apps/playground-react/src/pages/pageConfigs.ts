@@ -1,4 +1,4 @@
-import type { AdvancedFilterModel, ColumnFilterModel, Column, GridNexaToolbarOptions, MergedHeader, PivotAggregation } from "@gridnexa/react";
+import type { AdvancedFilterModel, ColumnFilterModel, Column, GridNexaSidePanelOptions, GridNexaToolbarOptions, MergedHeader, PivotAggregation } from "@gridnexa/react";
 import { compactEmployeeColumns, employeeColumns, employees, formulaEmployeeColumns, readonlyEmployeeColumns, type Employee } from "../data/employees";
 import { treeColumns, treeRows } from "../data/treeData";
 
@@ -20,6 +20,7 @@ export interface FeatureConfig {
   columnFilters?: Record<string, ColumnFilterModel>;
   advancedFilterModel?: AdvancedFilterModel;
   toolbar?: GridNexaToolbarOptions;
+  sidePanel?: GridNexaSidePanelOptions;
   height?: number | string;
   columnTools?: boolean | Record<string, boolean>;
   textDisplay?: { overflow?: "ellipsis" | "wrap" | "clip"; showTooltip?: boolean };
@@ -79,6 +80,11 @@ export const featureConfigs = {
       deleteRow: true,
       deleteSelectedRows: true,
     },
+    sidePanel: {
+      columns: true,
+      pivot: true,
+      filters: true,
+    },
     createRow: () => ({
       id: Date.now(),
       name: "New employee",
@@ -132,6 +138,11 @@ const toolbar = {
     hide: true,
     autosize: true,
     columnSelector: true
+  }}
+  sidePanel={{
+    columns: true,
+    pivot: true,
+    filters: true
   }}
   textDisplay={{ overflow: "ellipsis", showTooltip: true }}
   createRow={() => ({

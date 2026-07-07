@@ -111,10 +111,18 @@ createGridNexa(document.getElementById("grid")!, {
     sortStatus: true,
     pagination: true,
   },
+  sidePanel: {
+    columns: true,
+    pivot: true,
+    filters: true,
+    defaultActivePanel: "columns",
+  },
 });
 ```
 
 Set `toolbar`, `columnTools`, and `footer` to `false` to hide those surfaces. Use `column.tools` for per-column header control overrides and `footer.renderer` for custom footer content.
+
+Set `sidePanel` to `false` or `{ enabled: false }` to hide the right-side tools. Use `{ columns, pivot, filters, defaultActivePanel }` to choose which side tabs appear and which tab opens first.
 
 ## AI Command Support
 
@@ -144,7 +152,7 @@ When testing the React package in an external app, import `@gridnexa/react/index
 - Sorting, pagination, quick filter, column filters, external filters, and advanced filters
 - Selection, row numbers, copy/paste, find, fill, undo, and redo
 - Inline editing, formulas, CSV export, and Excel export
-- Merged headers, column resize, aligned drag reorder, hide/show, pinning, and row reorder
+- Merged headers, column resize, aligned drag reorder, hide/show, pinning, configurable side tools, and row reorder
 - Grouping, pivoting, tree data, master/detail, transactions, and server-side operation callbacks
 - AI command bar with safe action plans
 

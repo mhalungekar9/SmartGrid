@@ -242,6 +242,7 @@ export const GridNexaVue = defineComponent({
     classNames: { type: Object as PropType<GridNexaVueOptions<RowRecord>["classNames"]>, default: () => ({}) },
     toolbar: { type: [Boolean, Object] as PropType<GridNexaVueOptions<RowRecord>["toolbar"]>, default: undefined },
     footer: { type: [Boolean, Object] as PropType<GridNexaVueOptions<RowRecord>["footer"]>, default: undefined },
+    sidePanel: { type: [Boolean, Object] as PropType<GridNexaVueOptions<RowRecord>["sidePanel"]>, default: undefined },
     columnTools: { type: [Boolean, Object] as PropType<unknown>, default: undefined },
     icons: { type: Object as PropType<Record<string, unknown>>, default: undefined },
     textDisplay: { type: Object as PropType<unknown>, default: undefined },

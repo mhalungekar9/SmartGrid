@@ -12,6 +12,7 @@ import type {
   ColumnFilterModel,
   GridOptions,
   GridNexaSlotClassNames,
+  GridNexaSidePanelOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
   GridNexaCommandPlan,
@@ -262,6 +263,7 @@ export interface GridNexaExtendedProps<T>
   pageSize?: number;
   toolbar?: GridOptions<T>["toolbar"] | (Record<string, boolean> & { saveAll?: boolean });
   footer?: GridNexaFooterOptions;
+  sidePanel?: GridNexaSidePanelOptions;
   rowReorderPosition?: "left" | "right";
   height?: number | string;
   columnTools?: GridNexaColumnToolOptions;
@@ -282,6 +284,37 @@ const defaultColumnTools = {
   autosize: true,
   columnSelector: true,
 };
+
+const defaultSidePanelOptions = {
+  enabled: true,
+  columns: true,
+  pivot: true,
+  filters: true,
+  defaultActivePanel: null as "columns" | "pivot" | "filters" | null,
+};
+
+function resolveSidePanelOptions(value?: GridNexaSidePanelOptions) {
+  if (value === false) {
+    return {
+      ...defaultSidePanelOptions,
+      enabled: false,
+      columns: false,
+      pivot: false,
+      filters: false,
+    };
+  }
+
+  const next =
+    value && typeof value === "object"
+      ? { ...defaultSidePanelOptions, ...value }
+      : defaultSidePanelOptions;
+  const hasPanels = Boolean(next.columns || next.pivot || next.filters);
+
+  return {
+    ...next,
+    enabled: Boolean(next.enabled && hasPanels),
+  };
+}
 
 function resolveToolOptions(
   base?: GridNexaColumnToolOptions,
@@ -1178,6 +1211,7 @@ export function GridNexa<T>({
   rowReorderPosition = "right",
   toolbar,
   footer,
+  sidePanel,
   localeText,
   getRowId,
   onGridReady,
@@ -1238,6 +1272,19 @@ export function GridNexa<T>({
     }
   }, [unstyled]);
 
+  const sidePanelOptions = resolveSidePanelOptions(sidePanel);
+  const initialSidePanel =
+    sidePanelOptions.enabled &&
+    sidePanelOptions.defaultActivePanel === "filters" &&
+    sidePanelOptions.filters
+      ? "filters"
+      : sidePanelOptions.enabled &&
+          (sidePanelOptions.defaultActivePanel === "columns" ||
+            sidePanelOptions.defaultActivePanel === "pivot") &&
+          (sidePanelOptions.columns || sidePanelOptions.pivot)
+        ? sidePanelOptions.defaultActivePanel
+        : null;
+
   const [gridRows, setGridRows] = useState(rows);
   const [columnWidths, setColumnWidths] = useState<Array<number | undefined>>(
     () => columns.map((column) => column.width),
@@ -1260,8 +1307,12 @@ export function GridNexa<T>({
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [advancedFilterPanelOpen, setAdvancedFilterPanelOpen] =
     useState(false);
-  const [pivotPanelOpen, setPivotPanelOpen] = useState(false);
-  const [sideFilterPanelOpen, setSideFilterPanelOpen] = useState(false);
+  const [pivotPanelOpen, setPivotPanelOpen] = useState(
+    initialSidePanel === "columns" || initialSidePanel === "pivot",
+  );
+  const [sideFilterPanelOpen, setSideFilterPanelOpen] = useState(
+    initialSidePanel === "filters",
+  );
   const [pivotToolSearch, setPivotToolSearch] = useState("");
   const [filterPopoverColumnId, setFilterPopoverColumnId] = useState<
     string | null
@@ -1415,6 +1466,61 @@ export function GridNexa<T>({
   const pivotBy = runtimePivotBy;
   const pivotValueColumns = runtimePivotValueColumns;
   const pivotAggregation = runtimePivotAggregation;
+  const sidePanelColumnsVisible = sidePanelOptions.enabled && sidePanelOptions.columns;
+  const sidePanelPivotVisible = sidePanelOptions.enabled && sidePanelOptions.pivot;
+  const sidePanelFiltersVisible = sidePanelOptions.enabled && sidePanelOptions.filters;
+  const sidePanelColumnTabVisible = sidePanelColumnsVisible || sidePanelPivotVisible;
+
+  useEffect(() => {
+    if (!sidePanelOptions.enabled) {
+      setPivotPanelOpen(false);
+      setSideFilterPanelOpen(false);
+      return;
+    }
+
+    if (!sidePanelColumnTabVisible && pivotPanelOpen) {
+      setPivotPanelOpen(false);
+    }
+
+    if (!sidePanelFiltersVisible && sideFilterPanelOpen) {
+      setSideFilterPanelOpen(false);
+    }
+  }, [
+    pivotPanelOpen,
+    sideFilterPanelOpen,
+    sidePanelColumnTabVisible,
+    sidePanelFiltersVisible,
+    sidePanelOptions.enabled,
+  ]);
+
+  useEffect(() => {
+    if (!sidePanelOptions.enabled || !sidePanelOptions.defaultActivePanel) {
+      return;
+    }
+
+    if (
+      (sidePanelOptions.defaultActivePanel === "columns" ||
+        sidePanelOptions.defaultActivePanel === "pivot") &&
+      sidePanelColumnTabVisible
+    ) {
+      setSideFilterPanelOpen(false);
+      setPivotPanelOpen(true);
+      return;
+    }
+
+    if (
+      sidePanelOptions.defaultActivePanel === "filters" &&
+      sidePanelFiltersVisible
+    ) {
+      setPivotPanelOpen(false);
+      setSideFilterPanelOpen(true);
+    }
+  }, [
+    sidePanelColumnTabVisible,
+    sidePanelFiltersVisible,
+    sidePanelOptions.defaultActivePanel,
+    sidePanelOptions.enabled,
+  ]);
 
   useEffect(() => {
     if (
@@ -4615,12 +4721,21 @@ export function GridNexa<T>({
             />
           </GridRoot>
 
+          {sidePanelOptions.enabled ? (
           <aside
-            className={cx("sg-side-tools", mergedClassNames.sideTools)}
+            className={cx(
+              "sg-side-tools",
+              (pivotPanelOpen || sideFilterPanelOpen) && "sg-side-tools--open",
+              mergedClassNames.sideTools,
+            )}
+            data-gnx-active-panel={
+              pivotPanelOpen ? "columns" : sideFilterPanelOpen ? "filters" : undefined
+            }
             ref={pivotPanelRef}
             aria-label="Grid tool panel"
           >
             <div className="sg-side-tabs" aria-label="Tool tabs">
+              {sidePanelColumnTabVisible ? (
               <button
                 className={cx(
                   "sg-side-tab",
@@ -4635,8 +4750,10 @@ export function GridNexa<T>({
                 }}
               >
                 <span className="sg-side-tab-icon">▦</span>
-                <span>Columns</span>
+                <span>{sidePanelColumnsVisible ? "Columns" : "Pivot"}</span>
               </button>
+              ) : null}
+              {sidePanelFiltersVisible ? (
               <button
                 className={cx(
                   "sg-side-tab",
@@ -4653,11 +4770,13 @@ export function GridNexa<T>({
                 <span className="sg-side-tab-icon">≡</span>
                 <span>Filters</span>
               </button>
+              ) : null}
             </div>
 
-            {pivotPanelOpen ? (
+            {pivotPanelOpen && sidePanelColumnTabVisible ? (
               <div className={cx("sg-pivot-panel", mergedClassNames.panel)}>
                 <div className="sg-pivot-panel-header">
+                  {sidePanelPivotVisible ? (
                   <label className="sg-pivot-toggle">
                     <input
                       type="checkbox"
@@ -4692,6 +4811,13 @@ export function GridNexa<T>({
                     />
                     <span>Pivot Mode</span>
                   </label>
+                  ) : (
+                    <div>
+                      <strong>Columns</strong>
+                      <span>Show, hide, and search visible columns.</span>
+                    </div>
+                  )}
+                  {sidePanelPivotVisible ? (
                   <button
                     className="sg-pivot-clear"
                     type="button"
@@ -4700,8 +4826,11 @@ export function GridNexa<T>({
                   >
                     Reset
                   </button>
+                  ) : null}
                 </div>
 
+                {sidePanelColumnsVisible ? (
+                <>
                 <label className="sg-pivot-search">
                   <span>Search columns</span>
                   <input
@@ -4738,7 +4867,11 @@ export function GridNexa<T>({
                     })}
                   </div>
                 </section>
+                </>
+                ) : null}
 
+                {sidePanelPivotVisible ? (
+                <>
                 <section className="sg-pivot-section">
                   <h3>Row Groups</h3>
                   <select
@@ -4827,10 +4960,12 @@ export function GridNexa<T>({
                     </select>
                   </label>
                 </section>
+                </>
+                ) : null}
               </div>
             ) : null}
 
-            {sideFilterPanelOpen ? (
+            {sideFilterPanelOpen && sidePanelFiltersVisible ? (
               <div className={cx("sg-pivot-panel sg-side-filter-panel", mergedClassNames.panel)}>
                 <div className="sg-pivot-panel-header">
                   <div>
@@ -4986,6 +5121,7 @@ export function GridNexa<T>({
               </div>
             ) : null}
           </aside>
+          ) : null}
         </div>
 
         {cellContextMenu ? (

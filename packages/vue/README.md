@@ -108,11 +108,19 @@ const rows: Employee[] = [
       sortStatus: true,
       pagination: true
     }"
+    :side-panel="{
+      columns: true,
+      pivot: true,
+      filters: true,
+      defaultActivePanel: 'columns'
+    }"
   />
 </template>
 ```
 
 Use `columnTools` for global header-button defaults and `column.tools` for per-column overrides. Use `:footer="false"` to hide the footer, or pass `footer.renderer` for custom footer content. Custom icons can be supplied globally through `icons` and per column through `column.icons` where supported.
+
+Use `:side-panel="false"` or `:side-panel="{ enabled: false }"` to hide right-side tools. Use `columns`, `pivot`, `filters`, and `defaultActivePanel` to control which side tabs appear and which one opens first.
 
 ## AI Command Support
 
@@ -144,7 +152,7 @@ If you compare behavior with an installed React app, import `@gridnexa/react/ind
 - Sorting, pagination, quick filter, column filters, external filters, and advanced filter model
 - Selection, row numbers, copy/paste, fill, find, undo, and redo
 - Inline editing, formulas, CSV export, and Excel export
-- Merged headers, column resize, aligned reorder, hide/show, pinning, and row reorder
+- Merged headers, column resize, aligned reorder, hide/show, pinning, configurable side tools, and row reorder
 - Grouping, pivoting, tree data, master/detail, transactions, and server-side operation events
 - AI command bar with safe action plans
 

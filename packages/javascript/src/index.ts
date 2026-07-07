@@ -6,6 +6,7 @@ import type {
   GridNexaApi,
   GridNexaClassName,
   GridNexaColumnToolOptions,
+  GridNexaSidePanelOptions,
   GridNexaTextDisplayOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
@@ -67,8 +68,9 @@ function injectStyles() {
     .gnx-table th{position:sticky;top:0;z-index:1;background:var(--gnx-header-bg);color:#172033;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;user-select:none}.gnx-table th[draggable=true]{cursor:grab}.gnx-table thead tr:first-child th{background:#e8f1ff;color:#153e90;text-align:center}.gnx-table tbody tr:hover td{background:var(--gnx-row-hover)}
     .gnx-cell-ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gnx-cell-clip{white-space:nowrap;overflow:hidden;text-overflow:clip}.gnx-cell-wrap{white-space:normal;overflow-wrap:anywhere;text-overflow:clip}
     .gnx-control{width:44px;text-align:center!important}.gnx-detail{background:#f8fbff;color:#334155}.gnx-empty{padding:18px;color:#64748b}.gnx-status{display:flex;gap:18px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid rgba(30,64,175,.12);font-size:12px;font-weight:800;color:#334155;background:#fff}.gnx-find{min-height:32px;padding:0 9px;border:1px solid rgba(30,64,175,.16);border-radius:8px}.gnx-cell-active{outline:2px solid #2563eb;outline-offset:-2px;background:rgba(37,99,235,.08)!important}.gnx-cell-range{background:rgba(37,99,235,.12)!important}.gnx-row-tools{display:inline-flex;gap:3px}.gnx-row-tools button{min-height:24px;padding:0 5px;border:1px solid rgba(30,64,175,.14);border-radius:6px;background:#fff;color:#1d4ed8;font-weight:900}.gnx-drop-target{box-shadow:inset 3px 0 #2563eb}.gnx-resizer{float:right;width:7px;height:24px;cursor:col-resize;border-right:2px solid rgba(30,64,175,.24)}.gnx-group-row td{background:#eef4ff!important;color:#153e90;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.gnx-tree-toggle,.gnx-detail-toggle{min-height:24px;margin-right:6px;border:1px solid rgba(30,64,175,.18);border-radius:6px;background:#fff;color:#1d4ed8;font-weight:900}.gnx-context{position:fixed;z-index:9999;display:grid;min-width:150px;padding:6px;border:1px solid rgba(30,64,175,.16);border-radius:10px;background:#fff;box-shadow:0 18px 48px rgba(15,23,42,.18)}.gnx-context button{min-height:30px;border:0;background:transparent;text-align:left;color:#0f172a;font:inherit}.gnx-context button:hover{background:#eef4ff}
-    .gnx-side{display:flex;border-left:1px solid rgba(30,64,175,.14);background:#f8fbff}.gnx-tabs{display:grid;grid-auto-rows:116px;width:42px;background:#eef4ff}.gnx-tab{border:0;border-bottom:1px solid rgba(30,64,175,.12);background:transparent;color:#334155;cursor:pointer;font:inherit;font-weight:800;writing-mode:vertical-rl}.gnx-tab.active,.gnx-tab:hover{background:rgba(37,99,235,.1);color:#1d4ed8}
+    .gnx-side{position:relative;z-index:2;display:flex;min-width:42px;border-left:1px solid rgba(30,64,175,.14);background:#f8fbff;overflow:hidden}.gnx-tabs{display:grid;grid-auto-rows:116px;width:42px;background:#eef4ff}.gnx-tab{border:0;border-bottom:1px solid rgba(30,64,175,.12);background:transparent;color:#334155;cursor:pointer;touch-action:manipulation;font:inherit;font-weight:800;writing-mode:vertical-rl}.gnx-tab.active,.gnx-tab:hover{background:rgba(37,99,235,.1);color:#1d4ed8}
     .gnx-panel{width:min(340px,calc(100vw - 64px));max-height:620px;overflow:auto;padding:14px;background:#fff;box-shadow:-18px 0 42px rgba(15,23,42,.1)}.gnx-panel h3{margin:0 0 8px;font-size:14px}.gnx-section{display:grid;gap:8px;padding:12px 0;border-top:1px solid rgba(30,64,175,.12)}.gnx-panel label{display:flex;align-items:center;gap:8px;min-height:30px}.gnx-panel select,.gnx-panel input{min-height:34px;padding:0 9px;border:1px solid rgba(30,64,175,.16);border-radius:8px;background:#fff;color:#0f172a}.gnx-rule{display:grid;gap:8px;padding:10px;border:1px solid rgba(30,64,175,.12);border-radius:10px;background:#f8fbff}
+    @media(max-width:900px){.gnx-grid{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;overflow:visible}.gnx-side{width:100%;border-top:1px solid rgba(30,64,175,.14);border-left:0;overflow:visible}.gnx-tabs{grid-auto-flow:column;grid-auto-columns:minmax(96px,1fr);grid-auto-rows:auto;width:100%}.gnx-tab{min-height:42px;writing-mode:horizontal-tb}.gnx-panel{position:fixed;right:12px;bottom:64px;left:12px;z-index:10020;width:auto;max-height:min(70vh,620px);border:1px solid rgba(30,64,175,.16);border-radius:14px;box-shadow:0 24px 80px rgba(15,23,42,.32)}}
   `;
   document.head.appendChild(style);
 }
@@ -281,12 +283,30 @@ function estimateWidth(value: unknown) {
   return String(value ?? "").length * 8 + 44;
 }
 
+function resolveSidePanelOptions(value?: GridNexaSidePanelOptions) {
+  if (value === false) {
+    return { enabled: false, columns: false, pivot: false, filters: false, defaultActivePanel: null as null };
+  }
+
+  const next = {
+    enabled: true,
+    columns: true,
+    pivot: true,
+    filters: true,
+    defaultActivePanel: null as "columns" | "pivot" | "filters" | null,
+    ...(value && typeof value === "object" ? value : {}),
+  };
+  const hasPanels = Boolean(next.columns || next.pivot || next.filters);
+
+  return { ...next, enabled: Boolean(next.enabled && hasPanels) };
+}
+
 export class GridNexaGrid<T = Record<string, unknown>> {
   private options: GridNexaJavaScriptOptions<T>;
   private sortState: SortState = null;
   private selectedIds = new Set<string | number>();
   private pageIndex = 0;
-  private sideOpen = false;
+  private sideOpen: "columns" | "filters" | null = null;
   private activeCell: CellPoint | null = null;
   private rangeAnchor: CellPoint | null = null;
   private rangeEnd: CellPoint | null = null;
@@ -309,6 +329,13 @@ export class GridNexaGrid<T = Record<string, unknown>> {
 
   constructor(private readonly container: HTMLElement, options: GridNexaJavaScriptOptions<T>) {
     this.options = options;
+    const sidePanel = resolveSidePanelOptions(options.sidePanel);
+    this.sideOpen =
+      sidePanel.enabled && sidePanel.defaultActivePanel
+        ? sidePanel.defaultActivePanel === "filters"
+          ? "filters"
+          : "columns"
+        : null;
     this.columnOrder = options.columns.map((column) => column.id);
     options.columns.forEach((column) => {
       if (column.width) this.columnWidths.set(column.id, column.width);
@@ -323,6 +350,10 @@ export class GridNexaGrid<T = Record<string, unknown>> {
 
   update(options: Partial<GridNexaJavaScriptOptions<T>>) {
     this.options = { ...this.options, ...options };
+    const sidePanel = resolveSidePanelOptions(this.options.sidePanel);
+    if (!sidePanel.enabled) this.sideOpen = null;
+    if (this.sideOpen === "columns" && !sidePanel.columns && !sidePanel.pivot) this.sideOpen = null;
+    if (this.sideOpen === "filters" && !sidePanel.filters) this.sideOpen = null;
     const knownColumns = new Set(this.columnOrder);
     this.options.columns.forEach((column) => {
       if (!knownColumns.has(column.id)) this.columnOrder.push(column.id);
@@ -809,7 +840,8 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     if (toolbar) main.appendChild(toolbar);
     main.appendChild(this.renderTable(columns, displayRows));
     main.appendChild(this.renderStatus(pivot.rows.length));
-    root.append(main, this.renderSidePanel());
+    const sidePanel = this.renderSidePanel();
+    sidePanel ? root.append(main, sidePanel) : root.appendChild(main);
     if (this.contextMenu) root.appendChild(this.renderContextMenu());
     this.container.replaceChildren(root);
     this.options.onServerSideOperation?.({
@@ -1517,26 +1549,54 @@ export class GridNexaGrid<T = Record<string, unknown>> {
   }
 
   private renderSidePanel() {
+    const sidePanel = resolveSidePanelOptions(this.options.sidePanel);
+
+    if (!sidePanel.enabled) return null;
+
+    const columnTabVisible = sidePanel.columns || sidePanel.pivot;
     const side = document.createElement("aside");
     side.className = "gnx-side";
     const tabs = document.createElement("div");
     tabs.className = "gnx-tabs";
-    const tab = document.createElement("button");
-    tab.className = `gnx-tab${this.sideOpen ? " active" : ""}`;
-    tab.type = "button";
-    tab.textContent = "Columns";
-    tab.addEventListener("click", () => {
-      this.sideOpen = !this.sideOpen;
-      this.render();
-    });
-    tabs.appendChild(tab);
+
+    if (columnTabVisible) {
+      const tab = document.createElement("button");
+      tab.className = `gnx-tab${this.sideOpen === "columns" ? " active" : ""}`;
+      tab.type = "button";
+      tab.textContent = sidePanel.columns ? "Columns" : "Pivot";
+      tab.addEventListener("click", () => {
+        this.sideOpen = this.sideOpen === "columns" ? null : "columns";
+        this.render();
+      });
+      tabs.appendChild(tab);
+    }
+
+    if (sidePanel.filters) {
+      const tab = document.createElement("button");
+      tab.className = `gnx-tab${this.sideOpen === "filters" ? " active" : ""}`;
+      tab.type = "button";
+      tab.textContent = "Filters";
+      tab.addEventListener("click", () => {
+        this.sideOpen = this.sideOpen === "filters" ? null : "filters";
+        this.render();
+      });
+      tabs.appendChild(tab);
+    }
+
     side.appendChild(tabs);
     if (!this.sideOpen) return side;
     const panel = document.createElement("div");
     panel.className = "gnx-panel";
-    panel.appendChild(this.renderColumnPanel());
-    panel.appendChild(this.renderPivotPanel());
-    panel.appendChild(this.renderAdvancedPanel());
+
+    if (this.sideOpen === "columns") {
+      if (sidePanel.columns) panel.appendChild(this.renderColumnPanel());
+      if (sidePanel.pivot) panel.appendChild(this.renderPivotPanel());
+    }
+
+    if (this.sideOpen === "filters" && sidePanel.filters) {
+      panel.appendChild(this.renderAdvancedPanel());
+    }
+
     side.appendChild(panel);
     return side;
   }

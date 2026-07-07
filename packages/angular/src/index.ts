@@ -256,6 +256,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   @Input() classNames: GridNexaAngularOptions<T>["classNames"] = {};
   @Input() toolbar: GridNexaAngularOptions<T>["toolbar"] = undefined;
   @Input() footer: GridNexaAngularOptions<T>["footer"] = undefined;
+  @Input() sidePanel: GridNexaAngularOptions<T>["sidePanel"] = undefined;
   @Input() columnTools: unknown;
   @Input() icons: Record<string, unknown> | undefined;
   @Input() textDisplay: unknown;

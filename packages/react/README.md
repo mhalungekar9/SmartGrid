@@ -132,6 +132,12 @@ import "@gridnexa/react/index.css";
     sortStatus: true,
     pagination: true,
   }}
+  sidePanel={{
+    columns: true,
+    pivot: true,
+    filters: true,
+    defaultActivePanel: "columns",
+  }}
   icons={{
     sortAsc: "A+",
     sortDesc: "Z+",
@@ -148,6 +154,8 @@ import "@gridnexa/react/index.css";
 Use `columnTools` for global header-button defaults and `column.tools` for per-column overrides. Supported header tools include `sort`, `filter`, `filterPanel`, `menu`, `resize`, `pin`, `hide`, and `autosize`.
 
 Use `footer={false}` to hide the footer or pass a footer object to choose row count, selected rows, selected cell, selected range, filter count, sort status, and pagination. For full control, pass `footer={{ renderer: (state) => <YourFooter {...state} /> }}`.
+
+Use `sidePanel={false}` or `sidePanel={{ enabled: false }}` to hide the right-side tools. Use `sidePanel={{ columns, pivot, filters, defaultActivePanel }}` to show only the Columns/Pivot or Filters tab and optionally open `"columns"`, `"pivot"`, or `"filters"` by default. On mobile and tablet widths, the side tools become horizontal tabs and the open panel behaves like a bottom sheet.
 
 Custom icons can be supplied globally through `icons` or per column through `column.icons`. Missing icons fall back to GridNexa defaults.
 
@@ -202,7 +210,7 @@ Use Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS through `classNam
 - Row selection, checkbox selection, row numbers, range selection, fill handle, find, undo, and redo
 - Inline editors for text, number, date, checkbox, select, large text, and advanced select
 - Formulas, clipboard operations, CSV export, and Excel export
-- Column resize, aligned drag reorder, hide/show, pin/freeze, column menu, and merged headers
+- Column resize, aligned drag reorder, hide/show, pin/freeze, column menu, configurable side tools, and merged headers
 - Row grouping, aggregation, pivoting, tree data, master/detail, and transactions
 - Server-side operation callbacks for sorting, filtering, selection, pagination, grouping, pivoting, tree data, and transactions
 

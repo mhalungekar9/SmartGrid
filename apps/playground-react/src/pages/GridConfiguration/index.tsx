@@ -130,6 +130,60 @@ const columnToolsCode = `<GridNexa
   }}
 />`;
 
+const sidePanelCode = `<GridNexa
+  columns={columns}
+  rows={rows}
+  sidePanel={{
+    columns: true,
+    pivot: true,
+    filters: true,
+    defaultActivePanel: "columns"
+  }}
+/>`;
+
+const sidePanelDisabledCode = `<GridNexa
+  columns={columns}
+  rows={rows}
+  sidePanel={false}
+/>;
+
+<GridNexa
+  columns={columns}
+  rows={rows}
+  sidePanel={{ enabled: false }}
+/>`;
+
+const sidePanelFiltersOnlyCode = `<GridNexa
+  columns={columns}
+  rows={rows}
+  sidePanel={{
+    columns: false,
+    pivot: false,
+    filters: true,
+    defaultActivePanel: "filters"
+  }}
+/>`;
+
+const sidePanelColumnsOnlyCode = `<GridNexa
+  columns={columns}
+  rows={rows}
+  sidePanel={{
+    columns: true,
+    pivot: true,
+    filters: false,
+    defaultActivePanel: "pivot"
+  }}
+/>`;
+
+const sidePanelResponsiveCode = `<div style={{ width: 390, maxWidth: "100%" }}>
+  <GridNexa
+    columns={columns}
+    rows={rows}
+    sidePanel={{ columns: true, pivot: true, filters: true }}
+    height={320}
+  />
+</div>`;
+
 const heightCode = `<GridNexa
   columns={columns}
   rows={rows}
@@ -300,6 +354,33 @@ export function GridConfiguration() {
         <DemoCard title="Column tools" description="Use columnTools for defaults, then override individual columns with tools.">
           <GridNexa columns={customToolColumns as Column<ConfigRow>[]} rows={rows} theme={theme} columnTools={{ sort: true, filter: true, filterPanel: true, menu: true, resize: true, pin: true, hide: true, autosize: true }} />
           <CodeViewer code={columnToolsCode} />
+        </DemoCard>
+
+        <DemoCard title="Right-side tools" description="Configure the Columns/Pivot and Filters side tools globally and choose a default open panel.">
+          <GridNexa columns={columns} rows={rows} theme={theme} sidePanel={{ columns: true, pivot: true, filters: true, defaultActivePanel: "columns" }} />
+          <CodeViewer code={sidePanelCode} />
+        </DemoCard>
+
+        <DemoCard title="Disable side panel" description="Hide the entire right-side tools rail when your app provides its own column or filter controls.">
+          <GridNexa columns={columns} rows={rows} theme={theme} sidePanel={false} />
+          <CodeViewer code={sidePanelDisabledCode} />
+        </DemoCard>
+
+        <DemoCard title="Filters-only side panel" description="Show only the Filters tab and open it by default.">
+          <GridNexa columns={columns} rows={rows} theme={theme} sidePanel={{ columns: false, pivot: false, filters: true, defaultActivePanel: "filters" }} />
+          <CodeViewer code={sidePanelFiltersOnlyCode} />
+        </DemoCard>
+
+        <DemoCard title="Columns and Pivot only" description="Show column visibility and pivot controls without the side Filters tab.">
+          <GridNexa columns={columns} rows={rows} theme={theme} sidePanel={{ columns: true, pivot: true, filters: false, defaultActivePanel: "pivot" }} />
+          <CodeViewer code={sidePanelColumnsOnlyCode} />
+        </DemoCard>
+
+        <DemoCard title="Mobile and tablet side panel" description="At compact widths the side tools become horizontal tabs and the open panel behaves like a bottom sheet.">
+          <div style={{ width: 390, maxWidth: "100%" }}>
+            <GridNexa columns={columns} rows={rows} theme={theme} sidePanel={{ columns: true, pivot: true, filters: true }} height={320} />
+          </div>
+          <CodeViewer code={sidePanelResponsiveCode} />
         </DemoCard>
 
         <DemoCard title="Hide and show header buttons" description="Disable sort, filter, filter-panel, menu, resize, pin, hide, or auto-size globally or per column.">
