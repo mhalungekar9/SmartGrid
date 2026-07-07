@@ -1,5 +1,12 @@
-import { useEffect, useInsertionEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, ReactElement } from "react";
+import {
+  createElement,
+  useEffect,
+  useInsertionEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { ComponentType, CSSProperties, ReactElement, ReactNode } from "react";
 import type {
   AdvancedFilterModel,
   ColumnFilterModel,
@@ -30,9 +37,76 @@ type GridNexaRowsChangeReason =
   | "paste"
   | "clear"
   | "rowReorder"
+  | "rowAdd"
+  | "rowDelete"
+  | "rowsDelete"
   | "transaction"
   | "undo"
   | "redo";
+
+type GridNexaColumnToolOptions =
+  | boolean
+  | Partial<
+      Record<
+        | "sort"
+        | "filter"
+        | "filterPanel"
+        | "menu"
+        | "resize"
+        | "pin"
+        | "hide"
+        | "autosize"
+        | "columnSelector"
+        | (string & {}),
+        boolean
+      >
+    >;
+
+interface GridNexaTextDisplayOptions {
+  overflow?: "ellipsis" | "wrap" | "clip";
+  showTooltip?: boolean;
+}
+
+interface GridNexaIconSet {
+  [key: string]: unknown;
+}
+
+interface GridNexaApi<T> {
+  getRows: () => T[];
+  setRows: (rows: T[]) => void;
+  addRow: (row?: T) => void;
+  deleteRow: (rowIndex: number) => void;
+  deleteSelectedRows: () => void;
+  saveAll: () => void;
+}
+
+type GridNexaColumn<T> = Column<T> & {
+  tools?: GridNexaColumnToolOptions;
+  icons?: GridNexaIconSet;
+  textDisplay?: GridNexaTextDisplayOptions;
+};
+
+type GridNexaFooterOptions =
+  | boolean
+  | Partial<{
+      rowCount: boolean;
+      selectedRows: boolean;
+      selectedCell: boolean;
+      selectedRange: boolean;
+      filterCount: boolean;
+      sortStatus: boolean;
+      pagination: boolean;
+      renderer: (state: {
+        rowCountLabel: string;
+        selectedRowsLabel: string;
+        activeCellLabel: string;
+        selectedRangeLabel: string;
+        filterCountLabel: string;
+        sortStatusLabel: string;
+        pageIndex: number;
+        pageCount: number;
+      }) => ReactNode;
+    }>;
 
 interface GridNexaEventProps<T> {
   onGridReady?: (params: { rows: T[]; columns: Column<T>[] }) => void;
@@ -40,6 +114,23 @@ interface GridNexaEventProps<T> {
     rows: T[];
     previousRows: T[];
     reason: GridNexaRowsChangeReason;
+  }) => void;
+  onDataChange?: (params: {
+    rows: T[];
+    previousRows: T[];
+    reason: GridNexaRowsChangeReason;
+  }) => void;
+  onRowAdd?: (params: { row: T; rowIndex: number; rows: T[] }) => void;
+  onRowDelete?: (params: {
+    row: T;
+    rowIndex: number;
+    rows: T[];
+    remainingRows: T[];
+  }) => void;
+  onRowsDelete?: (params: {
+    rows: T[];
+    rowIndexes: number[];
+    remainingRows: T[];
   }) => void;
   onSaveAll?: (params: {
     rows: T[];
@@ -165,12 +256,117 @@ interface GridNexaEventProps<T> {
 }
 
 export interface GridNexaExtendedProps<T>
-  extends Omit<GridOptions<T>, "toolbar">,
+  extends Omit<GridOptions<T>, "toolbar" | "footer" | keyof GridNexaEventProps<T>>,
     GridNexaEventProps<T> {
   groupBy?: keyof T & string;
   pageSize?: number;
   toolbar?: GridOptions<T>["toolbar"] | (Record<string, boolean> & { saveAll?: boolean });
+  footer?: GridNexaFooterOptions;
   rowReorderPosition?: "left" | "right";
+  height?: number | string;
+  columnTools?: GridNexaColumnToolOptions;
+  icons?: GridNexaIconSet;
+  textDisplay?: GridNexaTextDisplayOptions;
+  createRow?: () => T;
+  apiRef?: { current: GridNexaApi<T> | null };
+}
+
+const defaultColumnTools = {
+  sort: true,
+  filter: true,
+  filterPanel: true,
+  menu: true,
+  resize: true,
+  pin: true,
+  hide: true,
+  autosize: true,
+  columnSelector: true,
+};
+
+function resolveToolOptions(
+  base?: GridNexaColumnToolOptions,
+  override?: GridNexaColumnToolOptions,
+) {
+  const applyOptions = (
+    current: typeof defaultColumnTools,
+    value?: GridNexaColumnToolOptions,
+  ) => {
+    if (value === undefined) {
+      return current;
+    }
+
+    if (typeof value === "boolean") {
+      return Object.fromEntries(
+        Object.keys(current).map((key) => [key, value]),
+      ) as typeof defaultColumnTools;
+    }
+
+    return { ...current, ...value };
+  };
+
+  return applyOptions(applyOptions(defaultColumnTools, base), override);
+}
+
+function clampColumnWidth(column: Column<unknown>, width: number) {
+  const minWidth = column.minWidth ?? 72;
+  const maxWidth = column.maxWidth ?? Number.POSITIVE_INFINITY;
+
+  return Math.min(maxWidth, Math.max(minWidth, Math.ceil(width)));
+}
+
+function estimateTextWidth(value: unknown) {
+  return String(value ?? "").length * 8 + 44;
+}
+
+function renderGridIcon(icon: unknown, fallback?: ReactNode) {
+  if (!icon) {
+    return fallback ?? null;
+  }
+
+  if (typeof icon === "function") {
+    return createElement(icon as ComponentType<{ size?: number }>, {
+      size: 15,
+    });
+  }
+
+  return icon as ReactNode;
+}
+
+function getAnchoredPanelStyle(
+  anchor: HTMLElement | null,
+  preferredWidth: number,
+): CSSProperties | undefined {
+  if (typeof window === "undefined" || !anchor) {
+    return undefined;
+  }
+
+  const rect = anchor.getBoundingClientRect();
+  const margin = 12;
+  const width = Math.min(preferredWidth, window.innerWidth - margin * 2);
+  const viewportLeft = Math.max(
+    margin,
+    Math.min(rect.right - width, window.innerWidth - width - margin),
+  );
+
+  return {
+    left: viewportLeft - rect.left,
+    right: "auto",
+    width,
+    maxWidth: `calc(100vw - ${margin * 2}px)`,
+  };
+}
+
+function getViewportMenuPosition(x: number, y: number, width = 220, height = 260) {
+  if (typeof window === "undefined") {
+    return { left: x, top: y };
+  }
+
+  const margin = 12;
+
+  return {
+    left: Math.max(margin, Math.min(x, window.innerWidth - width - margin)),
+    top: Math.max(margin, Math.min(y, window.innerHeight - height - margin)),
+  };
 }
 
 type SortDirection = "asc" | "desc";
@@ -939,8 +1135,14 @@ export function GridNexa<T>({
   className,
   theme = "dark",
   density = "standard",
+  height,
   unstyled = false,
   classNames = {},
+  columnTools,
+  icons = {},
+  textDisplay,
+  createRow,
+  apiRef,
   getRowClassName,
   getCellClassName,
   getHeaderClassName,
@@ -959,10 +1161,15 @@ export function GridNexa<T>({
   enableRowReorder = false,
   rowReorderPosition = "right",
   toolbar,
+  footer,
   localeText,
   getRowId,
   onGridReady,
   onRowsChange,
+  onDataChange,
+  onRowAdd,
+  onRowDelete,
+  onRowsDelete,
   onRowClick,
   onRowDoubleClick,
   onRowSelected,
@@ -1016,8 +1223,8 @@ export function GridNexa<T>({
   }, [unstyled]);
 
   const [gridRows, setGridRows] = useState(rows);
-  const [columnWidths, setColumnWidths] = useState(() =>
-    columns.map((column) => column.width ?? 150),
+  const [columnWidths, setColumnWidths] = useState<Array<number | undefined>>(
+    () => columns.map((column) => column.width),
   );
   const [sortModel, setSortModel] = useState<SortModel | null>(null);
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
@@ -1117,7 +1324,6 @@ export function GridNexa<T>({
     startWidth: number;
   } | null>(null);
   const readyEmittedRef = useRef(false);
-
   useEffect(() => {
     if (readyEmittedRef.current) {
       return;
@@ -1267,7 +1473,7 @@ export function GridNexa<T>({
     .join("|");
 
   useEffect(() => {
-    setColumnWidths(columns.map((column) => column.width ?? 150));
+    setColumnWidths(columns.map((column) => column.width));
     setSortModel(null);
     setSelectedRowIndex(null);
     setSelectedRowIds(new Set());
@@ -1347,9 +1553,7 @@ export function GridNexa<T>({
   const orderedWidths = orderedColumns.map((column, index) => {
     const originalIndex = columns.findIndex((entry) => entry.id === column.id);
 
-    return (
-      columnWidths[originalIndex] ?? column.width ?? columnWidths[index] ?? 150
-    );
+    return columnWidths[originalIndex] ?? column.width ?? columnWidths[index];
   });
 
   useEffect(() => {
@@ -1414,7 +1618,9 @@ export function GridNexa<T>({
         setRedoStack([]);
       }
 
-      onRowsChange?.({ rows: nextRows, previousRows: currentRows, reason });
+      const changeParams = { rows: nextRows, previousRows: currentRows, reason };
+      onRowsChange?.(changeParams);
+      onDataChange?.(changeParams);
 
       return nextRows;
     });
@@ -1430,11 +1636,13 @@ export function GridNexa<T>({
 
       setRedoStack((currentRedo) => [gridRows, ...currentRedo.slice(0, 19)]);
       setGridRows(previousRows);
-      onRowsChange?.({
+      const changeParams = {
         rows: previousRows,
         previousRows: gridRows,
         reason: "undo",
-      });
+      } as const;
+      onRowsChange?.(changeParams);
+      onDataChange?.(changeParams);
 
       return currentStack.slice(0, -1);
     });
@@ -1450,7 +1658,9 @@ export function GridNexa<T>({
 
       setUndoStack((currentUndo) => [...currentUndo.slice(-19), gridRows]);
       setGridRows(nextRows);
-      onRowsChange?.({ rows: nextRows, previousRows: gridRows, reason: "redo" });
+      const changeParams = { rows: nextRows, previousRows: gridRows, reason: "redo" } as const;
+      onRowsChange?.(changeParams);
+      onDataChange?.(changeParams);
 
       return currentStack.slice(1);
     });
@@ -1667,14 +1877,24 @@ export function GridNexa<T>({
       (entry) => entry.id === column.id,
     );
     const originalIndex = columns.findIndex((entry) => entry.id === column.id);
-
-    return (
+    const explicitWidth =
       dynamicColumnWidths[column.id] ??
       (orderedIndex >= 0 ? orderedWidths[orderedIndex] : undefined) ??
       (originalIndex >= 0 ? columnWidths[originalIndex] : undefined) ??
-      column.width ??
-      (index === 0 ? 180 : 140)
-    );
+      column.width;
+
+    if (explicitWidth !== undefined) {
+      return clampColumnWidth(column as Column<unknown>, explicitWidth);
+    }
+
+    const headerWidth = estimateTextWidth(column.headerName) + 72;
+    const contentWidth = tableRows.slice(0, 100).reduce((maxWidth, row) => {
+      const width = estimateTextWidth(getColumnValue(row, column));
+
+      return Math.max(maxWidth, width);
+    }, headerWidth);
+
+    return clampColumnWidth(column as Column<unknown>, contentWidth);
   });
   const selectionColumnWidth = checkboxSelection ? 44 : 0;
   const rowNumberColumnWidth = rowNumbers ? 52 : 0;
@@ -2781,23 +3001,81 @@ export function GridNexa<T>({
     ? `${tableRows.length} pivot rows from ${filteredRows.length} rows`
     : `${tableRows.length} of ${filteredRows.length} rows shown`;
   const t = (key: string, fallback: string) => localeText?.[key] ?? fallback;
-  const toolbarOptions = {
-    summary: true,
-    pagination: true,
-    quickFilter: true,
-    find: true,
-    undoRedo: true,
-    fillHandle: true,
-    filters: true,
-    advancedFilter: true,
-    columns: true,
-    exportCsv: true,
-    exportExcel: true,
-    saveAll: Boolean(onSaveAll),
-    ai: true,
+  const toolbarDefaults =
+    typeof toolbar === "object"
+      ? {
+          summary: false,
+          pagination: false,
+          quickFilter: false,
+          find: false,
+          undoRedo: false,
+          fillHandle: false,
+          fill: false,
+          filters: false,
+          advancedFilter: false,
+          columns: false,
+          columnSelector: false,
+          exportCsv: false,
+          exportExcel: false,
+          prevNextPage: false,
+          saveAll: false,
+          addRow: false,
+          deleteRow: false,
+          deleteSelectedRows: false,
+          ai: false,
+        }
+      : {
+          summary: true,
+          pagination: true,
+          quickFilter: true,
+          find: true,
+          undoRedo: true,
+          fillHandle: true,
+          fill: true,
+          filters: true,
+          advancedFilter: true,
+          columns: true,
+          columnSelector: true,
+          exportCsv: true,
+          exportExcel: true,
+          prevNextPage: true,
+          saveAll: Boolean(onSaveAll),
+          addRow: false,
+          deleteRow: false,
+          deleteSelectedRows: false,
+          ai: true,
+        };
+  const toolbarOptionsBase = {
+    ...toolbarDefaults,
     ...(typeof toolbar === "object" ? toolbar : {}),
   };
-  const toolbarVisible = toolbar !== false;
+  const toolbarOptions = {
+    ...toolbarOptionsBase,
+    pagination:
+      toolbarOptionsBase.pagination || toolbarOptionsBase.prevNextPage,
+    fillHandle: toolbarOptionsBase.fillHandle || toolbarOptionsBase.fill,
+    columns: toolbarOptionsBase.columns || toolbarOptionsBase.columnSelector,
+  };
+  const toolbarVisible =
+    toolbar !== false && Object.values(toolbarOptions).some(Boolean);
+  const footerDefaults = {
+    rowCount: true,
+    selectedRows: true,
+    selectedCell: true,
+    selectedRange: true,
+    filterCount: true,
+    sortStatus: true,
+    pagination: true,
+  };
+  const footerOptions = {
+    ...footerDefaults,
+    ...(typeof footer === "object" ? footer : {}),
+  };
+  const footerVisible =
+    footer !== false &&
+    (typeof footer === "object" && footer.renderer
+      ? true
+      : Object.values(footerOptions).some(Boolean));
   const activeColumn = activeCell ? tableColumns[activeCell.columnIndex] : null;
   const activeCellLabel =
     activeCell && activeColumn
@@ -2813,10 +3091,13 @@ export function GridNexa<T>({
     ? (cellRange.endRow - cellRange.startRow + 1) *
       (cellRange.endColumn - cellRange.startColumn + 1)
     : 0;
+  const selectedRangeLabel = rangeSize ? `${rangeSize} cells selected` : "No range";
+  const sortStatusLabel = sortModel ? `Sorted ${sortModel.direction}` : "Unsorted";
   const activeFilterCount =
     Object.values(filterModel).filter(isFilterActive).length;
   const activeAdvancedFilterCount =
     countAdvancedFilterRules(advancedFilterModel);
+  const filterCountLabel = `${activeFilterCount + activeAdvancedFilterCount} filters`;
   const pivotCandidateColumns = columns;
   const searchedPivotColumns = pivotCandidateColumns.filter((column) =>
     column.headerName.toLowerCase().includes(pivotToolSearch.toLowerCase()),
@@ -2836,6 +3117,111 @@ export function GridNexa<T>({
       reason: "toolbar",
     });
   };
+
+  const buildDefaultRow = () => {
+    if (createRow) {
+      return createRow();
+    }
+
+    return Object.fromEntries(
+      columns.map((column) => [column.field, ""]),
+    ) as T;
+  };
+
+  const addRow = (row = buildDefaultRow()) => {
+    const rowIndex = gridRows.length;
+    const nextRows = [...gridRows, row];
+
+    replaceGridRows(() => nextRows, "rowAdd");
+    onRowAdd?.({ row, rowIndex, rows: nextRows });
+  };
+
+  const deleteRowsByVisibleIndexes = (rowIndexes: number[]) => {
+    if (pivotResult.active || rowIndexes.length === 0) {
+      return;
+    }
+
+    const uniqueIndexes = Array.from(new Set(rowIndexes))
+      .filter((rowIndex) => rowIndex >= 0 && rowIndex < tableRows.length)
+      .sort((left, right) => left - right);
+    const rowsToDelete = uniqueIndexes
+      .map((rowIndex) => tableRows[rowIndex])
+      .filter((row): row is T => row !== undefined);
+
+    if (!rowsToDelete.length) {
+      return;
+    }
+
+    const sourceIndexes = new Set(
+      rowsToDelete
+        .map((rowToDelete) =>
+          gridRows.findIndex((row, index) =>
+            getRowId
+              ? getRowId(row, index) ===
+                getRowId(rowToDelete, tableRows.indexOf(rowToDelete))
+              : row === rowToDelete,
+          ),
+        )
+        .filter((rowIndex) => rowIndex >= 0),
+    );
+    const remainingRows = gridRows.filter((_, index) => !sourceIndexes.has(index));
+
+    replaceGridRows(() => remainingRows, rowsToDelete.length > 1 ? "rowsDelete" : "rowDelete");
+    setSelectedRowIds(new Set());
+    setSelectedRowIndex(null);
+
+    if (rowsToDelete.length === 1) {
+      onRowDelete?.({
+        row: rowsToDelete[0],
+        rowIndex: uniqueIndexes[0],
+        rows: rowsToDelete,
+        remainingRows,
+      });
+    } else {
+      onRowsDelete?.({
+        rows: rowsToDelete,
+        rowIndexes: uniqueIndexes,
+        remainingRows,
+      });
+    }
+  };
+
+  const deleteRow = (rowIndex: number) => {
+    deleteRowsByVisibleIndexes([rowIndex]);
+  };
+
+  const deleteSelectedRows = () => {
+    const selectedIndexes = tableRows
+      .map((row, rowIndex) =>
+        selectedRowIds.has(getRowSelectionId(row, rowIndex)) ? rowIndex : -1,
+      )
+      .filter((rowIndex) => rowIndex >= 0);
+
+    deleteRowsByVisibleIndexes(selectedIndexes);
+  };
+
+  useEffect(() => {
+    if (!apiRef) {
+      return;
+    }
+
+    const api: GridNexaApi<T> = {
+      getRows: () => gridRows,
+      setRows: (nextRows: T[]) => replaceGridRows(() => nextRows, "transaction"),
+      addRow,
+      deleteRow,
+      deleteSelectedRows,
+      saveAll: saveAllRows,
+    };
+
+    apiRef.current = api;
+
+    return () => {
+      if (apiRef.current === api) {
+        apiRef.current = null;
+      }
+    };
+  });
 
   const setColumnFilter = (
     columnId: string,
@@ -3532,6 +3918,8 @@ export function GridNexa<T>({
         columns: tableColumns,
         theme,
         classNames: mergedClassNames,
+        icons,
+        height,
         columnTemplate: template,
         tableMinWidth,
         selectedRowIndex,
@@ -3548,6 +3936,16 @@ export function GridNexa<T>({
         enableRowReorder,
         rowReorderPosition,
         getColumnStyle: (columnId: string) => tableColumnStyles[columnId] ?? {},
+        getColumnTools: (column: Column<T>) =>
+          resolveToolOptions(columnTools, (column as GridNexaColumn<T>).tools),
+        getColumnIcons: (column: Column<T>) =>
+          (column as GridNexaColumn<T>).icons ?? {},
+        getColumnTextDisplay: (column: Column<T>) => ({
+          overflow: "ellipsis",
+          showTooltip: true,
+          ...textDisplay,
+          ...(column as GridNexaColumn<T>).textDisplay,
+        }),
         selectionColumnStyle,
         rowNumberColumnStyle,
         getRowClassName: (params) => getRowClassName?.(params),
@@ -3659,7 +4057,7 @@ export function GridNexa<T>({
           ) : null}
 
           <div className={cx("sg-toolbar-actions", mergedClassNames.toolbarActions)}>
-            {toolbarOptions.pagination && pageSize && pageSize > 0 ? (
+            {false ? (
               <div className="sg-pager">
                 <button
                   className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
@@ -3667,6 +4065,7 @@ export function GridNexa<T>({
                   onClick={goToPreviousPage}
                   disabled={pageIndex === 0}
                 >
+                  {renderGridIcon(icons.pagePrevious, "‹")}
                   Prev
                 </button>
                 <span className="sg-pager-status">
@@ -3678,6 +4077,7 @@ export function GridNexa<T>({
                   onClick={goToNextPage}
                   disabled={pageIndex >= pageCount - 1}
                 >
+                  {renderGridIcon(icons.pageNext, "›")}
                   Next
                 </button>
               </div>
@@ -3721,9 +4121,10 @@ export function GridNexa<T>({
                 )
               }
               disabled={!findMatches.length}
-            >
-              Next
-            </button>
+                >
+                  {renderGridIcon(icons.find)}
+                  Next
+                </button>
             </>
             ) : null}
 
@@ -3735,6 +4136,7 @@ export function GridNexa<T>({
                   onClick={undo}
                   disabled={!undoStack.length}
                 >
+                  {renderGridIcon(icons.undo)}
                   Undo
                 </button>
                 <button
@@ -3743,6 +4145,7 @@ export function GridNexa<T>({
                   onClick={redo}
                   disabled={!redoStack.length}
                 >
+                  {renderGridIcon(icons.redo)}
                   Redo
                 </button>
               </>
@@ -3755,7 +4158,45 @@ export function GridNexa<T>({
                 onClick={fillSelection}
                 disabled={!cellRange}
               >
+                {renderGridIcon(icons.fill)}
                 Fill
+              </button>
+            ) : null}
+
+            {toolbarOptions.addRow ? (
+              <button
+                className={cx("sg-toolbar-button", mergedClassNames.button)}
+                type="button"
+                onClick={() => addRow()}
+              >
+                {renderGridIcon(icons.addRow, "+")}
+                Add row
+              </button>
+            ) : null}
+
+            {toolbarOptions.deleteRow ? (
+              <button
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                type="button"
+                onClick={() =>
+                  selectedRowIndex == null ? deleteRow(0) : deleteRow(selectedRowIndex)
+                }
+                disabled={!tableRows.length || pivotResult.active}
+              >
+                {renderGridIcon(icons.deleteRow, "-")}
+                Delete row
+              </button>
+            ) : null}
+
+            {toolbarOptions.deleteSelectedRows ? (
+              <button
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                type="button"
+                onClick={deleteSelectedRows}
+                disabled={!selectedRowIds.size || pivotResult.active}
+              >
+                {renderGridIcon(icons.deleteRow, "-")}
+                Delete selected
               </button>
             ) : null}
 
@@ -3768,6 +4209,7 @@ export function GridNexa<T>({
                 aria-expanded={filterPanelOpen}
                 aria-haspopup="menu"
               >
+                {renderGridIcon(icons.filter)}
                 Filters
               </button>
 
@@ -3777,6 +4219,7 @@ export function GridNexa<T>({
                     "sg-column-chooser-panel sg-column-chooser-panel--align-end sg-filter-panel",
                     mergedClassNames.panel,
                   )}
+                  style={getAnchoredPanelStyle(filterPanelRef.current, 720)}
                   role="menu"
                   aria-label="Column filters"
                 >
@@ -3931,6 +4374,7 @@ export function GridNexa<T>({
                 aria-expanded={advancedFilterPanelOpen}
                 aria-haspopup="menu"
               >
+                {renderGridIcon(icons.advancedFilter)}
                 Advanced
                 {activeAdvancedFilterCount ? ` (${activeAdvancedFilterCount})` : ""}
               </button>
@@ -3941,6 +4385,7 @@ export function GridNexa<T>({
                     "sg-column-chooser-panel sg-column-chooser-panel--align-end sg-advanced-filter-panel",
                     mergedClassNames.panel,
                   )}
+                  style={getAnchoredPanelStyle(advancedFilterPanelRef.current, 860)}
                   role="menu"
                   aria-label="Advanced filter builder"
                 >
@@ -3985,12 +4430,17 @@ export function GridNexa<T>({
                 aria-expanded={columnChooserOpen}
                 aria-haspopup="menu"
               >
+                {renderGridIcon(icons.columns)}
                 Columns
               </button>
 
               {columnChooserOpen ? (
                 <div
-                  className={cx("sg-column-chooser-panel", mergedClassNames.panel)}
+                  className={cx(
+                    "sg-column-chooser-panel sg-column-chooser-panel--align-end",
+                    mergedClassNames.panel,
+                  )}
+                  style={getAnchoredPanelStyle(chooserRef.current, 320)}
                   role="menu"
                   aria-label="Column chooser"
                 >
@@ -4027,6 +4477,7 @@ export function GridNexa<T>({
               onClick={saveAllRows}
               disabled={!onSaveAll}
             >
+              {renderGridIcon(icons.saveAll)}
               Save all
             </button>
             ) : null}
@@ -4037,6 +4488,7 @@ export function GridNexa<T>({
               type="button"
               onClick={exportVisibleRowsToCsv}
             >
+              {renderGridIcon(icons.exportCsv)}
               Export CSV
             </button>
             ) : null}
@@ -4047,6 +4499,7 @@ export function GridNexa<T>({
               type="button"
               onClick={exportVisibleRowsToExcel}
             >
+              {renderGridIcon(icons.exportExcel)}
               Export Excel
             </button>
             ) : null}
@@ -4512,10 +4965,7 @@ export function GridNexa<T>({
           <div
             className="sg-context-menu"
             role="menu"
-            style={{
-              left: cellContextMenu.x,
-              top: cellContextMenu.y,
-            }}
+            style={getViewportMenuPosition(cellContextMenu.x, cellContextMenu.y)}
             onClick={(event) => event.stopPropagation()}
           >
             <button
@@ -4558,18 +5008,56 @@ export function GridNexa<T>({
           </div>
         ) : null}
 
+        {footerVisible ? (
         <div className={cx("sg-status-bar", mergedClassNames.statusBar)} role="status">
-          <span>{rowCountLabel}</span>
-          <span>{selectedRowsLabel}</span>
-          <span>{activeCellLabel}</span>
-          <span>{rangeSize ? `${rangeSize} cells selected` : "No range"}</span>
-          <span>
-            {activeFilterCount + activeAdvancedFilterCount} filters
-          </span>
-          <span>
-            {sortModel ? `Sorted ${sortModel.direction}` : "Unsorted"}
-          </span>
+          {typeof footer === "object" && footer.renderer ? (
+            footer.renderer({
+              rowCountLabel,
+              selectedRowsLabel,
+              activeCellLabel,
+              selectedRangeLabel,
+              filterCountLabel,
+              sortStatusLabel,
+              pageIndex,
+              pageCount,
+            })
+          ) : (
+          <>
+          {footerOptions.rowCount ? <span>{rowCountLabel}</span> : null}
+          {footerOptions.selectedRows ? <span>{selectedRowsLabel}</span> : null}
+          {footerOptions.selectedCell ? <span>{activeCellLabel}</span> : null}
+          {footerOptions.selectedRange ? <span>{selectedRangeLabel}</span> : null}
+          {footerOptions.filterCount ? <span>{filterCountLabel}</span> : null}
+          {footerOptions.sortStatus ? <span>{sortStatusLabel}</span> : null}
+          {footerOptions.pagination && toolbarOptions.pagination && pageSize && pageSize > 0 ? (
+            <div className="sg-pager sg-pager--footer" aria-label="Pagination">
+              <button
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                type="button"
+                onClick={goToPreviousPage}
+                disabled={pageIndex === 0}
+              >
+                {renderGridIcon(icons.pagePrevious, "‹")}
+                Prev
+              </button>
+              <span className="sg-pager-status">
+                Page {pageIndex + 1} of {pageCount}
+              </span>
+              <button
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                type="button"
+                onClick={goToNextPage}
+                disabled={pageIndex >= pageCount - 1}
+              >
+                {renderGridIcon(icons.pageNext, "›")}
+                Next
+              </button>
+            </div>
+          ) : null}
+          </>
+          )}
         </div>
+        ) : null}
       </div>
     </GridContext.Provider>
   );

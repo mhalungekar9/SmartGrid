@@ -42,6 +42,28 @@
   overflow: auto;
   min-width: 0;
   width: 100%;
+  max-height: 100%;
+  scrollbar-color: var(--gnx-scrollbar-thumb, #94a3b8) var(--gnx-scrollbar-track, transparent);
+}
+
+.sg-cell[data-text-overflow="ellipsis"] {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sg-cell[data-text-overflow="clip"] {
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
+.sg-cell[data-text-overflow="wrap"] {
+  min-height: auto;
+  align-items: flex-start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  padding-top: 10px;
+  padding-bottom: 10px;
 }
 
 .sg-header {
@@ -116,6 +138,18 @@
   color: rgba(226, 232, 240, 0.74);
   font-size: 0.78rem;
   font-weight: 700;
+}
+
+.sg-status-bar .sg-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.sg-status-bar .sg-pager-status {
+  min-height: 32px;
+  color: inherit;
 }
 
 .sg-status-bar span {
@@ -357,8 +391,14 @@
   position: relative;
 }
 
+.sg-toolbar {
+  position: relative;
+  overflow: visible;
+}
+
 .sg-column-chooser-panel {
   position: absolute;
+  top: calc(100% + 8px);
   z-index: 40;
   min-width: 220px;
   padding: 10px;

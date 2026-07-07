@@ -23,6 +23,7 @@ import { RemoteData } from "../pages/RemoteData";
 import { Export } from "../pages/Export";
 import { Theme } from "../pages/Theme";
 import { StylingConfiguration } from "../pages/StylingConfiguration";
+import { GridConfiguration } from "../pages/GridConfiguration";
 import { Events } from "../pages/Events";
 import { Performance } from "../pages/Performance";
 
@@ -76,6 +77,7 @@ export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
     title: "Design",
     items: [
       { path: "/docs/theme", label: "Theme", icon: "bi-palette", component: Theme },
+      { path: "/docs/grid-configuration", label: "Grid Config", icon: "bi-sliders", component: GridConfiguration },
       { path: "/docs/styling-configuration", label: "Styling Config", icon: "bi-brush", component: StylingConfiguration },
     ],
   },

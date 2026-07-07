@@ -15,11 +15,22 @@ export function cx(...values: GridNexaClassName[]): string {
     .join(" ");
 }
 
+export interface GridNexaIconSet {
+  [key: string]: unknown;
+}
+
+export interface GridNexaTextDisplayOptions {
+  overflow?: "ellipsis" | "wrap" | "clip";
+  showTooltip?: boolean;
+}
+
 export interface GridContextValue<T> {
   rows: T[];
   columns: Column<T>[];
   theme: GridNexaTheme;
   classNames: GridNexaSlotClassNames;
+  icons: GridNexaIconSet;
+  height?: number | string;
   columnTemplate: string;
   tableMinWidth: number;
   selectedRowIndex: number | null;
@@ -36,6 +47,9 @@ export interface GridContextValue<T> {
   enableRowReorder: boolean;
   rowReorderPosition: GridNexaRowReorderPosition;
   getColumnStyle: (columnId: string) => CSSProperties;
+  getColumnTools: (column: Column<T>) => Record<string, boolean>;
+  getColumnIcons: (column: Column<T>) => GridNexaIconSet;
+  getColumnTextDisplay: (column: Column<T>) => GridNexaTextDisplayOptions;
   selectionColumnStyle: CSSProperties | undefined;
   rowNumberColumnStyle: CSSProperties | undefined;
   getRowClassName: (params: {

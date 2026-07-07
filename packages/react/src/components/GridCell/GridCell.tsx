@@ -57,6 +57,7 @@ export function GridCell<T>({
     selectedRowIds,
     getRowSelectionId,
     getCellClassName,
+    getColumnTextDisplay,
     emitCellClick,
     emitCellDoubleClick,
   } = useGridContext<T>();
@@ -120,6 +121,11 @@ export function GridCell<T>({
       : columnStyle.right !== undefined
         ? "right"
         : undefined);
+  const textDisplay = getColumnTextDisplay(column);
+  const tooltipText =
+    textDisplay.overflow === "ellipsis" && textDisplay.showTooltip !== false
+      ? String(value ?? "")
+      : undefined;
 
   if (isEditing) {
     const commonEditorProps = {
@@ -262,6 +268,8 @@ export function GridCell<T>({
         getCellClassName({ value, row, rowIndex, column, columnIndex, selected: isSelected }),
       )}
       data-gnx-pinned={pinnedSide}
+      data-text-overflow={textDisplay.overflow ?? "ellipsis"}
+      title={tooltipText}
       style={columnStyle}
       tabIndex={column.editable ? 0 : -1}
       onClick={(event) => {

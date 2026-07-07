@@ -19,6 +19,26 @@
   font-size: 0.94rem;
 }
 
+.sg-cell[data-text-overflow="ellipsis"] {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.sg-cell[data-text-overflow="clip"] {
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
+.sg-cell[data-text-overflow="wrap"] {
+  min-height: auto;
+  align-items: flex-start;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-overflow: clip;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
 .sg-cell--range {
   background: rgba(59, 130, 246, 0.12);
 }

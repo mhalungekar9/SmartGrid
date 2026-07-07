@@ -1,5 +1,6 @@
 import type { Column } from "@gridnexa/core";
 import type { ColumnFilterModel } from "@gridnexa/core";
+import { createElement, type ComponentType, type ReactNode } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Popover from "@radix-ui/react-popover";
 import {
@@ -17,6 +18,20 @@ import {
 } from "lucide-react";
 import "./GridHeaderCell.css";
 import { cx, useGridContext } from "../../context/GridContext";
+
+function renderIcon(icon: unknown, fallback: ReactNode) {
+  if (!icon) {
+    return fallback;
+  }
+
+  if (typeof icon === "function") {
+    return createElement(icon as ComponentType<{ size?: number }>, {
+      size: 15,
+    });
+  }
+
+  return icon as ReactNode;
+}
 
 interface Props<T> {
   column: Column<T>;
@@ -77,8 +92,10 @@ export function GridHeaderCell<T>({
   onPinColumn,
   onHideColumn,
 }: Props<T>) {
-  const { classNames, getColumnStyle, getHeaderClassName, theme } =
+  const { classNames, getColumnStyle, getHeaderClassName, getColumnTools, getColumnIcons, icons, theme } =
     useGridContext<T>();
+  const tools = getColumnTools(column);
+  const columnIcons = { ...icons, ...getColumnIcons(column) };
   const popupThemeClass = `sg-popup-theme-${theme}`;
   const selectedSetValues = (filter?.values ?? []).map(String);
   const toggleSetFilterValue = (value: string) => {
@@ -121,7 +138,7 @@ export function GridHeaderCell<T>({
         getHeaderClassName({ column, columnIndex }),
       )}
       role="columnheader"
-      draggable
+      draggable={tools.menu}
       aria-sort={
         sortDirection
           ? sortDirection === "asc"
@@ -132,6 +149,11 @@ export function GridHeaderCell<T>({
       data-gnx-pinned={pinnedSide}
       style={columnStyle}
       onDragStart={(event) => {
+        if (!tools.menu) {
+          event.preventDefault();
+          return;
+        }
+
         const target = event.target as HTMLElement | null;
 
         if (target?.closest("button, input, select, textarea, .sg-resize-handle")) {
@@ -161,6 +183,7 @@ export function GridHeaderCell<T>({
       <span className="sg-header-label">{column.headerName}</span>
 
       <div className="sg-header-actions">
+        {tools.sort ? (
         <button
           className="sg-header-icon-button"
           type="button"
@@ -172,13 +195,13 @@ export function GridHeaderCell<T>({
           }}
           disabled={column.sortable === false}
         >
-          {sortDirection === "desc" ? (
-            <ArrowDownAZ size={15} strokeWidth={2} />
-          ) : (
-            <ArrowUpAZ size={15} strokeWidth={2} />
-          )}
+          {sortDirection === "desc"
+            ? renderIcon(columnIcons.sortDesc, <ArrowDownAZ size={15} strokeWidth={2} />)
+            : renderIcon(columnIcons.sortAsc, <ArrowUpAZ size={15} strokeWidth={2} />)}
         </button>
+        ) : null}
 
+        {tools.filter ? (
         <Popover.Root
           open={filterOpen}
           onOpenChange={(open) => {
@@ -198,7 +221,7 @@ export function GridHeaderCell<T>({
               onClick={(event) => event.stopPropagation()}
               disabled={column.filterable === false}
             >
-              <Filter size={15} strokeWidth={2} />
+              {renderIcon(columnIcons.filter, <Filter size={15} strokeWidth={2} />)}
             </button>
           </Popover.Trigger>
 
@@ -209,15 +232,17 @@ export function GridHeaderCell<T>({
                 popupThemeClass,
               )}
               align="end"
+              alignOffset={0}
               side="bottom"
               sideOffset={8}
+              avoidCollisions
               collisionPadding={12}
               onClick={(event) => event.stopPropagation()}
               onInteractOutside={() => onFilterOpenChange(column.id, false)}
               onEscapeKeyDown={() => onFilterOpenChange(column.id, false)}
             >
               <div className="sg-column-filter-title">
-                <SlidersHorizontal size={15} />
+                {renderIcon(columnIcons.columnTools, <SlidersHorizontal size={15} />)}
                 <span>{column.headerName}</span>
               </div>
 
@@ -314,7 +339,9 @@ export function GridHeaderCell<T>({
             </Popover.Content>
           </Popover.Portal>
         </Popover.Root>
+        ) : null}
 
+        {tools.filterPanel ? (
         <button
           className="sg-header-icon-button"
           type="button"
@@ -326,9 +353,11 @@ export function GridHeaderCell<T>({
           }}
           disabled={column.filterable === false}
         >
-          <SlidersHorizontal size={15} strokeWidth={2} />
+          {renderIcon(columnIcons.columnTools, <SlidersHorizontal size={15} strokeWidth={2} />)}
         </button>
+        ) : null}
 
+        {tools.menu ? (
         <DropdownMenu.Root
           modal={false}
           open={menuOpen}
@@ -342,7 +371,7 @@ export function GridHeaderCell<T>({
               aria-label={`Column menu: ${column.headerName}`}
               onClick={(event) => event.stopPropagation()}
             >
-              <MoreVertical size={15} strokeWidth={2.2} />
+              {renderIcon(columnIcons.menu, <MoreVertical size={15} strokeWidth={2.2} />)}
             </button>
           </DropdownMenu.Trigger>
 
@@ -350,90 +379,115 @@ export function GridHeaderCell<T>({
             <DropdownMenu.Content
               className={cx("sg-header-menu", popupThemeClass)}
               align="end"
+              alignOffset={0}
               side="bottom"
               sideOffset={8}
+              avoidCollisions
               collisionPadding={12}
               onClick={(event) => event.stopPropagation()}
             >
+              {tools.sort ? (
+              <>
               <DropdownMenu.Item
                 className="sg-header-menu-item"
                 onSelect={() => onSortDirection(column.id, "asc")}
+                disabled={column.sortable === false}
               >
-                <ArrowUpAZ size={15} />
+                {renderIcon(columnIcons.sortAsc, <ArrowUpAZ size={15} />)}
                 <span>Sort ascending</span>
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 className="sg-header-menu-item"
                 onSelect={() => onSortDirection(column.id, "desc")}
+                disabled={column.sortable === false}
               >
-                <ArrowDownAZ size={15} />
+                {renderIcon(columnIcons.sortDesc, <ArrowDownAZ size={15} />)}
                 <span>Sort descending</span>
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 className="sg-header-menu-item"
                 onSelect={() => onSortDirection(column.id, null)}
               >
-                <X size={15} />
+                {renderIcon(columnIcons.clear, <X size={15} />)}
                 <span>Clear sort</span>
               </DropdownMenu.Item>
               <DropdownMenu.Separator className="sg-header-menu-divider" />
+              </>
+              ) : null}
+              {tools.filterPanel ? (
               <DropdownMenu.Item
                 className="sg-header-menu-item"
                 onSelect={() => onOpenFilters(column.id)}
+                disabled={column.filterable === false}
               >
-                <SlidersHorizontal size={15} />
+                {renderIcon(columnIcons.columnTools, <SlidersHorizontal size={15} />)}
                 <span>{hasFilter ? "Edit filter" : "Filter column"}</span>
               </DropdownMenu.Item>
+              ) : null}
+              {tools.filter ? (
               <DropdownMenu.Item
                 className="sg-header-menu-item"
                 disabled={!hasFilter}
                 onSelect={() => onClearFilter(column.id)}
               >
-                <Filter size={15} />
+                {renderIcon(columnIcons.filter, <Filter size={15} />)}
                 <span>Clear filter</span>
               </DropdownMenu.Item>
+              ) : null}
+              {(tools.filter || tools.filterPanel) ? (
               <DropdownMenu.Separator className="sg-header-menu-divider" />
+              ) : null}
+              {tools.pin ? (
+              <>
               <DropdownMenu.Item
                 className="sg-header-menu-item"
                 onSelect={() => onPinColumn(column.id, "left")}
               >
-                <ChevronsLeft size={15} />
+                {renderIcon(columnIcons.pinLeft, <ChevronsLeft size={15} />)}
                 <span>Pin left</span>
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 className="sg-header-menu-item"
                 onSelect={() => onPinColumn(column.id, "right")}
               >
-                <ChevronsRight size={15} />
+                {renderIcon(columnIcons.pinRight, <ChevronsRight size={15} />)}
                 <span>Pin right</span>
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 className="sg-header-menu-item"
                 onSelect={() => onPinColumn(column.id, null)}
               >
-                <PinOff size={15} />
+                {renderIcon(columnIcons.unpin, <PinOff size={15} />)}
                 <span>Unpin</span>
               </DropdownMenu.Item>
               <DropdownMenu.Separator className="sg-header-menu-divider" />
+              </>
+              ) : null}
+              {tools.autosize ? (
               <DropdownMenu.Item
                 className="sg-header-menu-item"
                 onSelect={() => onAutoSize(column.id)}
               >
-                <Maximize2 size={15} />
+                {renderIcon(columnIcons.autoSize, <Maximize2 size={15} />)}
                 <span>Auto-size</span>
               </DropdownMenu.Item>
+              ) : null}
+              {tools.hide ? (
               <DropdownMenu.Item
                 className="sg-header-menu-item"
                 onSelect={() => onHideColumn(column.id)}
               >
-                <EyeOff size={15} />
+                {renderIcon(columnIcons.hideColumn, <EyeOff size={15} />)}
                 <span>Hide column</span>
               </DropdownMenu.Item>
+              ) : null}
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
+        ) : null}
       </div>
 
+      {tools.resize ? (
       <div
         className="sg-resize-handle"
         onPointerDown={(event) => {
@@ -447,6 +501,7 @@ export function GridHeaderCell<T>({
           onAutoSize(column.id);
         }}
       />
+      ) : null}
     </div>
   );
 }

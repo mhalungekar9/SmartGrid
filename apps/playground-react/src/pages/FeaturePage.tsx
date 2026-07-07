@@ -22,6 +22,7 @@ const defaultDetails = [
 
 export function FeaturePage({ config }: FeaturePageProps) {
   const theme = useAppTheme();
+  const toolbar = config.toolbar ?? false;
 
   return (
     <ExampleLayout
@@ -41,7 +42,11 @@ export function FeaturePage({ config }: FeaturePageProps) {
         checkboxSelection={config.checkboxSelection}
         rowNumbers={config.rowNumbers}
         enableRowReorder={config.enableRowReorder}
-        toolbar={config.cellEvents ? { saveAll: true } : undefined}
+        height={config.height}
+        columnTools={config.columnTools}
+        textDisplay={config.textDisplay}
+        createRow={config.createRow}
+        toolbar={toolbar}
         pageSize={config.pageSize}
         quickFilterText={config.quickFilterText}
         columnFilters={config.columnFilters}
@@ -87,8 +92,29 @@ export function FeaturePage({ config }: FeaturePageProps) {
             ? (event) => console.info("Row order changed", event)
             : undefined
         }
+        onRowAdd={
+          config.createRow
+            ? (event) => console.info("Row added", event)
+            : undefined
+        }
+        onRowDelete={
+          config.createRow
+            ? (event) => console.info("Row deleted", event)
+            : undefined
+        }
+        onRowsDelete={
+          config.createRow
+            ? (event) => console.info("Rows deleted", event)
+            : undefined
+        }
+        onDataChange={
+          config.createRow
+            ? (event) => console.info("Data changed", event)
+            : undefined
+        }
         onSaveAll={
-          config.cellEvents
+          config.cellEvents ||
+          (typeof config.toolbar === "object" && config.toolbar.saveAll)
             ? (event) => console.info("Save all requested", event)
             : undefined
         }

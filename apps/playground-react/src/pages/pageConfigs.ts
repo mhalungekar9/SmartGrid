@@ -1,4 +1,4 @@
-import type { AdvancedFilterModel, ColumnFilterModel, Column, MergedHeader, PivotAggregation } from "@gridnexa/react";
+import type { AdvancedFilterModel, ColumnFilterModel, Column, GridNexaToolbarOptions, MergedHeader, PivotAggregation } from "@gridnexa/react";
 import { compactEmployeeColumns, employeeColumns, employees, formulaEmployeeColumns, readonlyEmployeeColumns, type Employee } from "../data/employees";
 import { treeColumns, treeRows } from "../data/treeData";
 
@@ -19,6 +19,11 @@ export interface FeatureConfig {
   quickFilterText?: string;
   columnFilters?: Record<string, ColumnFilterModel>;
   advancedFilterModel?: AdvancedFilterModel;
+  toolbar?: GridNexaToolbarOptions;
+  height?: number | string;
+  columnTools?: boolean | Record<string, boolean>;
+  textDisplay?: { overflow?: "ellipsis" | "wrap" | "clip"; showTooltip?: boolean };
+  createRow?: () => Employee;
   groupBy?: keyof Employee & string;
   pivotBy?: keyof Employee & string;
   pivotValueColumns?: Array<keyof Employee & string>;
@@ -35,12 +40,114 @@ export const featureConfigs = {
     title: "Basic Grid",
     subtitle: "Foundation",
     overview: "Render typed rows and columns with sorting, filtering metadata, pinned columns, and value formatting.",
-    notes: ["typed columns", "value formatter", "pinned score"],
-    columns: compactEmployeeColumns,
-    code: `<GridNexa
+    notes: ["all toolbar tools", "column tools", "add/delete rows", "scrollbar", "ellipsis tooltip"],
+    columns: compactEmployeeColumns.map((column) =>
+      column.id === "name"
+        ? { ...column, width: undefined, minWidth: 180, textDisplay: { overflow: "ellipsis", showTooltip: true } }
+        : column,
+    ),
+    checkboxSelection: true,
+    rowNumbers: true,
+    enableRowReorder: true,
+    height: 420,
+    columnTools: {
+      sort: true,
+      filter: true,
+      filterPanel: true,
+      menu: true,
+      resize: true,
+      pin: true,
+      hide: true,
+      autosize: true,
+      columnSelector: true,
+    },
+    textDisplay: { overflow: "ellipsis", showTooltip: true },
+    toolbar: {
+      saveAll: true,
+      undoRedo: true,
+      filters: true,
+      advancedFilter: true,
+      columnSelector: true,
+      quickFilter: true,
+      exportCsv: true,
+      exportExcel: true,
+      prevNextPage: true,
+      find: true,
+      columns: true,
+      fill: true,
+      addRow: true,
+      deleteRow: true,
+      deleteSelectedRows: true,
+    },
+    createRow: () => ({
+      id: Date.now(),
+      name: "New employee",
+      age: 0,
+      department: "Operations",
+      city: "London",
+      hired: new Date().toISOString().slice(0, 10),
+      region: "EMEA",
+      active: true,
+      score: 0,
+      manager: "Unassigned",
+      adjustedScore: "=score * 1.05",
+    }),
+    code: `const toolbar = {
+  saveAll: true,
+  undoRedo: true,
+  filters: true,
+  advancedFilter: true,
+  columnSelector: true,
+  quickFilter: true,
+  exportCsv: true,
+  exportExcel: true,
+  prevNextPage: true,
+  find: true,
+  columns: true,
+  fill: true,
+  addRow: true,
+  deleteRow: true,
+  deleteSelectedRows: true,
+};
+
+<GridNexa
   columns={columns}
   rows={rows}
   getRowId={(row) => row.id}
+  height={420}
+  checkboxSelection
+  rowNumbers
+  enableRowReorder
+  toolbar={toolbar}
+  columnTools={{
+    sort: true,
+    filter: true,
+    filterPanel: true,
+    menu: true,
+    resize: true,
+    pin: true,
+    hide: true,
+    autosize: true,
+    columnSelector: true
+  }}
+  textDisplay={{ overflow: "ellipsis", showTooltip: true }}
+  createRow={() => ({
+    id: Date.now(),
+    name: "New employee",
+    age: 0,
+    department: "Operations",
+    city: "London",
+    hired: new Date().toISOString().slice(0, 10),
+    region: "EMEA",
+    active: true,
+    score: 0,
+    manager: "Unassigned",
+    adjustedScore: "=score * 1.05"
+  })}
+  onRowAdd={(event) => console.info("Row added", event)}
+  onRowDelete={(event) => console.info("Row deleted", event)}
+  onRowsDelete={(event) => console.info("Rows deleted", event)}
+  onDataChange={(event) => console.info("Data changed", event)}
 />`,
   },
   sorting: {
@@ -68,6 +175,12 @@ export const featureConfigs = {
       "The advancedFilterModel prop is serializable, so you can save it, restore it, or send it to a server.",
     ],
     quickFilterText: "engineering",
+    toolbar: {
+      summary: true,
+      quickFilter: true,
+      filters: true,
+      advancedFilter: true,
+    },
     columnFilters: {
       score: { type: "number", operator: "gte", value: 85 },
     },
@@ -133,6 +246,10 @@ export const featureConfigs = {
     notes: ["pageSize", "toolbar pager", "row numbers"],
     pageSize: 4,
     rowNumbers: true,
+    toolbar: {
+      summary: true,
+      pagination: true,
+    },
     code: `<GridNexa
   columns={columns}
   rows={rows}
@@ -147,6 +264,11 @@ export const featureConfigs = {
     notes: ["checkboxSelection", "select all", "getRowId"],
     checkboxSelection: true,
     rowNumbers: true,
+    toolbar: {
+      summary: true,
+      exportCsv: true,
+      exportExcel: true,
+    },
     code: `<GridNexa
   columns={columns}
   rows={rows}
@@ -578,6 +700,15 @@ export function ThemedGrid() {
     enableRowReorder: true,
     cellEvents: true,
     serverEvents: true,
+    toolbar: {
+      summary: true,
+      filters: true,
+      advancedFilter: true,
+      columns: true,
+      exportCsv: true,
+      exportExcel: true,
+      saveAll: true,
+    },
     code: `<GridNexa
   columns={columns}
   rows={rows}

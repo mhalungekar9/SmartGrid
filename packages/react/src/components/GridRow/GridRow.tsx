@@ -1,9 +1,23 @@
-import type { ReactNode } from "react";
+import { createElement, type ComponentType, type ReactNode } from "react";
 import { cx, useGridContext } from "../../context/GridContext";
 import type { Column } from "@gridnexa/core";
 import { GridCell } from "../GridCell/GridCell";
 
 import "./GridRow.css";
+
+function renderIcon(icon: unknown, fallback: ReactNode) {
+  if (!icon) {
+    return fallback;
+  }
+
+  if (typeof icon === "function") {
+    return createElement(icon as ComponentType<{ size?: number }>, {
+      size: 14,
+    });
+  }
+
+  return icon as ReactNode;
+}
 
 type DataRow<T> = {
   kind: "data";
@@ -77,6 +91,7 @@ export function GridRow<T>({
     getRowClassName,
     selectionColumnStyle,
     rowNumberColumnStyle,
+    icons,
   } = useGridContext<T>();
   const leadingColumnCount = (checkboxSelection ? 1 : 0) + (rowNumbers ? 1 : 0);
 
@@ -105,7 +120,7 @@ export function GridRow<T>({
             }}
           >
             <span className="sg-group-toggle" aria-hidden="true">
-              {isPivot ? "Pivot" : "v"}
+              {isPivot ? "Pivot" : renderIcon(icons.treeCollapse, "v")}
             </span>
             <span>{item.label}</span>
             <span className="sg-group-count">{item.count} rows</span>
@@ -291,7 +306,9 @@ export function GridRow<T>({
                   onToggleTreeNode(dataItem.treeKey!);
                 }}
               >
-                {dataItem.expanded ? "v" : ">"}
+                {dataItem.expanded
+                  ? renderIcon(icons.treeCollapse, "v")
+                  : renderIcon(icons.treeExpand, ">")}
               </button>
             ) : dataItem.depth ? (
               <span
@@ -332,7 +349,7 @@ export function GridRow<T>({
                       onToggleDetailRow(rowIndex);
                     }}
                   >
-                    +
+                    {renderIcon(icons.detailExpand, "+")}
                   </button>
                 ) : undefined
               }

@@ -10,6 +10,27 @@ export type GridNexaClassName =
 
 export type ColumnFilterKind = "text" | "number" | "date" | "set" | "multi";
 
+export type GridNexaColumnToolName =
+  | "sort"
+  | "filter"
+  | "filterPanel"
+  | "menu"
+  | "resize"
+  | "pin"
+  | "hide"
+  | "autosize"
+  | "columnSelector"
+  | (string & {});
+
+export type GridNexaColumnToolOptions =
+  | boolean
+  | Partial<Record<GridNexaColumnToolName, boolean>>;
+
+export interface GridNexaTextDisplayOptions {
+  overflow?: "ellipsis" | "wrap" | "clip";
+  showTooltip?: boolean;
+}
+
 export type ColumnEditorKind =
   | "text"
   | "number"
@@ -75,6 +96,12 @@ export interface Column<T = unknown> {
   sortable?: boolean;
 
   filterable?: boolean;
+
+  tools?: GridNexaColumnToolOptions;
+
+  icons?: Record<string, unknown>;
+
+  textDisplay?: GridNexaTextDisplayOptions;
 
   filter?: ColumnFilterKind | ColumnFilterOptions<T>;
 

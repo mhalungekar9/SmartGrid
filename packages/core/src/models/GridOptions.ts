@@ -1,4 +1,9 @@
-import { Column, type GridNexaClassName } from "./Column";
+import {
+  Column,
+  type GridNexaClassName,
+  type GridNexaColumnToolOptions,
+  type GridNexaTextDisplayOptions,
+} from "./Column";
 import type { GridNexaAiOptions } from "../types/GridCommand";
 
 export type ColumnFilterOperator =
@@ -65,14 +70,76 @@ export type GridNexaToolbarOptions =
       find: boolean;
       undoRedo: boolean;
       fillHandle: boolean;
+      fill: boolean;
       filters: boolean;
       advancedFilter: boolean;
       columns: boolean;
+      columnSelector: boolean;
       exportCsv: boolean;
       exportExcel: boolean;
+      prevNextPage: boolean;
       saveAll: boolean;
+      addRow: boolean;
+      deleteRow: boolean;
+      deleteSelectedRows: boolean;
       ai: boolean;
     }>;
+export type GridNexaFooterOptions =
+  | boolean
+  | Partial<{
+      rowCount: boolean;
+      selectedRows: boolean;
+      selectedCell: boolean;
+      selectedRange: boolean;
+      filterCount: boolean;
+      sortStatus: boolean;
+      pagination: boolean;
+      renderer: (state: {
+        rowCountLabel: string;
+        selectedRowsLabel: string;
+        activeCellLabel: string;
+        selectedRangeLabel: string;
+        filterCountLabel: string;
+        sortStatusLabel: string;
+        pageIndex: number;
+        pageCount: number;
+      }) => unknown;
+    }>;
+export interface GridNexaIconSet {
+  sortAsc?: unknown;
+  sortDesc?: unknown;
+  filter?: unknown;
+  menu?: unknown;
+  columnTools?: unknown;
+  resize?: unknown;
+  pinLeft?: unknown;
+  pinRight?: unknown;
+  unpin?: unknown;
+  hideColumn?: unknown;
+  autoSize?: unknown;
+  clear?: unknown;
+  treeExpand?: unknown;
+  treeCollapse?: unknown;
+  detailExpand?: unknown;
+  detailCollapse?: unknown;
+  checkboxChecked?: unknown;
+  checkboxUnchecked?: unknown;
+  checkboxIndeterminate?: unknown;
+  pagePrevious?: unknown;
+  pageNext?: unknown;
+  addRow?: unknown;
+  deleteRow?: unknown;
+  exportCsv?: unknown;
+  exportExcel?: unknown;
+  saveAll?: unknown;
+  undo?: unknown;
+  redo?: unknown;
+  fill?: unknown;
+  columns?: unknown;
+  advancedFilter?: unknown;
+  quickFilter?: unknown;
+  find?: unknown;
+}
 export type GridNexaSlotClassNames = Partial<{
   shell: GridNexaClassName;
   toolbar: GridNexaClassName;
@@ -131,9 +198,21 @@ export type GridNexaRowsChangeReason =
   | "paste"
   | "clear"
   | "rowReorder"
+  | "rowAdd"
+  | "rowDelete"
+  | "rowsDelete"
   | "transaction"
   | "undo"
   | "redo";
+
+export interface GridNexaApi<T = unknown> {
+  getRows: () => T[];
+  setRows: (rows: T[]) => void;
+  addRow: (row?: T) => void;
+  deleteRow: (rowIndex: number) => void;
+  deleteSelectedRows: () => void;
+  saveAll: () => void;
+}
 
 export interface GridNexaCellPosition {
   rowIndex: number;
@@ -153,8 +232,14 @@ export interface GridOptions<T = unknown> {
   className?: string;
   theme?: GridNexaTheme;
   density?: GridNexaDensity;
+  height?: number | string;
   unstyled?: boolean;
   classNames?: GridNexaSlotClassNames;
+  columnTools?: GridNexaColumnToolOptions;
+  icons?: GridNexaIconSet;
+  textDisplay?: GridNexaTextDisplayOptions;
+  createRow?: () => T;
+  apiRef?: { current: GridNexaApi<T> | null };
   getRowClassName?: (params: {
     row: T;
     rowIndex: number;
@@ -184,6 +269,7 @@ export interface GridOptions<T = unknown> {
   enableRowReorder?: boolean;
   rowReorderPosition?: GridNexaRowReorderPosition;
   toolbar?: GridNexaToolbarOptions;
+  footer?: GridNexaFooterOptions;
   localeText?: Record<string, string>;
   getRowId?: (row: T, index: number) => string | number;
   onGridReady?: (params: { rows: T[]; columns: Column<T>[] }) => void;
@@ -191,6 +277,23 @@ export interface GridOptions<T = unknown> {
     rows: T[];
     previousRows: T[];
     reason: GridNexaRowsChangeReason;
+  }) => void;
+  onDataChange?: (params: {
+    rows: T[];
+    previousRows: T[];
+    reason: GridNexaRowsChangeReason;
+  }) => void;
+  onRowAdd?: (params: { row: T; rowIndex: number; rows: T[] }) => void;
+  onRowDelete?: (params: {
+    row: T;
+    rowIndex: number;
+    rows: T[];
+    remainingRows: T[];
+  }) => void;
+  onRowsDelete?: (params: {
+    rows: T[];
+    rowIndexes: number[];
+    remainingRows: T[];
   }) => void;
   onSaveAll?: (params: {
     rows: T[];
