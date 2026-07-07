@@ -1,6 +1,6 @@
 {
   "name": "@gridnexa/angular",
-  "version": "0.0.10",
+  "version": "0.1.0",
   "description": "Enterprise Angular data grid for modern UI apps with Excel-like filtering, editing, formulas, grouping, pivoting, export, and native Angular UX.",
   "type": "module",
   "main": "./dist/index.js",
