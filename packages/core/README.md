@@ -40,6 +40,11 @@ npm install @gridnexa/javascript
 - `MergedHeader`
 - `GridTransaction`
 - `ServerSideOperationState`
+- `GridNexaToolbarOptions`
+- `GridNexaFooterOptions`
+- `GridNexaColumnToolOptions`
+- `GridNexaIconSet`
+- `GridNexaApi`
 - `PivotAggregation`
 - `GridNexaAiRequest`
 - `GridNexaCommandPlan`
@@ -69,6 +74,15 @@ export async function gridAiProvider(
 ```
 
 GridNexa AI actions are explicit and allow-listed. Providers return JSON plans; the grid decides how to apply them.
+
+## Shared Configuration Contracts
+
+Core includes the typed contracts used by all framework packages:
+
+- `columnTools` controls header buttons globally, with per-column overrides through `column.tools`.
+- `footer` controls row count, selected rows, selected cell, selected range, filter count, sort status, pagination, or a custom renderer.
+- `icons` provides global icon replacement, while `column.icons` can override icons for a specific column.
+- `toolbar` enables or hides quick filter, find, filters, advanced filter, columns, exports, add/delete rows, undo/redo, fill, and save-all tools.
 
 ## Framework Packages
 

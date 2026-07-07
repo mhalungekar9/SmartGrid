@@ -74,6 +74,70 @@ export function App() {
 
 GridNexa ships with runtime styles, so the grid looks usable immediately. You can still import `@gridnexa/react/dist/index.css` for extracted CSS workflows or pass `unstyled` when your design system owns every rule.
 
+## Toolbar, Header Tools, Footer, And Icons
+
+```tsx
+<GridNexa
+  columns={[
+    {
+      id: "name",
+      field: "name",
+      headerName: "Name",
+      tools: { filter: false, filterPanel: false },
+      icons: { menu: "..." },
+    },
+  ]}
+  rows={rows}
+  toolbar={{
+    quickFilter: true,
+    find: true,
+    filters: true,
+    advancedFilter: true,
+    columns: true,
+    addRow: true,
+    deleteRow: true,
+    deleteSelectedRows: true,
+    exportCsv: true,
+    exportExcel: true,
+  }}
+  columnTools={{
+    sort: true,
+    filter: true,
+    filterPanel: true,
+    menu: true,
+    resize: true,
+    pin: true,
+    hide: true,
+    autosize: true,
+  }}
+  footer={{
+    rowCount: true,
+    selectedRows: true,
+    selectedCell: true,
+    selectedRange: true,
+    filterCount: true,
+    sortStatus: true,
+    pagination: true,
+  }}
+  icons={{
+    sortAsc: "A+",
+    sortDesc: "Z+",
+    filter: "F",
+    menu: "...",
+    pagePrevious: "<",
+    pageNext: ">",
+    addRow: "+",
+    deleteRow: "-",
+  }}
+/>
+```
+
+Use `columnTools` for global header-button defaults and `column.tools` for per-column overrides. Supported header tools include `sort`, `filter`, `filterPanel`, `menu`, `resize`, `pin`, `hide`, and `autosize`.
+
+Use `footer={false}` to hide the footer or pass a footer object to choose row count, selected rows, selected cell, selected range, filter count, sort status, and pagination. For full control, pass `footer={{ renderer: (state) => <YourFooter {...state} /> }}`.
+
+Custom icons can be supplied globally through `icons` or per column through `column.icons`. Missing icons fall back to GridNexa defaults.
+
 ## AI Command Support
 
 ```tsx

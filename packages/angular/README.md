@@ -87,6 +87,46 @@ export class AppComponent {
 }
 ```
 
+## Toolbar, Header Tools, Footer, And Icons
+
+```html
+<grid-nexa
+  [columns]="columns"
+  [rows]="rows"
+  [toolbar]="{
+    quickFilter: true,
+    find: true,
+    filters: true,
+    advancedFilter: true,
+    columns: true,
+    addRow: true,
+    deleteRow: true,
+    deleteSelectedRows: true
+  }"
+  [columnTools]="{
+    sort: true,
+    filter: true,
+    filterPanel: true,
+    menu: true,
+    resize: true,
+    pin: true,
+    hide: true,
+    autosize: true
+  }"
+  [footer]="{
+    rowCount: true,
+    selectedRows: true,
+    selectedCell: true,
+    selectedRange: true,
+    filterCount: true,
+    sortStatus: true,
+    pagination: true
+  }"
+/>
+```
+
+Use `columnTools` for global header-button defaults and `column.tools` for per-column overrides. Use `[footer]="false"` to hide the footer, or pass `footer.renderer` for a custom footer. Custom icons can be supplied through `icons` and per-column `icons` values where supported.
+
 ## AI Command Support
 
 ```html

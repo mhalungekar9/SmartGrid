@@ -68,6 +68,54 @@ const grid = createGridNexa<Employee>(document.getElementById("grid")!, {
 grid.update({ quickFilterText: "finance" });
 ```
 
+## Toolbar, Header Tools, Footer, And Icons
+
+```ts
+createGridNexa(document.getElementById("grid")!, {
+  columns: [
+    {
+      id: "name",
+      field: "name",
+      headerName: "Name",
+      tools: { filter: false, filterPanel: false },
+      icons: { menu: "..." },
+    },
+  ],
+  rows,
+  toolbar: {
+    quickFilter: true,
+    find: true,
+    filters: true,
+    advancedFilter: true,
+    columns: true,
+    addRow: true,
+    deleteRow: true,
+    deleteSelectedRows: true,
+  },
+  columnTools: {
+    sort: true,
+    filter: true,
+    filterPanel: true,
+    menu: true,
+    resize: true,
+    pin: true,
+    hide: true,
+    autosize: true,
+  },
+  footer: {
+    rowCount: true,
+    selectedRows: true,
+    selectedCell: true,
+    selectedRange: true,
+    filterCount: true,
+    sortStatus: true,
+    pagination: true,
+  },
+});
+```
+
+Set `toolbar`, `columnTools`, and `footer` to `false` to hide those surfaces. Use `column.tools` for per-column header control overrides and `footer.renderer` for custom footer content.
+
 ## AI Command Support
 
 ```ts

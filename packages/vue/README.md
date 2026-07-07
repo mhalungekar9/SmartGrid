@@ -72,6 +72,48 @@ const rows: Employee[] = [
 </template>
 ```
 
+## Toolbar, Header Tools, Footer, And Icons
+
+```vue
+<template>
+  <GridNexaVue
+    :columns="columns"
+    :rows="rows"
+    :toolbar="{
+      quickFilter: true,
+      find: true,
+      filters: true,
+      advancedFilter: true,
+      columns: true,
+      addRow: true,
+      deleteRow: true,
+      deleteSelectedRows: true
+    }"
+    :column-tools="{
+      sort: true,
+      filter: true,
+      filterPanel: true,
+      menu: true,
+      resize: true,
+      pin: true,
+      hide: true,
+      autosize: true
+    }"
+    :footer="{
+      rowCount: true,
+      selectedRows: true,
+      selectedCell: true,
+      selectedRange: true,
+      filterCount: true,
+      sortStatus: true,
+      pagination: true
+    }"
+  />
+</template>
+```
+
+Use `columnTools` for global header-button defaults and `column.tools` for per-column overrides. Use `:footer="false"` to hide the footer, or pass `footer.renderer` for custom footer content. Custom icons can be supplied globally through `icons` and per column through `column.icons` where supported.
+
 ## AI Command Support
 
 ```vue
