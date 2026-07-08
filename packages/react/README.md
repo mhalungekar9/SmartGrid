@@ -182,7 +182,9 @@ Presets provide sensible defaults for common product screens without taking away
 />
 ```
 
-`stateStorage` persists practical saved-view state such as column order, widths, hidden columns, pinned columns, filters, and sort state. Use `persist` to choose slices: `"columns"`, `"filters"`, `"sort"`, `"pagination"`, and `"sidePanel"`.
+`stateStorage` persists grid UI state only: column order, widths, hidden columns, pinned columns, filters, sorting, pagination, and side-panel state. It does not store row data. Use `persist` to choose slices: `"columns"`, `"filters"`, `"sort"`, `"pagination"`, and `"sidePanel"`.
+
+Saved views always include a registered `Default View`. Switching back to it restores the original grid UI state from mount time. Saving a view with the same name updates that view in place, and column width changes stay scoped to the active saved view until you explicitly save.
 
 ```tsx
 <GridNexa

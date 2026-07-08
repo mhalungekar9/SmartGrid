@@ -676,7 +676,7 @@ textarea {
 
 .example-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(340px, 0.6fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
   gap: 18px;
   align-items: start;
 }
@@ -1204,6 +1204,16 @@ textarea {
 .sg-toolbar-button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+.sg-toolbar-button:not(.sg-toolbar-button--ghost),
+.sg-ai-command .sg-toolbar-button:not(:disabled) {
+  color: #ffffff;
+}
+
+.sg-ai-command .sg-toolbar-button--ghost,
+.sg-saved-views .sg-toolbar-button--ghost {
+  color: var(--app-text);
 }
 
 .sg-ai-command {

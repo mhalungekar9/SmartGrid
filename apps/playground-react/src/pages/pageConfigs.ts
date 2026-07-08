@@ -606,9 +606,11 @@ const rows = [
   virtualScrolling: {
     title: "Virtual Scrolling",
     subtitle: "Large lists",
-    overview: "The body renders only the visible row window with overscan, keeping scrolling responsive.",
-    notes: ["virtual body", "overscan", "stable height"],
-    rows: Array.from({ length: 160 }, (_, index) => ({
+    overview: "Use a fixed grid height for production scrolling so the header and body stay aligned inside one scroll container. A row-window virtualizer can be layered on this contract without changing the public API.",
+    notes: ["height={420}", "stable getRowId", "aligned header/body scroll"],
+    height: 420,
+    fillWidth: true,
+    rows: Array.from({ length: 1000 }, (_, index) => ({
       ...employees[index % employees.length],
       id: index + 1,
       name: `${employees[index % employees.length].name} ${index + 1}`,
@@ -618,6 +620,8 @@ const rows = [
   columns={columns}
   rows={largeRows}
   getRowId={(row) => row.id}
+  height={420}
+  fillWidth
 />`,
   },
   remoteData: {

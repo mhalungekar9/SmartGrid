@@ -496,11 +496,16 @@ type PersistedGridState = {
   };
 };
 
+const DEFAULT_VIEW_ID = "__gridnexa_default_view__";
+const DEFAULT_VIEW_NAME = "Default View";
+
 type SavedGridView = {
   id: string;
   name: string;
   state: PersistedGridState;
   createdAt: number;
+  updatedAt?: number;
+  system?: boolean;
 };
 
 type ChangeReviewEntry = {
@@ -557,7 +562,8 @@ function readSavedGridViews(key: string): SavedGridView[] {
   if (!key || typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(key);
-    return raw ? JSON.parse(raw) as SavedGridView[] : [];
+    const parsed = raw ? JSON.parse(raw) as SavedGridView[] : [];
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
@@ -1553,8 +1559,16 @@ export function GridNexa<T>({
     enableUndoRedoProp ?? presetDefaults.enableUndoRedo ?? true;
   const enableRowReorder =
     enableRowReorderProp ?? presetDefaults.enableRowReorder ?? false;
-  const toolbar = toolbarProp ?? presetDefaults.toolbar;
-  const footer = footerProp ?? presetDefaults.footer;
+  const toolbar = toolbarProp === false
+    ? false
+    : typeof presetDefaults.toolbar === "object" || typeof toolbarProp === "object"
+      ? { ...(typeof presetDefaults.toolbar === "object" ? presetDefaults.toolbar : {}), ...(typeof toolbarProp === "object" ? toolbarProp : {}) }
+      : toolbarProp ?? presetDefaults.toolbar;
+  const footer = footerProp === false
+    ? false
+    : typeof presetDefaults.footer === "object" || typeof footerProp === "object"
+      ? { ...(typeof presetDefaults.footer === "object" ? presetDefaults.footer : {}), ...(typeof footerProp === "object" ? footerProp : {}) }
+      : footerProp ?? presetDefaults.footer;
   const sidePanel = sidePanelProp ?? presetDefaults.sidePanel;
   const fillWidth = fillWidthProp ?? presetDefaults.fillWidth;
   const pageSize = pageSizeProp ?? presetDefaults.pageSize;
@@ -1630,8 +1644,10 @@ export function GridNexa<T>({
   const [savedViews, setSavedViews] = useState<SavedGridView[]>(() =>
     savedViewsOptions.enabled ? readSavedGridViews(savedViewsOptions.key) : [],
   );
-  const [activeViewId, setActiveViewId] = useState("");
+  const [activeViewId, setActiveViewId] = useState(DEFAULT_VIEW_ID);
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [commandPaletteStyle, setCommandPaletteStyle] =
+    useState<CSSProperties>();
   const [commandQuery, setCommandQuery] = useState("");
   const [changeReviewOpen, setChangeReviewOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(
@@ -1736,6 +1752,9 @@ export function GridNexa<T>({
   const [dynamicColumnWidths, setDynamicColumnWidths] = useState<
     Record<string, number>
   >({});
+  const commandButtonRef = useRef<HTMLButtonElement | null>(null);
+  const defaultViewStateRef = useRef<PersistedGridState | null>(null);
+  const defaultViewCreatedAtRef = useRef(Date.now());
   const filterPanelRef = useRef<HTMLDivElement | null>(null);
   const advancedFilterPanelRef = useRef<HTMLDivElement | null>(null);
   const pivotPanelRef = useRef<HTMLDivElement | null>(null);
@@ -2035,7 +2054,10 @@ export function GridNexa<T>({
       nextState.columnWidths = Object.fromEntries(
         columns.map((column, index) => [
           column.id,
-          columnWidths[index] ?? column.width ?? 150,
+          dynamicColumnWidths[column.id] ??
+            columnWidths[index] ??
+            column.width ??
+            150,
         ]),
       );
       nextState.hiddenColumnIds = Array.from(hiddenColumnIds);
@@ -2072,6 +2094,7 @@ export function GridNexa<T>({
     columnOrder,
     columnWidths,
     columns,
+    dynamicColumnWidths,
     filterModel,
     hiddenColumnIds,
     pageIndex,
@@ -3334,6 +3357,18 @@ export function GridNexa<T>({
           ? Number(editingCell.draftValue)
           : editingCell.draftValue;
 
+    if (Object.is(row[column.field], parsedValue)) {
+      onCellEditStop?.({
+        row,
+        rowIndex: editingCell.rowIndex,
+        column,
+        oldValue: row[column.field],
+        newValue: parsedValue,
+      });
+      setEditingCell(null);
+      return;
+    }
+
     replaceGridRows((currentRows) =>
       currentRows.map((entry, index) => {
         if (index !== originalIndex) {
@@ -3812,7 +3847,15 @@ export function GridNexa<T>({
   const createCurrentViewState = (): PersistedGridState => ({
     version: 1,
     columnOrder,
-    columnWidths: Object.fromEntries(tableColumns.map((column, index) => [column.id, tableWidths[index]])),
+    columnWidths: Object.fromEntries(
+      columns.map((column, index) => [
+        column.id,
+        dynamicColumnWidths[column.id] ??
+          columnWidths[index] ??
+          column.width ??
+          150,
+      ]),
+    ),
     hiddenColumnIds: Array.from(hiddenColumnIds),
     pinnedColumnIds: Object.fromEntries(
       Object.entries(pinnedColumnIds).map(([columnId, pinned]) => [columnId, pinned ?? null]),
@@ -3822,34 +3865,80 @@ export function GridNexa<T>({
     pageIndex,
     sidePanel: {
       columnsOpen: pivotPanelOpen,
-      filtersOpen: filterPanelOpen,
+      filtersOpen: sideFilterPanelOpen,
     },
   });
+  const getDefaultSavedView = (): SavedGridView => ({
+    id: DEFAULT_VIEW_ID,
+    name: DEFAULT_VIEW_NAME,
+    state: defaultViewStateRef.current ?? createCurrentViewState(),
+    createdAt: defaultViewCreatedAtRef.current,
+    system: true,
+  });
+  const getRegisteredSavedViews = () => [
+    getDefaultSavedView(),
+    ...savedViews.filter((view) => view.id !== DEFAULT_VIEW_ID && !view.system),
+  ];
   const applySavedView = (view: SavedGridView) => {
     setActiveViewId(view.id);
-    if (view.state.columnOrder) setColumnOrder(view.state.columnOrder);
-    if (view.state.hiddenColumnIds) setHiddenColumnIds(new Set(view.state.hiddenColumnIds));
-    if (view.state.pinnedColumnIds) setPinnedColumnIds(view.state.pinnedColumnIds);
-    if (view.state.filterModel) setFilterModel(view.state.filterModel);
+    setColumnOrder(view.state.columnOrder ?? columns.map((column) => column.id));
+    setColumnWidths(
+      columns.map((column, index) =>
+        view.state.columnWidths?.[column.id] ?? column.width ?? columnWidths[index],
+      ),
+    );
+    setDynamicColumnWidths({ ...(view.state.columnWidths ?? {}) });
+    setHiddenColumnIds(new Set(view.state.hiddenColumnIds ?? []));
+    setPinnedColumnIds(view.state.pinnedColumnIds ?? {});
+    setFilterModel(view.state.filterModel ?? {});
     setSortModel(view.state.sortModel ?? null);
     setPageIndex(view.state.pageIndex ?? 0);
+    setPivotPanelOpen(view.state.sidePanel?.columnsOpen ?? false);
+    setSideFilterPanelOpen(view.state.sidePanel?.filtersOpen ?? false);
+    setFilterPanelOpen(false);
   };
   const saveCurrentView = () => {
     if (!savedViewsOptions.enabled || !savedViewsOptions.allowUserViews) return;
-    const name = window.prompt("Save current view as", "My grid view");
+    const activeView = savedViews.find((view) => view.id === activeViewId && !view.system);
+    const name = window.prompt("Save current view as", activeView?.name ?? "My grid view");
     if (!name?.trim()) return;
+    const trimmedName = name.trim();
+    const now = Date.now();
+    const currentUserViews = savedViews.filter((view) => view.id !== DEFAULT_VIEW_ID && !view.system);
+    const existingView = currentUserViews.find(
+      (view) => view.id === activeView?.id || view.name.toLowerCase() === trimmedName.toLowerCase(),
+    );
+    const nextView: SavedGridView = {
+      id: existingView?.id ?? `${now}`,
+      name: trimmedName,
+      state: createCurrentViewState(),
+      createdAt: existingView?.createdAt ?? now,
+      updatedAt: now,
+    };
     const nextViews = [
-      ...savedViews.filter((view) => view.name !== name.trim()),
-      {
-        id: `${Date.now()}`,
-        name: name.trim(),
-        state: createCurrentViewState(),
-        createdAt: Date.now(),
-      },
+      getDefaultSavedView(),
+      ...currentUserViews.filter((view) => view.id !== nextView.id),
+      nextView,
     ];
     setSavedViews(nextViews);
+    setActiveViewId(nextView.id);
     writeSavedGridViews(savedViewsOptions.key, nextViews);
   };
+
+  useEffect(() => {
+    if (!savedViewsOptions.enabled) return;
+    if (!defaultViewStateRef.current) {
+      defaultViewStateRef.current = createCurrentViewState();
+    }
+
+    const currentUserViews = readSavedGridViews(savedViewsOptions.key).filter(
+      (view) => view.id !== DEFAULT_VIEW_ID && !view.system,
+    );
+    const nextViews = [getDefaultSavedView(), ...currentUserViews];
+    setSavedViews(nextViews);
+    writeSavedGridViews(savedViewsOptions.key, nextViews);
+  }, [savedViewsOptions.enabled, savedViewsOptions.key]);
+
   const saveAllRows = () => {
     if (validation && typeof validation === "object" && validation.blockSave && invalidCellCount) {
       return;
@@ -3872,6 +3961,53 @@ export function GridNexa<T>({
     { id: "review-changes", label: "Review changes", run: () => { setChangeReviewOpen(true); setCommandPaletteOpen(false); } },
     { id: "diagnostics", label: "Open diagnostics", run: () => { setDiagnosticsOpen(true); setCommandPaletteOpen(false); } },
   ].filter((command) => command.label.toLowerCase().includes(commandQuery.trim().toLowerCase()));
+
+  const updateCommandPalettePosition = () => {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const width = Math.min(620, Math.max(280, viewportWidth - 24));
+    const maxHeight = Math.min(420, viewportHeight - 24);
+    const triggerRect = commandButtonRef.current?.getBoundingClientRect();
+
+    if (!triggerRect) {
+      setCommandPaletteStyle({
+        left: Math.max(12, (viewportWidth - width) / 2),
+        top: 72,
+        width,
+        maxHeight,
+      });
+      return;
+    }
+
+    const preferredLeft = triggerRect.right - width;
+    const left = Math.min(
+      Math.max(12, preferredLeft),
+      Math.max(12, viewportWidth - width - 12),
+    );
+    const belowTop = triggerRect.bottom + 8;
+    const aboveTop = triggerRect.top - maxHeight - 8;
+    const top =
+      belowTop + maxHeight <= viewportHeight - 12
+        ? belowTop
+        : Math.max(12, aboveTop);
+
+    setCommandPaletteStyle({ left, top, width, maxHeight });
+  };
+
+  useEffect(() => {
+    if (!commandPaletteOpen) return;
+
+    updateCommandPalettePosition();
+    const onPositionChange = () => updateCommandPalettePosition();
+
+    window.addEventListener("resize", onPositionChange);
+    window.addEventListener("scroll", onPositionChange, true);
+
+    return () => {
+      window.removeEventListener("resize", onPositionChange);
+      window.removeEventListener("scroll", onPositionChange, true);
+    };
+  }, [commandPaletteOpen]);
 
   useEffect(() => {
     if (!commandPaletteEnabled) return;
@@ -4697,6 +4833,7 @@ export function GridNexa<T>({
 
   const aiEnabled = ai?.enabled ?? Boolean(ai?.provider || ai?.endpoint);
   const mergedClassNames: GridNexaSlotClassNames = classNames;
+  const registeredSavedViews = getRegisteredSavedViews();
 
   return (
     <GridContext.Provider
@@ -4856,12 +4993,11 @@ export function GridNexa<T>({
                   className={cx("sg-filter-input sg-filter-input--short", mergedClassNames.input)}
                   value={activeViewId}
                   onChange={(event) => {
-                    const view = savedViews.find((entry) => entry.id === event.target.value);
+                    const view = registeredSavedViews.find((entry) => entry.id === event.target.value);
                     if (view) applySavedView(view);
                   }}
                 >
-                  <option value="">Default view</option>
-                  {savedViews.map((view) => (
+                  {registeredSavedViews.map((view) => (
                     <option key={view.id} value={view.id}>{view.name}</option>
                   ))}
                 </select>
@@ -4874,7 +5010,7 @@ export function GridNexa<T>({
             ) : null}
 
             {commandPaletteEnabled ? (
-              <button className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)} type="button" onClick={() => setCommandPaletteOpen(true)}>
+              <button ref={commandButtonRef} className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)} type="button" onClick={() => setCommandPaletteOpen((current) => !current)}>
                 Commands
               </button>
             ) : null}
@@ -5342,7 +5478,7 @@ export function GridNexa<T>({
         ) : null}
 
         {commandPaletteOpen ? (
-          <div className="sg-product-panel sg-command-palette" role="dialog" aria-label="Command palette" onClick={(event) => event.stopPropagation()}>
+          <div className="sg-product-panel sg-command-palette" role="dialog" aria-label="Command palette" style={commandPaletteStyle} onClick={(event) => event.stopPropagation()}>
             <input
               className={cx("sg-filter-input", mergedClassNames.input)}
               autoFocus
@@ -5976,7 +6112,7 @@ export function GridNexa<T>({
           {summaryOptions.selectedRange && selectedRangeSummaryLabel ? <span>{selectedRangeSummaryLabel}</span> : null}
           {footerOptions.filterCount ? <span>{filterCountLabel}</span> : null}
           {footerOptions.sortStatus ? <span>{sortStatusLabel}</span> : null}
-          {footerOptions.pagination && toolbarOptions.pagination && pageSize && pageSize > 0 ? (
+          {footerOptions.pagination && pageSize && pageSize > 0 ? (
             <div className="sg-pager sg-pager--footer" aria-label="Pagination">
               <button
                 className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}

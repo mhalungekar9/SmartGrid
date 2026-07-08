@@ -765,7 +765,7 @@ export function GridConfiguration() {
           <CodeViewer code={presetCode} />
         </DemoCard>
 
-        <DemoCard {...sectionProps("state-persistence")} title="State persistence and saved views" description="Persist column order, widths, hidden columns, pinned columns, filters, and sort state with one localStorage key.">
+        <DemoCard {...sectionProps("state-persistence")} title="State persistence and saved views" description="Persist grid UI state only. Default View is always available, and named views store their own column order, widths, filters, sorting, pagination, and side-panel state.">
           <GridNexa
             columns={columns}
             rows={rows}
@@ -943,7 +943,7 @@ export function GridConfiguration() {
           </div>
         </DemoCard>
 
-        <DemoCard {...sectionProps("saved-views-switcher")} title="Saved views switcher" description="Save a named view from the toolbar, then switch between saved layouts without rebuilding app state by hand.">
+        <DemoCard {...sectionProps("saved-views-switcher")} title="Saved views switcher" description="Save a named view from the toolbar, update the same view by saving with the same name, or return to Default View to restore the original layout. Row data is not stored.">
           <GridNexa columns={columns} rows={rows} theme={theme} preset="admin" views={{ key: "gridnexa-view-switcher-demo" }} />
           <CodeViewer code={savedViewsCode} />
         </DemoCard>

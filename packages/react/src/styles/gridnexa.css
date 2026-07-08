@@ -94,8 +94,10 @@
 }
 
 .sg-command-palette {
-  position: relative;
-  z-index: 20;
+  position: fixed;
+  z-index: 10030;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .sg-command-list,
