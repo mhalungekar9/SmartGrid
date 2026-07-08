@@ -43,6 +43,7 @@ npm install @gridnexa/javascript
 - `GridNexaToolbarOptions`
 - `GridNexaFooterOptions`
 - `GridNexaSidePanelOptions`
+- `GridNexaFillWidthOptions`
 - `GridNexaColumnToolOptions`
 - `GridNexaIconSet`
 - `GridNexaApi`
@@ -83,6 +84,7 @@ Core includes the typed contracts used by all framework packages:
 - `columnTools` controls header buttons globally, with per-column overrides through `column.tools`.
 - `footer` controls row count, selected rows, selected cell, selected range, filter count, sort status, pagination, or a custom renderer.
 - `sidePanel` controls the right-side Columns/Pivot and Filters tools, including disabled state and default active panel.
+- `fillWidth` controls whether visible columns stop at their real total width or stretch to fill remaining container width with `flex` columns or the last visible data column.
 - `icons` provides global icon replacement, while `column.icons` can override icons for a specific column.
 - `toolbar` enables or hides quick filter, find, filters, advanced filter, columns, exports, add/delete rows, undo/redo, fill, and save-all tools.
 

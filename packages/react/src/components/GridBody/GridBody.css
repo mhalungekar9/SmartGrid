@@ -6,5 +6,5 @@
   background: rgba(7, 11, 24, 0.72);
   position: relative;
   min-width: var(--gnx-table-min-width, max-content);
-  width: 100%;
+  width: var(--gnx-table-width, var(--gnx-table-min-width, max-content));
 }

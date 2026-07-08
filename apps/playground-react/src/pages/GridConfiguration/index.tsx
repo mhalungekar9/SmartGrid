@@ -281,6 +281,48 @@ const widthCode = `<GridNexa
   rows={rows}
 />`;
 
+const fixedWidthCode = `<GridNexa
+  columns={[
+    { id: "name", field: "name", headerName: "Name", width: 170 },
+    { id: "department", field: "department", headerName: "Department", width: 170 },
+    { id: "score", field: "score", headerName: "Score", width: 110 }
+  ]}
+  rows={rows}
+  fillWidth={false}
+/>`;
+
+const fillWidthCode = `<GridNexa
+  columns={columns}
+  rows={rows}
+  fillWidth
+/>;
+
+<GridNexa
+  columns={columns}
+  rows={rows}
+  fillWidth={{ enabled: true, mode: "flexOrLast" }}
+/>`;
+
+const flexWidthCode = `<GridNexa
+  columns={[
+    { id: "name", field: "name", headerName: "Name", width: 170 },
+    { id: "department", field: "department", headerName: "Department", flex: 1, minWidth: 180 },
+    { id: "notes", field: "notes", headerName: "Notes", flex: 2, minWidth: 220 }
+  ]}
+  rows={rows}
+  fillWidth={{ enabled: true, mode: "flex" }}
+/>`;
+
+const lastColumnFillCode = `<GridNexa
+  columns={[
+    { id: "name", field: "name", headerName: "Name", width: 170 },
+    { id: "department", field: "department", headerName: "Department", width: 170 },
+    { id: "notes", field: "notes", headerName: "Notes", minWidth: 220 }
+  ]}
+  rows={rows}
+  fillWidth={{ enabled: true, mode: "lastColumn" }}
+/>`;
+
 const textCode = `<GridNexa
   columns={[
     { id: "notes", field: "notes", headerName: "Notes", textDisplay: { overflow: "ellipsis", showTooltip: true } },
@@ -317,6 +359,21 @@ export function GridConfiguration() {
     { ...columns[0], width: 170 },
     { ...columns[3], width: 210, textDisplay: { overflow: "ellipsis", showTooltip: true } },
     { ...columns[3], id: "notesWrap", headerName: "Wrapped notes", width: 240, textDisplay: { overflow: "wrap" } },
+  ] as Column<ConfigRow>[];
+  const fixedWidthColumns = [
+    { ...columns[0], width: 170 },
+    { ...columns[1], width: 170 },
+    { ...columns[4], width: 110 },
+  ] as Column<ConfigRow>[];
+  const flexColumns = [
+    { ...columns[0], width: 170 },
+    { ...columns[1], flex: 1, minWidth: 180, width: undefined },
+    { ...columns[3], flex: 2, minWidth: 220, width: undefined },
+  ] as Column<ConfigRow>[];
+  const lastFillColumns = [
+    { ...columns[0], width: 170 },
+    { ...columns[1], width: 170 },
+    { ...columns[3], minWidth: 220, width: undefined },
   ] as Column<ConfigRow>[];
 
   return (
@@ -458,6 +515,26 @@ export function GridConfiguration() {
         <DemoCard title="Auto column width" description="Omit width to estimate from header and cell content; width, minWidth, and maxWidth remain respected.">
           <GridNexa columns={columns.map(({ width, ...column }) => column)} rows={rows} theme={theme} />
           <CodeViewer code={widthCode} />
+        </DemoCard>
+
+        <DemoCard title="Fixed columns without fake blank space" description="When fillWidth is false, the grid stops at the total real column width instead of painting a blank column.">
+          <GridNexa columns={fixedWidthColumns} rows={rows} theme={theme} fillWidth={false} />
+          <CodeViewer code={fixedWidthCode} />
+        </DemoCard>
+
+        <DemoCard title="Fill remaining width" description="Use fillWidth to let real columns occupy remaining container width.">
+          <GridNexa columns={fixedWidthColumns} rows={rows} theme={theme} fillWidth />
+          <CodeViewer code={fillWidthCode} />
+        </DemoCard>
+
+        <DemoCard title="Flex columns" description="Set column.flex values and enable fillWidth to distribute extra width across those columns.">
+          <GridNexa columns={flexColumns} rows={rows} theme={theme} fillWidth={{ enabled: true, mode: "flex" }} />
+          <CodeViewer code={flexWidthCode} />
+        </DemoCard>
+
+        <DemoCard title="Last column fills remaining width" description="Use lastColumn mode when no flex column is configured but you want the final data column to absorb empty space.">
+          <GridNexa columns={lastFillColumns} rows={rows} theme={theme} fillWidth={{ enabled: true, mode: "lastColumn" }} />
+          <CodeViewer code={lastColumnFillCode} />
         </DemoCard>
 
         <DemoCard title="Ellipsis, tooltip, wrap, and clip" description="Control large text globally with textDisplay or per column with column.textDisplay.">

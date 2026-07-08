@@ -243,6 +243,7 @@ export const GridNexaVue = defineComponent({
     toolbar: { type: [Boolean, Object] as PropType<GridNexaVueOptions<RowRecord>["toolbar"]>, default: undefined },
     footer: { type: [Boolean, Object] as PropType<GridNexaVueOptions<RowRecord>["footer"]>, default: undefined },
     sidePanel: { type: [Boolean, Object] as PropType<GridNexaVueOptions<RowRecord>["sidePanel"]>, default: undefined },
+    fillWidth: { type: [Boolean, Object] as PropType<GridNexaVueOptions<RowRecord>["fillWidth"]>, default: undefined },
     columnTools: { type: [Boolean, Object] as PropType<unknown>, default: undefined },
     icons: { type: Object as PropType<Record<string, unknown>>, default: undefined },
     textDisplay: { type: Object as PropType<unknown>, default: undefined },
@@ -883,8 +884,11 @@ export const GridNexaVue = defineComponent({
     };
 
     const renderTable = (columns: Column<RowRecord>[], rows: DisplayRow[]) => {
+      const fillWidthEnabled =
+        props.fillWidth === true ||
+        (typeof props.fillWidth === "object" && props.fillWidth?.enabled !== false);
       const table = document.createElement("table");
-      table.style.cssText = "width:100%;border-collapse:collapse";
+      table.style.cssText = `width:${fillWidthEnabled ? "100%" : "max-content"};min-width:max-content;border-collapse:collapse`;
       const thead = document.createElement("thead");
       const leading = Number(props.checkboxSelection) + Number(props.rowNumbers);
       if (props.mergedHeaders?.length) thead.appendChild(renderMergedHeaders(columns, leading));

@@ -68,7 +68,7 @@
 
 .sg-header {
   align-self: flex-start;
-  width: 100%;
+  width: var(--gnx-table-width, var(--gnx-table-min-width, max-content));
   min-width: var(--gnx-table-min-width, max-content);
 }
 
@@ -150,7 +150,7 @@
 
 .sg-body {
   min-width: var(--gnx-table-min-width, max-content);
-  width: 100%;
+  width: var(--gnx-table-width, var(--gnx-table-min-width, max-content));
   overflow: visible;
   flex: 0 0 auto;
 }
@@ -158,7 +158,7 @@
 .sg-row,
 .sg-column-header-row,
 .sg-merged-header-row {
-  width: 100%;
+  width: var(--gnx-table-width, var(--gnx-table-min-width, max-content));
   min-width: var(--gnx-table-min-width, max-content);
 }
 

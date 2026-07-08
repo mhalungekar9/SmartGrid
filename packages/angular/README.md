@@ -56,6 +56,7 @@ interface Employee {
       [pageSize]="20"
       theme="light"
       density="standard"
+      [fillWidth]="false"
       [getRowId]="getRowId"
       (rowSelectionChange)="onSelection($event)"
       (cellValueChange)="onCellValueChange($event)"
@@ -135,6 +136,22 @@ Use `columnTools` for global header-button defaults and `column.tools` for per-c
 
 Use `[sidePanel]="false"` or `[sidePanel]="{ enabled: false }"` to hide right-side tools. Use `columns`, `pivot`, `filters`, and `defaultActivePanel` to control which side tabs appear and which one opens first.
 
+## Column Width And Fill Behavior
+
+```html
+<grid-nexa
+  [columns]="[
+    { id: 'name', field: 'name', headerName: 'Name', width: 180 },
+    { id: 'department', field: 'department', headerName: 'Department', flex: 1, minWidth: 180 },
+    { id: 'notes', field: 'notes', headerName: 'Notes', flex: 2, minWidth: 240 }
+  ]"
+  [rows]="rows"
+  [fillWidth]="{ enabled: true, mode: 'flex' }"
+/>
+```
+
+When `fillWidth` is disabled, the grid stops at the total real column width instead of showing a blank fake column. Enable it to stretch real columns with `flex`, or use `mode: 'lastColumn'` to let the final visible data column fill remaining space.
+
 ## AI Command Support
 
 ```html
@@ -162,7 +179,7 @@ If you compare behavior with an installed React app, import `@gridnexa/react/ind
 - Sorting, pagination, quick filter, column filters, external filters, and advanced filter model
 - Selection, row numbers, clipboard operations, fill, find, undo, and redo
 - Inline editing, formulas, CSV export, and Excel export
-- Merged headers, column resize, aligned drag reorder, hide/show, pinning, configurable side tools, and row reorder
+- Merged headers, column resize, aligned drag reorder, hide/show, pinning, flex/fill-width columns, configurable side tools, and row reorder
 - Grouping, pivoting, tree data, master/detail, transactions, and server-side operation events
 - AI command bar with safe action plans
 

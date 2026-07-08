@@ -1,4 +1,4 @@
-import type { AdvancedFilterModel, ColumnFilterModel, Column, GridNexaSidePanelOptions, GridNexaToolbarOptions, MergedHeader, PivotAggregation } from "@gridnexa/react";
+import type { AdvancedFilterModel, ColumnFilterModel, Column, GridNexaFillWidthOptions, GridNexaSidePanelOptions, GridNexaToolbarOptions, MergedHeader, PivotAggregation } from "@gridnexa/react";
 import { compactEmployeeColumns, employeeColumns, employees, formulaEmployeeColumns, readonlyEmployeeColumns, type Employee } from "../data/employees";
 import { treeColumns, treeRows } from "../data/treeData";
 
@@ -21,6 +21,7 @@ export interface FeatureConfig {
   advancedFilterModel?: AdvancedFilterModel;
   toolbar?: GridNexaToolbarOptions;
   sidePanel?: GridNexaSidePanelOptions;
+  fillWidth?: GridNexaFillWidthOptions;
   height?: number | string;
   columnTools?: boolean | Record<string, boolean>;
   textDisplay?: { overflow?: "ellipsis" | "wrap" | "clip"; showTooltip?: boolean };

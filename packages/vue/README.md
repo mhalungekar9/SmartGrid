@@ -64,6 +64,7 @@ const rows: Employee[] = [
     enable-undo-redo
     theme="light"
     density="standard"
+    :fill-width="false"
     :page-size="20"
     :get-row-id="(row) => row.id"
     @row-selection-change="console.log"
@@ -122,6 +123,24 @@ Use `columnTools` for global header-button defaults and `column.tools` for per-c
 
 Use `:side-panel="false"` or `:side-panel="{ enabled: false }"` to hide right-side tools. Use `columns`, `pivot`, `filters`, and `defaultActivePanel` to control which side tabs appear and which one opens first.
 
+## Column Width And Fill Behavior
+
+```vue
+<template>
+  <GridNexaVue
+    :columns="[
+      { id: 'name', field: 'name', headerName: 'Name', width: 180 },
+      { id: 'department', field: 'department', headerName: 'Department', flex: 1, minWidth: 180 },
+      { id: 'notes', field: 'notes', headerName: 'Notes', flex: 2, minWidth: 240 }
+    ]"
+    :rows="rows"
+    :fill-width="{ enabled: true, mode: 'flex' }"
+  />
+</template>
+```
+
+When `fillWidth` is off, the grid stops at the total real column width instead of showing a blank fake column. Enable it to stretch real columns with `flex`, or use `mode: 'lastColumn'` to let the final visible data column fill remaining space.
+
 ## AI Command Support
 
 ```vue
@@ -152,7 +171,7 @@ If you compare behavior with an installed React app, import `@gridnexa/react/ind
 - Sorting, pagination, quick filter, column filters, external filters, and advanced filter model
 - Selection, row numbers, copy/paste, fill, find, undo, and redo
 - Inline editing, formulas, CSV export, and Excel export
-- Merged headers, column resize, aligned reorder, hide/show, pinning, configurable side tools, and row reorder
+- Merged headers, column resize, aligned reorder, hide/show, pinning, flex/fill-width columns, configurable side tools, and row reorder
 - Grouping, pivoting, tree data, master/detail, transactions, and server-side operation events
 - AI command bar with safe action plans
 

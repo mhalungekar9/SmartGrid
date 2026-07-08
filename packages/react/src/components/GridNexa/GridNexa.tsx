@@ -13,6 +13,7 @@ import type {
   GridOptions,
   GridNexaSlotClassNames,
   GridNexaSidePanelOptions,
+  GridNexaFillWidthOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
   GridNexaCommandPlan,
@@ -264,6 +265,7 @@ export interface GridNexaExtendedProps<T>
   toolbar?: GridOptions<T>["toolbar"] | (Record<string, boolean> & { saveAll?: boolean });
   footer?: GridNexaFooterOptions;
   sidePanel?: GridNexaSidePanelOptions;
+  fillWidth?: GridNexaFillWidthOptions;
   rowReorderPosition?: "left" | "right";
   height?: number | string;
   columnTools?: GridNexaColumnToolOptions;
@@ -314,6 +316,23 @@ function resolveSidePanelOptions(value?: GridNexaSidePanelOptions) {
     ...next,
     enabled: Boolean(next.enabled && hasPanels),
   };
+}
+
+const defaultFillWidthOptions = {
+  enabled: false,
+  mode: "flexOrLast" as "flex" | "lastColumn" | "flexOrLast",
+};
+
+function resolveFillWidthOptions(value?: GridNexaFillWidthOptions) {
+  if (value === true) {
+    return { ...defaultFillWidthOptions, enabled: true };
+  }
+
+  if (value === false || value === undefined) {
+    return defaultFillWidthOptions;
+  }
+
+  return { ...defaultFillWidthOptions, ...value, enabled: value.enabled ?? true };
 }
 
 function resolveToolOptions(
@@ -1212,6 +1231,7 @@ export function GridNexa<T>({
   toolbar,
   footer,
   sidePanel,
+  fillWidth,
   localeText,
   getRowId,
   onGridReady,
@@ -1273,6 +1293,7 @@ export function GridNexa<T>({
   }, [unstyled]);
 
   const sidePanelOptions = resolveSidePanelOptions(sidePanel);
+  const fillWidthOptions = resolveFillWidthOptions(fillWidth);
   const initialSidePanel =
     sidePanelOptions.enabled &&
     sidePanelOptions.defaultActivePanel === "filters" &&
@@ -2461,10 +2482,37 @@ export function GridNexa<T>({
       return renderer.getTemplate();
     }
 
+    const flexColumnIndexes = tableColumns
+      .map((column, index) => ((column.flex ?? 0) > 0 ? index : -1))
+      .filter((index) => index >= 0);
+    const shouldFillLastColumn =
+      fillWidthOptions.enabled &&
+      (fillWidthOptions.mode === "lastColumn" ||
+        (fillWidthOptions.mode === "flexOrLast" && flexColumnIndexes.length === 0));
+    const lastColumnIndex = tableColumns.length - 1;
+
     return tableColumns
-      .map((column, index) => `${tableWidths[index] ?? column.width ?? 150}px`)
+      .map((column, index) => {
+        const width = tableWidths[index] ?? column.width ?? 150;
+
+        if (!fillWidthOptions.enabled) {
+          return `${width}px`;
+        }
+
+        const flex = column.flex ?? 0;
+
+        if (flex > 0 && fillWidthOptions.mode !== "lastColumn") {
+          return `minmax(${width}px, ${flex}fr)`;
+        }
+
+        if (shouldFillLastColumn && index === lastColumnIndex) {
+          return `minmax(${width}px, 1fr)`;
+        }
+
+        return `${width}px`;
+      })
       .join(" ");
-  }, [renderer, tableColumns, tableWidths]);
+  }, [fillWidthOptions.enabled, fillWidthOptions.mode, renderer, tableColumns, tableWidths]);
   const leadingTemplate = [
     checkboxSelection ? "44px" : null,
     rowNumbers ? "52px" : null,
@@ -2474,6 +2522,9 @@ export function GridNexa<T>({
   const tableMinWidth =
     leadingPinnedOffset +
     tableWidths.reduce((total, width) => total + (width ?? 150), 0);
+  const tableWidth = fillWidthOptions.enabled
+    ? `max(100%, ${tableMinWidth}px)`
+    : `${tableMinWidth}px`;
   const template = leadingTemplate
     ? `${leadingTemplate} ${dataColumnTemplate}`
     : dataColumnTemplate;
@@ -4051,6 +4102,7 @@ export function GridNexa<T>({
         height,
         columnTemplate: template,
         tableMinWidth,
+        tableWidth,
         selectedRowIndex,
         onRowSelect: handleRowSelect,
         emitRowDoubleClick,

@@ -17,6 +17,7 @@ export function GridRoot({ children }: PropsWithChildren) {
     moveActiveCell,
     classNames,
     tableMinWidth,
+    tableWidth,
     height,
   } = useGridContext<any>();
 
@@ -128,6 +129,7 @@ export function GridRoot({ children }: PropsWithChildren) {
       style={
         {
           "--gnx-table-min-width": `${tableMinWidth}px`,
+          "--gnx-table-width": tableWidth,
           height: typeof height === "number" ? `${height}px` : height,
         } as React.CSSProperties
       }

@@ -3,7 +3,7 @@
   top: 0;
   z-index: 2;
   align-self: flex-start;
-  width: 100%;
+  width: var(--gnx-table-width, var(--gnx-table-min-width, max-content));
   min-width: var(--gnx-table-min-width, max-content);
   min-height: 48px;
   background: rgba(8, 12, 24, 0.96);
@@ -14,7 +14,7 @@
 .sg-column-header-row,
 .sg-merged-header-row {
   display: grid;
-  width: 100%;
+  width: var(--gnx-table-width, var(--gnx-table-min-width, max-content));
   min-width: var(--gnx-table-min-width, max-content);
 }
 

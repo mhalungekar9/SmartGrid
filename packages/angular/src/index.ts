@@ -257,6 +257,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   @Input() toolbar: GridNexaAngularOptions<T>["toolbar"] = undefined;
   @Input() footer: GridNexaAngularOptions<T>["footer"] = undefined;
   @Input() sidePanel: GridNexaAngularOptions<T>["sidePanel"] = undefined;
+  @Input() fillWidth: GridNexaAngularOptions<T>["fillWidth"] = undefined;
   @Input() columnTools: unknown;
   @Input() icons: Record<string, unknown> | undefined;
   @Input() textDisplay: unknown;
@@ -1019,8 +1020,11 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   }
 
   private renderTable(columns: Column<T>[], rows: Array<DisplayRow<T>>) {
+    const fillWidthEnabled =
+      this.fillWidth === true ||
+      (typeof this.fillWidth === "object" && this.fillWidth?.enabled !== false);
     const table = document.createElement("table");
-    table.style.cssText = "width:100%;border-collapse:collapse";
+    table.style.cssText = `width:${fillWidthEnabled ? "100%" : "max-content"};min-width:max-content;border-collapse:collapse`;
     const thead = document.createElement("thead");
     const leading = Number(this.checkboxSelection) + Number(this.rowNumbers);
     if (this.mergedHeaders?.length) thead.appendChild(this.renderMergedHeaders(columns, leading));

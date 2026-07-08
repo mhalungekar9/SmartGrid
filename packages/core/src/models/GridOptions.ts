@@ -115,6 +115,13 @@ export type GridNexaSidePanelOptions =
       filters: boolean;
       defaultActivePanel: GridNexaSidePanelActivePanel | null;
     }>;
+export type GridNexaFillWidthMode = "flex" | "lastColumn" | "flexOrLast";
+export type GridNexaFillWidthOptions =
+  | boolean
+  | Partial<{
+      enabled: boolean;
+      mode: GridNexaFillWidthMode;
+    }>;
 export interface GridNexaIconSet {
   sortAsc?: unknown;
   sortDesc?: unknown;
@@ -281,6 +288,7 @@ export interface GridOptions<T = unknown> {
   toolbar?: GridNexaToolbarOptions;
   footer?: GridNexaFooterOptions;
   sidePanel?: GridNexaSidePanelOptions;
+  fillWidth?: GridNexaFillWidthOptions;
   localeText?: Record<string, string>;
   getRowId?: (row: T, index: number) => string | number;
   onGridReady?: (params: { rows: T[]; columns: Column<T>[] }) => void;

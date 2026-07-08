@@ -67,6 +67,7 @@ export function App() {
       pageSize={20}
       theme="light"
       density="standard"
+      fillWidth={false}
       getRowId={(row) => row.id}
     />
   );
@@ -159,6 +160,22 @@ Use `sidePanel={false}` or `sidePanel={{ enabled: false }}` to hide the right-si
 
 Custom icons can be supplied globally through `icons` or per column through `column.icons`. Missing icons fall back to GridNexa defaults.
 
+## Column Width And Fill Behavior
+
+```tsx
+<GridNexa
+  columns={[
+    { id: "name", field: "name", headerName: "Name", width: 180 },
+    { id: "department", field: "department", headerName: "Department", flex: 1, minWidth: 180 },
+    { id: "notes", field: "notes", headerName: "Notes", flex: 2, minWidth: 240 },
+  ]}
+  rows={rows}
+  fillWidth={{ enabled: true, mode: "flex" }}
+/>
+```
+
+By default, GridNexa uses the total real column width and does not paint a fake blank column after the last visible column. Pass `fillWidth` to let real columns fill the container. Columns with `flex` share the remaining width; `fillWidth={{ enabled: true, mode: "lastColumn" }}` makes the last visible data column absorb leftover space when you prefer that behavior.
+
 ## AI Command Support
 
 ```tsx
@@ -210,7 +227,7 @@ Use Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS through `classNam
 - Row selection, checkbox selection, row numbers, range selection, fill handle, find, undo, and redo
 - Inline editors for text, number, date, checkbox, select, large text, and advanced select
 - Formulas, clipboard operations, CSV export, and Excel export
-- Column resize, aligned drag reorder, hide/show, pin/freeze, column menu, configurable side tools, and merged headers
+- Column resize, aligned drag reorder, hide/show, pin/freeze, flex/fill-width columns, column menu, configurable side tools, and merged headers
 - Row grouping, aggregation, pivoting, tree data, master/detail, and transactions
 - Server-side operation callbacks for sorting, filtering, selection, pagination, grouping, pivoting, tree data, and transactions
 

@@ -6,6 +6,7 @@ import type {
   GridNexaApi,
   GridNexaClassName,
   GridNexaColumnToolOptions,
+  GridNexaFillWidthOptions,
   GridNexaSidePanelOptions,
   GridNexaTextDisplayOptions,
   GridNexaAiRequest,
@@ -64,7 +65,7 @@ function injectStyles() {
     .gnx-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;border:1px solid rgba(30,64,175,.16);border-radius:12px;background:#fff;color:#0f172a;font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif;overflow:hidden;box-shadow:0 18px 48px rgba(15,23,42,.12);--gnx-bg:#fff;--gnx-header-bg:#f8fbff;--gnx-border:rgba(30,64,175,.16);--gnx-row-hover:rgba(37,99,235,.07);--gnx-primary:#2563eb}
     .gnx-main{min-width:0;overflow:auto}.gnx-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border-bottom:1px solid rgba(30,64,175,.12);background:#f8fbff}.gnx-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
     .gnx-button,.gnx-panel button{min-height:32px;padding:0 10px;border:1px solid rgba(30,64,175,.16);border-radius:8px;background:#fff;color:#1d4ed8;font:inherit;font-weight:800;cursor:pointer}.gnx-button:disabled{opacity:.48;cursor:not-allowed}
-    .gnx-table{width:100%;min-width:max-content;border-collapse:separate;border-spacing:0}.gnx-table th,.gnx-table td{min-height:42px;padding:10px 12px;border-right:1px solid var(--gnx-border);border-bottom:1px solid rgba(30,64,175,.1);text-align:left;white-space:nowrap}
+    .gnx-table{width:max-content;min-width:max-content;border-collapse:separate;border-spacing:0}.gnx-grid[data-gnx-fill-width=true] .gnx-table{width:100%}.gnx-table th,.gnx-table td{min-height:42px;padding:10px 12px;border-right:1px solid var(--gnx-border);border-bottom:1px solid rgba(30,64,175,.1);text-align:left;white-space:nowrap}
     .gnx-table th{position:sticky;top:0;z-index:1;background:var(--gnx-header-bg);color:#172033;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;user-select:none}.gnx-table th[draggable=true]{cursor:grab}.gnx-table thead tr:first-child th{background:#e8f1ff;color:#153e90;text-align:center}.gnx-table tbody tr:hover td{background:var(--gnx-row-hover)}
     .gnx-cell-ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gnx-cell-clip{white-space:nowrap;overflow:hidden;text-overflow:clip}.gnx-cell-wrap{white-space:normal;overflow-wrap:anywhere;text-overflow:clip}
     .gnx-control{width:44px;text-align:center!important}.gnx-detail{background:#f8fbff;color:#334155}.gnx-empty{padding:18px;color:#64748b}.gnx-status{display:flex;gap:18px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid rgba(30,64,175,.12);font-size:12px;font-weight:800;color:#334155;background:#fff}.gnx-find{min-height:32px;padding:0 9px;border:1px solid rgba(30,64,175,.16);border-radius:8px}.gnx-cell-active{outline:2px solid #2563eb;outline-offset:-2px;background:rgba(37,99,235,.08)!important}.gnx-cell-range{background:rgba(37,99,235,.12)!important}.gnx-row-tools{display:inline-flex;gap:3px}.gnx-row-tools button{min-height:24px;padding:0 5px;border:1px solid rgba(30,64,175,.14);border-radius:6px;background:#fff;color:#1d4ed8;font-weight:900}.gnx-drop-target{box-shadow:inset 3px 0 #2563eb}.gnx-resizer{float:right;width:7px;height:24px;cursor:col-resize;border-right:2px solid rgba(30,64,175,.24)}.gnx-group-row td{background:#eef4ff!important;color:#153e90;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.gnx-tree-toggle,.gnx-detail-toggle{min-height:24px;margin-right:6px;border:1px solid rgba(30,64,175,.18);border-radius:6px;background:#fff;color:#1d4ed8;font-weight:900}.gnx-context{position:fixed;z-index:9999;display:grid;min-width:150px;padding:6px;border:1px solid rgba(30,64,175,.16);border-radius:10px;background:#fff;box-shadow:0 18px 48px rgba(15,23,42,.18)}.gnx-context button{min-height:30px;border:0;background:transparent;text-align:left;color:#0f172a;font:inherit}.gnx-context button:hover{background:#eef4ff}
@@ -299,6 +300,12 @@ function resolveSidePanelOptions(value?: GridNexaSidePanelOptions) {
   const hasPanels = Boolean(next.columns || next.pivot || next.filters);
 
   return { ...next, enabled: Boolean(next.enabled && hasPanels) };
+}
+
+function resolveFillWidthOptions(value?: GridNexaFillWidthOptions) {
+  if (value === true) return { enabled: true, mode: "flexOrLast" as const };
+  if (value === false || value === undefined) return { enabled: false, mode: "flexOrLast" as const };
+  return { enabled: value.enabled ?? true, mode: value.mode ?? "flexOrLast" as const };
 }
 
 export class GridNexaGrid<T = Record<string, unknown>> {
@@ -831,6 +838,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       .join(" ");
     root.dataset.gnxTheme = this.options.theme ?? "dark";
     root.dataset.gnxDensity = this.options.density ?? "standard";
+    root.dataset.gnxFillWidth = String(resolveFillWidthOptions(this.options.fillWidth).enabled);
     if (this.options.height != null) {
       root.style.height = typeof this.options.height === "number" ? `${this.options.height}px` : this.options.height;
     }
@@ -1118,6 +1126,8 @@ export class GridNexaGrid<T = Record<string, unknown>> {
   }
 
   private renderTable(columns: Column<T>[], rows: Array<DisplayRow<T>>) {
+    const fillWidth = resolveFillWidthOptions(this.options.fillWidth);
+    const flexColumns = columns.filter((entry) => (entry.flex ?? 0) > 0);
     const table = document.createElement("table");
     table.className = "gnx-table";
     const thead = document.createElement("thead");
@@ -1136,7 +1146,14 @@ export class GridNexaGrid<T = Record<string, unknown>> {
           : column.headerClassName,
         this.options.getHeaderClassName?.({ column, columnIndex }),
       );
-      th.style.width = `${this.columnWidth(column)}px`;
+      const shouldFill =
+        fillWidth.enabled &&
+        ((column.flex ?? 0) > 0 ||
+          ((fillWidth.mode === "lastColumn" ||
+            (fillWidth.mode === "flexOrLast" && flexColumns.length === 0)) &&
+            columnIndex === columns.length - 1));
+      th.style.width = shouldFill ? "auto" : `${this.columnWidth(column)}px`;
+      th.style.minWidth = `${this.columnWidth(column)}px`;
       Object.assign(th.style, this.pinnedStyle(column, columns));
       th.draggable = Boolean(tools.menu);
       th.addEventListener("dragstart", () => {

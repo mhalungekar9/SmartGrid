@@ -62,6 +62,7 @@ const grid = createGridNexa<Employee>(document.getElementById("grid")!, {
   pageSize: 20,
   theme: "light",
   density: "standard",
+  fillWidth: false,
   getRowId: (row) => row.id,
 });
 
@@ -124,6 +125,22 @@ Set `toolbar`, `columnTools`, and `footer` to `false` to hide those surfaces. Us
 
 Set `sidePanel` to `false` or `{ enabled: false }` to hide the right-side tools. Use `{ columns, pivot, filters, defaultActivePanel }` to choose which side tabs appear and which tab opens first.
 
+## Column Width And Fill Behavior
+
+```ts
+createGridNexa(document.getElementById("grid")!, {
+  columns: [
+    { id: "name", field: "name", headerName: "Name", width: 180 },
+    { id: "department", field: "department", headerName: "Department", flex: 1, minWidth: 180 },
+    { id: "notes", field: "notes", headerName: "Notes", flex: 2, minWidth: 240 },
+  ],
+  rows,
+  fillWidth: { enabled: true, mode: "flex" },
+});
+```
+
+When `fillWidth` is not enabled, the grid stops at the total real column width so users do not see a misleading empty column after the last field. Enable `fillWidth` to distribute remaining space across `flex` columns, or use `mode: "lastColumn"` to let the final visible data column fill the container.
+
 ## AI Command Support
 
 ```ts
@@ -152,7 +169,7 @@ When testing the React package in an external app, import `@gridnexa/react/index
 - Sorting, pagination, quick filter, column filters, external filters, and advanced filters
 - Selection, row numbers, copy/paste, find, fill, undo, and redo
 - Inline editing, formulas, CSV export, and Excel export
-- Merged headers, column resize, aligned drag reorder, hide/show, pinning, configurable side tools, and row reorder
+- Merged headers, column resize, aligned drag reorder, hide/show, pinning, flex/fill-width columns, configurable side tools, and row reorder
 - Grouping, pivoting, tree data, master/detail, transactions, and server-side operation callbacks
 - AI command bar with safe action plans
 

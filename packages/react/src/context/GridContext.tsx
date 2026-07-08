@@ -33,6 +33,7 @@ export interface GridContextValue<T> {
   height?: number | string;
   columnTemplate: string;
   tableMinWidth: number;
+  tableWidth: string;
   selectedRowIndex: number | null;
   onRowSelect: (rowIndex: number) => void;
   emitRowDoubleClick: (rowIndex: number) => void;
