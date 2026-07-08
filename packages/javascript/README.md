@@ -125,6 +125,47 @@ Set `toolbar`, `columnTools`, and `footer` to `false` to hide those surfaces. Us
 
 Set `sidePanel` to `false` or `{ enabled: false }` to hide the right-side tools. Use `{ columns, pivot, filters, defaultActivePanel }` to choose which side tabs appear and which tab opens first.
 
+## Presets, Saved Views, And Overlays
+
+```ts
+createGridNexa(document.getElementById("grid")!, {
+  columns,
+  rows,
+  preset: "admin",
+});
+
+createGridNexa(document.getElementById("grid")!, {
+  columns,
+  rows,
+  preset: "spreadsheet",
+  stateStorage: {
+    key: "employees-grid",
+    type: "localStorage",
+  },
+});
+```
+
+Presets make common screens fast to ship:
+
+- `basic` for clean read-only tables
+- `admin` for CRUD-heavy internal tools
+- `spreadsheet` for Excel-like data entry
+- `analytics` for reporting, pivoting, and saved exploration
+
+Any explicit option still wins over the preset. `stateStorage` persists saved-view state such as column widths, hidden columns, pinned columns, filters, sorting, pagination, and side panel state.
+
+```ts
+createGridNexa(document.getElementById("grid")!, {
+  columns,
+  rows: [],
+  loading: false,
+  error: null,
+  emptyState: "No employees found",
+});
+```
+
+Built-in loading, error, and empty overlays render inside the grid viewport without changing header or body alignment.
+
 ## Column Width And Fill Behavior
 
 ```ts

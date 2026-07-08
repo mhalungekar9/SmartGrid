@@ -160,6 +160,42 @@ Use `sidePanel={false}` or `sidePanel={{ enabled: false }}` to hide the right-si
 
 Custom icons can be supplied globally through `icons` or per column through `column.icons`. Missing icons fall back to GridNexa defaults.
 
+## Presets, Saved Views, And Overlays
+
+```tsx
+<GridNexa columns={columns} rows={rows} preset="admin" />
+<GridNexa columns={columns} rows={rows} preset="spreadsheet" />
+<GridNexa columns={columns} rows={rows} preset="analytics" />
+```
+
+Presets provide sensible defaults for common product screens without taking away control. Any explicit prop you pass still wins over the preset.
+
+```tsx
+<GridNexa
+  columns={columns}
+  rows={rows}
+  preset="admin"
+  stateStorage={{
+    key: "employees-grid",
+    type: "localStorage",
+  }}
+/>
+```
+
+`stateStorage` persists practical saved-view state such as column order, widths, hidden columns, pinned columns, filters, and sort state. Use `persist` to choose slices: `"columns"`, `"filters"`, `"sort"`, `"pagination"`, and `"sidePanel"`.
+
+```tsx
+<GridNexa
+  columns={columns}
+  rows={rows}
+  loading={isLoading}
+  error={error}
+  emptyState="No employees found"
+/>
+```
+
+Built-in overlays cover loading, error, and empty states inside the grid viewport, so product apps do not need wrapper logic for common states.
+
 ## Column Width And Fill Behavior
 
 ```tsx
@@ -223,7 +259,7 @@ Use Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS through `classNam
 
 ## Feature Highlights
 
-- Sorting, pagination, quick filter, column filters, external filters, and visual advanced filters
+- Presets, saved views, loading/error/empty overlays, sorting, pagination, quick filter, column filters, external filters, and visual advanced filters
 - Row selection, checkbox selection, row numbers, range selection, fill handle, find, undo, and redo
 - Inline editors for text, number, date, checkbox, select, large text, and advanced select
 - Formulas, clipboard operations, CSV export, and Excel export

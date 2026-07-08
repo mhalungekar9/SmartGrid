@@ -61,6 +61,7 @@ export type PivotAggregation = "sum" | "avg" | "count" | "min" | "max";
 export type GridNexaTheme = "light" | "dark" | "system";
 export type GridNexaDensity = "compact" | "standard" | "comfortable";
 export type GridNexaRowReorderPosition = "left" | "right";
+export type GridNexaPreset = "basic" | "admin" | "spreadsheet" | "analytics";
 export type GridNexaToolbarOptions =
   | boolean
   | Partial<{
@@ -121,6 +122,19 @@ export type GridNexaFillWidthOptions =
   | Partial<{
       enabled: boolean;
       mode: GridNexaFillWidthMode;
+    }>;
+export type GridNexaPersistedStateKey =
+  | "columns"
+  | "filters"
+  | "sort"
+  | "pagination"
+  | "sidePanel";
+export type GridNexaStateStorageOptions =
+  | boolean
+  | Partial<{
+      key: string;
+      type: "localStorage";
+      persist: GridNexaPersistedStateKey[];
     }>;
 export interface GridNexaIconSet {
   sortAsc?: unknown;
@@ -252,6 +266,7 @@ export interface GridOptions<T = unknown> {
   height?: number | string;
   unstyled?: boolean;
   classNames?: GridNexaSlotClassNames;
+  preset?: GridNexaPreset;
   columnTools?: GridNexaColumnToolOptions;
   icons?: GridNexaIconSet;
   textDisplay?: GridNexaTextDisplayOptions;
@@ -289,6 +304,10 @@ export interface GridOptions<T = unknown> {
   footer?: GridNexaFooterOptions;
   sidePanel?: GridNexaSidePanelOptions;
   fillWidth?: GridNexaFillWidthOptions;
+  stateStorage?: GridNexaStateStorageOptions;
+  loading?: boolean;
+  error?: unknown;
+  emptyState?: unknown;
   localeText?: Record<string, string>;
   getRowId?: (row: T, index: number) => string | number;
   onGridReady?: (params: { rows: T[]; columns: Column<T>[] }) => void;

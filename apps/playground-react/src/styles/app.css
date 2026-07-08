@@ -347,6 +347,175 @@ textarea {
   align-items: start;
 }
 
+.config-doc-panel {
+  display: grid;
+  gap: 16px;
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-panel);
+  box-shadow: 0 18px 48px color-mix(in srgb, var(--app-shadow) 55%, transparent);
+}
+
+.config-doc-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.config-doc-panel-header h3 {
+  margin: 4px 0 6px;
+  color: var(--app-heading);
+  font-size: 1.1rem;
+}
+
+.config-doc-panel-header p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--app-muted);
+}
+
+.config-search {
+  display: grid;
+  gap: 6px;
+  min-width: min(280px, 100%);
+  color: var(--app-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.config-search input {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 8px;
+  background: var(--app-input-bg);
+  color: var(--app-text);
+  font: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.config-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+}
+
+.config-index-table,
+.preset-comparison-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--app-panel);
+}
+
+.config-index-table th,
+.config-index-table td,
+.preset-comparison-table th,
+.preset-comparison-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--app-border);
+  color: var(--app-text);
+  text-align: left;
+  vertical-align: top;
+}
+
+.config-index-table thead th,
+.preset-comparison-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--app-panel-strong);
+  color: var(--app-heading);
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.config-index-table tbody tr,
+.preset-comparison-table tbody tr {
+  transition: background 160ms ease, box-shadow 160ms ease;
+}
+
+.config-index-table tbody tr:hover,
+.config-index-table tbody tr.is-active {
+  background: color-mix(in srgb, var(--app-primary) 10%, transparent);
+}
+
+.config-index-table button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--app-primary);
+  font: inherit;
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
+}
+
+.config-index-table code {
+  color: var(--app-heading);
+  white-space: nowrap;
+}
+
+.preset-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.preset-summary-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--app-primary) 5%, var(--app-panel));
+}
+
+.preset-summary-card strong {
+  color: var(--app-heading);
+  font-size: 0.98rem;
+}
+
+.preset-summary-card span {
+  color: var(--app-muted);
+  font-size: 0.86rem;
+}
+
+.preset-comparison-table tbody th {
+  color: var(--app-heading);
+  font-weight: 900;
+}
+
+.preset-comparison-table td[data-state="enabled"] {
+  color: #15803d;
+  font-weight: 900;
+}
+
+.preset-comparison-table td[data-state="disabled"] {
+  color: var(--app-muted);
+}
+
+.preset-comparison-table td[data-state="custom"] {
+  color: var(--app-text);
+}
+
+.demo-card.config-section-active {
+  scroll-margin-top: 110px;
+  outline: 2px solid color-mix(in srgb, var(--app-primary) 55%, transparent);
+  box-shadow: 0 20px 60px color-mix(in srgb, var(--app-primary) 18%, transparent);
+  transition: outline-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
 .demo-card {
   min-width: 0;
   overflow: hidden;
@@ -2456,6 +2625,14 @@ body.gridnexa-marketing-page .sg-header-menu-divider {
   .hero-panel,
   .example-grid {
     grid-template-columns: 1fr;
+  }
+
+  .config-doc-panel-header {
+    display: grid;
+  }
+
+  .preset-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .site-hero,

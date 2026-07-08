@@ -11,9 +11,11 @@ import type {
   AdvancedFilterModel,
   ColumnFilterModel,
   GridOptions,
+  GridNexaPreset,
   GridNexaSlotClassNames,
   GridNexaSidePanelOptions,
   GridNexaFillWidthOptions,
+  GridNexaStateStorageOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
   GridNexaCommandPlan,
@@ -262,10 +264,15 @@ export interface GridNexaExtendedProps<T>
     GridNexaEventProps<T> {
   groupBy?: keyof T & string;
   pageSize?: number;
+  preset?: GridNexaPreset;
   toolbar?: GridOptions<T>["toolbar"] | (Record<string, boolean> & { saveAll?: boolean });
   footer?: GridNexaFooterOptions;
   sidePanel?: GridNexaSidePanelOptions;
   fillWidth?: GridNexaFillWidthOptions;
+  stateStorage?: GridNexaStateStorageOptions;
+  loading?: boolean;
+  error?: ReactNode;
+  emptyState?: ReactNode;
   rowReorderPosition?: "left" | "right";
   height?: number | string;
   columnTools?: GridNexaColumnToolOptions;
@@ -333,6 +340,172 @@ function resolveFillWidthOptions(value?: GridNexaFillWidthOptions) {
   }
 
   return { ...defaultFillWidthOptions, ...value, enabled: value.enabled ?? true };
+}
+
+type PresetDefaults<T> = Partial<
+  Pick<
+    GridNexaExtendedProps<T>,
+    | "rowNumbers"
+    | "checkboxSelection"
+    | "enableRangeSelection"
+    | "enableFillHandle"
+    | "enableUndoRedo"
+    | "enableRowReorder"
+    | "toolbar"
+    | "footer"
+    | "sidePanel"
+    | "fillWidth"
+    | "pageSize"
+  >
+>;
+
+function resolvePresetDefaults<T>(preset?: GridNexaPreset): PresetDefaults<T> {
+  if (preset === "basic") {
+    return {
+      toolbar: false,
+      footer: { rowCount: true },
+      sidePanel: false,
+      fillWidth: false,
+    };
+  }
+
+  if (preset === "admin") {
+    return {
+      rowNumbers: true,
+      checkboxSelection: true,
+      enableRangeSelection: true,
+      enableUndoRedo: true,
+      toolbar: {
+        quickFilter: true,
+        find: true,
+        filters: true,
+        advancedFilter: true,
+        columns: true,
+        addRow: true,
+        deleteSelectedRows: true,
+        exportCsv: true,
+        exportExcel: true,
+      },
+      footer: true,
+      sidePanel: { columns: true, filters: true, pivot: false },
+      fillWidth: true,
+      pageSize: 25,
+    };
+  }
+
+  if (preset === "spreadsheet") {
+    return {
+      rowNumbers: true,
+      checkboxSelection: true,
+      enableRangeSelection: true,
+      enableFillHandle: true,
+      enableUndoRedo: true,
+      toolbar: {
+        find: true,
+        undoRedo: true,
+        fill: true,
+        filters: true,
+        columns: true,
+        exportCsv: true,
+        exportExcel: true,
+      },
+      footer: {
+        rowCount: true,
+        selectedRows: true,
+        selectedCell: true,
+        selectedRange: true,
+        filterCount: true,
+        sortStatus: true,
+      },
+      sidePanel: { columns: true, filters: true, pivot: false },
+      fillWidth: true,
+    };
+  }
+
+  if (preset === "analytics") {
+    return {
+      rowNumbers: true,
+      enableRangeSelection: true,
+      toolbar: {
+        quickFilter: true,
+        find: true,
+        filters: true,
+        advancedFilter: true,
+        columns: true,
+        exportCsv: true,
+        exportExcel: true,
+      },
+      footer: true,
+      sidePanel: {
+        columns: true,
+        pivot: true,
+        filters: true,
+        defaultActivePanel: "columns",
+      },
+      fillWidth: true,
+      pageSize: 50,
+    };
+  }
+
+  return {};
+}
+
+const defaultPersistedStateKeys = ["columns", "filters", "sort"] as const;
+
+function resolveStateStorageOptions(value?: GridNexaStateStorageOptions) {
+  if (value === false || value === undefined) {
+    return { enabled: false, key: "", type: "localStorage" as const, persist: [] as string[] };
+  }
+
+  const next = value === true ? {} : value;
+
+  return {
+    enabled: Boolean(next.key),
+    key: next.key ?? "",
+    type: next.type ?? "localStorage" as const,
+    persist: next.persist ?? [...defaultPersistedStateKeys],
+  };
+}
+
+type PersistedGridState = {
+  version: 1;
+  columnOrder?: string[];
+  columnWidths?: Record<string, number>;
+  hiddenColumnIds?: string[];
+  pinnedColumnIds?: Record<string, "left" | "right" | null>;
+  filterModel?: Record<string, ColumnFilterModel>;
+  sortModel?: SortModel | null;
+  pageIndex?: number;
+  sidePanel?: {
+    columnsOpen?: boolean;
+    filtersOpen?: boolean;
+  };
+};
+
+function readPersistedGridState(key: string): PersistedGridState | null {
+  if (!key || typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(key);
+
+    return raw ? JSON.parse(raw) as PersistedGridState : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedGridState(key: string, state: PersistedGridState) {
+  if (!key || typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(key, JSON.stringify(state));
+  } catch {
+    // Storage can fail in private browsing or locked-down embedded contexts.
+  }
 }
 
 function resolveToolOptions(
@@ -1202,10 +1375,11 @@ export function GridNexa<T>({
   columns,
   className,
   theme = "dark",
-  density = "standard",
+  density: densityProp,
   height,
   unstyled = false,
   classNames = {},
+  preset,
   columnTools,
   icons = {},
   textDisplay,
@@ -1221,17 +1395,21 @@ export function GridNexa<T>({
   advancedFilter,
   advancedFilterModel: advancedFilterModelProp,
   onAdvancedFilterModelChange,
-  rowNumbers = false,
-  checkboxSelection = false,
-  enableRangeSelection = true,
-  enableFillHandle = true,
-  enableUndoRedo = true,
-  enableRowReorder = false,
+  rowNumbers: rowNumbersProp,
+  checkboxSelection: checkboxSelectionProp,
+  enableRangeSelection: enableRangeSelectionProp,
+  enableFillHandle: enableFillHandleProp,
+  enableUndoRedo: enableUndoRedoProp,
+  enableRowReorder: enableRowReorderProp,
   rowReorderPosition = "right",
-  toolbar,
-  footer,
-  sidePanel,
-  fillWidth,
+  toolbar: toolbarProp,
+  footer: footerProp,
+  sidePanel: sidePanelProp,
+  fillWidth: fillWidthProp,
+  stateStorage,
+  loading = false,
+  error,
+  emptyState,
   localeText,
   getRowId,
   onGridReady,
@@ -1283,7 +1461,7 @@ export function GridNexa<T>({
   getTreeDataPath,
   masterDetailRenderer,
   transaction,
-  pageSize,
+  pageSize: pageSizeProp,
   ai,
 }: GridNexaExtendedProps<T>) {
   useInsertionEffect(() => {
@@ -1292,9 +1470,48 @@ export function GridNexa<T>({
     }
   }, [unstyled]);
 
+  const presetDefaults = resolvePresetDefaults<T>(preset);
+  const density = densityProp ?? "standard";
+  const rowNumbers = rowNumbersProp ?? presetDefaults.rowNumbers ?? false;
+  const checkboxSelection =
+    checkboxSelectionProp ?? presetDefaults.checkboxSelection ?? false;
+  const enableRangeSelection =
+    enableRangeSelectionProp ?? presetDefaults.enableRangeSelection ?? true;
+  const enableFillHandle =
+    enableFillHandleProp ?? presetDefaults.enableFillHandle ?? true;
+  const enableUndoRedo =
+    enableUndoRedoProp ?? presetDefaults.enableUndoRedo ?? true;
+  const enableRowReorder =
+    enableRowReorderProp ?? presetDefaults.enableRowReorder ?? false;
+  const toolbar = toolbarProp ?? presetDefaults.toolbar;
+  const footer = footerProp ?? presetDefaults.footer;
+  const sidePanel = sidePanelProp ?? presetDefaults.sidePanel;
+  const fillWidth = fillWidthProp ?? presetDefaults.fillWidth;
+  const pageSize = pageSizeProp ?? presetDefaults.pageSize;
+  const stateStorageOptions = resolveStateStorageOptions(stateStorage);
+  const stateStoragePersistSignature = stateStorageOptions.persist.join("|");
+  const persistedState = useMemo(
+    () =>
+      stateStorageOptions.enabled
+        ? readPersistedGridState(stateStorageOptions.key)
+        : null,
+    [stateStorageOptions.enabled, stateStorageOptions.key],
+  );
+
   const sidePanelOptions = resolveSidePanelOptions(sidePanel);
   const fillWidthOptions = resolveFillWidthOptions(fillWidth);
   const initialSidePanel =
+    stateStorageOptions.persist.includes("sidePanel") &&
+    persistedState?.sidePanel?.filtersOpen &&
+    sidePanelOptions.enabled &&
+    sidePanelOptions.filters
+      ? "filters"
+      : stateStorageOptions.persist.includes("sidePanel") &&
+          persistedState?.sidePanel?.columnsOpen &&
+          sidePanelOptions.enabled &&
+          (sidePanelOptions.columns || sidePanelOptions.pivot)
+        ? (sidePanelOptions.defaultActivePanel ?? "columns")
+        :
     sidePanelOptions.enabled &&
     sidePanelOptions.defaultActivePanel === "filters" &&
     sidePanelOptions.filters
@@ -1308,9 +1525,18 @@ export function GridNexa<T>({
 
   const [gridRows, setGridRows] = useState(rows);
   const [columnWidths, setColumnWidths] = useState<Array<number | undefined>>(
-    () => columns.map((column) => column.width),
+    () =>
+      columns.map((column) =>
+        stateStorageOptions.persist.includes("columns")
+          ? persistedState?.columnWidths?.[column.id] ?? column.width
+          : column.width,
+      ),
   );
-  const [sortModel, setSortModel] = useState<SortModel | null>(null);
+  const [sortModel, setSortModel] = useState<SortModel | null>(() =>
+    stateStorageOptions.persist.includes("sort")
+      ? persistedState?.sortModel ?? null
+      : null,
+  );
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(
     () => new Set(),
@@ -1343,7 +1569,12 @@ export function GridNexa<T>({
   );
   const [filterModel, setFilterModel] = useState<
     Record<string, ColumnFilterModel>
-  >(() => columnFilters ?? {});
+  >(() =>
+    columnFilters ??
+    (stateStorageOptions.persist.includes("filters")
+      ? persistedState?.filterModel ?? {}
+      : {}),
+  );
   const [advancedFilterModel, setAdvancedFilterModelState] =
     useState<AdvancedFilterModel | null>(() => advancedFilterModelProp ?? null);
   const [runtimeGroupBy, setRuntimeGroupBy] = useState<
@@ -1369,7 +1600,11 @@ export function GridNexa<T>({
   const [expandedDetailKeys, setExpandedDetailKeys] = useState<Set<string>>(
     () => new Set(),
   );
-  const [pageIndex, setPageIndex] = useState(0);
+  const [pageIndex, setPageIndex] = useState(() =>
+    stateStorageOptions.persist.includes("pagination")
+      ? persistedState?.pageIndex ?? 0
+      : 0,
+  );
   const [draggedRowIndex, setDraggedRowIndex] = useState<number | null>(null);
   const [dropTargetRowIndex, setDropTargetRowIndex] = useState<number | null>(
     null,
@@ -1379,20 +1614,29 @@ export function GridNexa<T>({
   const [hiddenColumnIds, setHiddenColumnIds] = useState<Set<string>>(
     () =>
       new Set(
-        columns.filter((column) => column.hidden).map((column) => column.id),
+        stateStorageOptions.persist.includes("columns") &&
+          persistedState?.hiddenColumnIds
+          ? persistedState.hiddenColumnIds
+          : columns.filter((column) => column.hidden).map((column) => column.id),
       ),
   );
   const [pinnedColumnIds, setPinnedColumnIds] = useState<
     Record<string, "left" | "right" | null | undefined>
   >(() =>
-    Object.fromEntries(
-      columns
-        .filter((column) => column.pinned)
-        .map((column) => [column.id, column.pinned]),
-    ),
+    stateStorageOptions.persist.includes("columns") &&
+      persistedState?.pinnedColumnIds
+      ? persistedState.pinnedColumnIds
+      : Object.fromEntries(
+          columns
+            .filter((column) => column.pinned)
+            .map((column) => [column.id, column.pinned]),
+        ),
   );
   const [columnOrder, setColumnOrder] = useState<string[]>(() =>
-    columns.map((column) => column.id),
+    stateStorageOptions.persist.includes("columns") &&
+      persistedState?.columnOrder?.length
+      ? persistedState.columnOrder
+      : columns.map((column) => column.id),
   );
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
   const [dropTargetColumnId, setDropTargetColumnId] = useState<string | null>(
@@ -1619,8 +1863,23 @@ export function GridNexa<T>({
     .join("|");
 
   useEffect(() => {
-    setColumnWidths(columns.map((column) => column.width));
-    setSortModel(null);
+    const storedState =
+      stateStorageOptions.enabled && stateStorageOptions.type === "localStorage"
+        ? readPersistedGridState(stateStorageOptions.key)
+        : null;
+
+    setColumnWidths(
+      columns.map((column) =>
+        stateStorageOptions.persist.includes("columns")
+          ? storedState?.columnWidths?.[column.id] ?? column.width
+          : column.width,
+      ),
+    );
+    setSortModel(
+      stateStorageOptions.persist.includes("sort")
+        ? storedState?.sortModel ?? null
+        : null,
+    );
     setSelectedRowIndex(null);
     setSelectedRowIds(new Set());
     setActiveCellState(null);
@@ -1628,29 +1887,116 @@ export function GridNexa<T>({
     setCollapsedGroups(new Set());
     setCollapsedTreeKeys(new Set());
     setExpandedDetailKeys(new Set());
-    setPageIndex(0);
+    setPageIndex(
+      stateStorageOptions.persist.includes("pagination")
+        ? storedState?.pageIndex ?? 0
+        : 0,
+    );
     setDraggedRowIndex(null);
     setDropTargetRowIndex(null);
     setHiddenColumnIds(
       new Set(
-        columns.filter((column) => column.hidden).map((column) => column.id),
+        stateStorageOptions.persist.includes("columns") &&
+          storedState?.hiddenColumnIds
+          ? storedState.hiddenColumnIds
+          : columns.filter((column) => column.hidden).map((column) => column.id),
       ),
     );
     setPinnedColumnIds(
-      Object.fromEntries(
-        columns
-          .filter((column) => column.pinned)
-          .map((column) => [column.id, column.pinned]),
-      ),
+      stateStorageOptions.persist.includes("columns") &&
+        storedState?.pinnedColumnIds
+        ? storedState.pinnedColumnIds
+        : Object.fromEntries(
+            columns
+              .filter((column) => column.pinned)
+              .map((column) => [column.id, column.pinned]),
+          ),
     );
-    setColumnOrder(columns.map((column) => column.id));
+    setColumnOrder(
+      stateStorageOptions.persist.includes("columns") &&
+        storedState?.columnOrder?.length
+        ? storedState.columnOrder
+        : columns.map((column) => column.id),
+    );
     setDraggedColumnId(null);
     setDropTargetColumnId(null);
     setColumnChooserOpen(false);
     setFilterPopoverColumnId(null);
     setColumnMenuColumnId(null);
     setDynamicColumnWidths({});
-  }, [columnSignature]);
+  }, [
+    columnSignature,
+    stateStorageOptions.enabled,
+    stateStorageOptions.key,
+    stateStoragePersistSignature,
+    stateStorageOptions.type,
+  ]);
+
+  useEffect(() => {
+    if (
+      !stateStorageOptions.enabled ||
+      stateStorageOptions.type !== "localStorage"
+    ) {
+      return;
+    }
+
+    const persist = stateStorageOptions.persist;
+    const nextState: PersistedGridState = { version: 1 };
+
+    if (persist.includes("columns")) {
+      nextState.columnOrder = columnOrder;
+      nextState.columnWidths = Object.fromEntries(
+        columns.map((column, index) => [
+          column.id,
+          columnWidths[index] ?? column.width ?? 150,
+        ]),
+      );
+      nextState.hiddenColumnIds = Array.from(hiddenColumnIds);
+      nextState.pinnedColumnIds = Object.fromEntries(
+        Object.entries(pinnedColumnIds).filter(([, pinned]) => pinned != null),
+      ) as Record<string, "left" | "right" | null>;
+    }
+
+    if (persist.includes("filters")) {
+      nextState.filterModel = filterModel;
+    }
+
+    if (persist.includes("sort")) {
+      nextState.sortModel = sortModel;
+    }
+
+    if (persist.includes("pagination")) {
+      nextState.pageIndex = pageIndex;
+    }
+
+    if (persist.includes("sidePanel")) {
+      nextState.sidePanel = {
+        columnsOpen: pivotPanelOpen,
+        filtersOpen: sideFilterPanelOpen,
+      };
+    }
+
+    const writeTimer = window.setTimeout(() => {
+      writePersistedGridState(stateStorageOptions.key, nextState);
+    }, 120);
+
+    return () => window.clearTimeout(writeTimer);
+  }, [
+    columnOrder,
+    columnWidths,
+    columns,
+    filterModel,
+    hiddenColumnIds,
+    pageIndex,
+    pinnedColumnIds,
+    pivotPanelOpen,
+    sideFilterPanelOpen,
+    sortModel,
+    stateStorageOptions.enabled,
+    stateStorageOptions.key,
+    stateStoragePersistSignature,
+    stateStorageOptions.type,
+  ]);
 
   const effectiveColumns = useMemo<Column<T>[]>(
     () =>
@@ -3264,6 +3610,16 @@ export function GridNexa<T>({
   const activeAdvancedFilterCount =
     countAdvancedFilterRules(advancedFilterModel);
   const filterCountLabel = `${activeFilterCount + activeAdvancedFilterCount} filters`;
+  const overlayError =
+    error instanceof Error ? error.message : error;
+  const overlayContent = loading
+    ? t("loading", "Loading...")
+    : overlayError
+      ? overlayError
+      : !displayRows.length
+        ? emptyState ?? t("emptyState", "No rows to display")
+        : null;
+  const overlayKind = loading ? "loading" : overlayError ? "error" : "empty";
   const pivotCandidateColumns = columns;
   const searchedPivotColumns = pivotCandidateColumns.filter((column) =>
     column.headerName.toLowerCase().includes(pivotToolSearch.toLowerCase()),
@@ -4771,6 +5127,22 @@ export function GridNexa<T>({
               }}
               onSetDropTargetRowIndex={setDropTargetRowIndex}
             />
+            {overlayContent ? (
+              <div
+                className="sg-grid-overlay"
+                data-gnx-overlay={overlayKind}
+                role={overlayKind === "error" ? "alert" : "status"}
+              >
+                <div className="sg-grid-overlay-card">
+                  {typeof overlayContent === "string" ||
+                  typeof overlayContent === "number" ? (
+                    <span>{overlayContent}</span>
+                  ) : (
+                    overlayContent
+                  )}
+                </div>
+              </div>
+            ) : null}
           </GridRoot>
 
           {sidePanelOptions.enabled ? (

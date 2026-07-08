@@ -136,6 +136,47 @@ Use `columnTools` for global header-button defaults and `column.tools` for per-c
 
 Use `[sidePanel]="false"` or `[sidePanel]="{ enabled: false }"` to hide right-side tools. Use `columns`, `pivot`, `filters`, and `defaultActivePanel` to control which side tabs appear and which one opens first.
 
+## Presets, Saved Views, And Overlays
+
+```html
+<grid-nexa
+  [columns]="columns"
+  [rows]="rows"
+  preset="admin"
+/>
+
+<grid-nexa
+  [columns]="columns"
+  [rows]="rows"
+  preset="spreadsheet"
+  [stateStorage]="{
+    key: 'employees-grid',
+    type: 'localStorage'
+  }"
+/>
+```
+
+Presets reduce setup for common product surfaces:
+
+- `basic` for clean read-only tables
+- `admin` for CRUD-heavy internal tools
+- `spreadsheet` for Excel-like editing and fill workflows
+- `analytics` for reporting, pivoting, and saved exploration
+
+Explicit inputs still win over preset defaults. `stateStorage` persists saved-view state such as column widths, hidden columns, pinned columns, filters, sorting, and pagination.
+
+```html
+<grid-nexa
+  [columns]="columns"
+  [rows]="[]"
+  [loading]="isLoading"
+  [error]="error"
+  emptyState="No employees found"
+/>
+```
+
+Built-in loading, error, and empty overlays appear inside the grid viewport without breaking header/body alignment.
+
 ## Column Width And Fill Behavior
 
 ```html

@@ -123,6 +123,47 @@ Use `columnTools` for global header-button defaults and `column.tools` for per-c
 
 Use `:side-panel="false"` or `:side-panel="{ enabled: false }"` to hide right-side tools. Use `columns`, `pivot`, `filters`, and `defaultActivePanel` to control which side tabs appear and which one opens first.
 
+## Presets, Saved Views, And Overlays
+
+```vue
+<template>
+  <GridNexaVue :columns="columns" :rows="rows" preset="admin" />
+
+  <GridNexaVue
+    :columns="columns"
+    :rows="rows"
+    preset="spreadsheet"
+    :state-storage="{
+      key: 'employees-grid',
+      type: 'localStorage'
+    }"
+  />
+</template>
+```
+
+Presets reduce setup for common product surfaces:
+
+- `basic` for clean read-only tables
+- `admin` for CRUD-heavy internal tools
+- `spreadsheet` for Excel-like editing and fill workflows
+- `analytics` for reporting, pivoting, and saved exploration
+
+Explicit props still win over preset defaults. `stateStorage` persists saved-view state such as column widths, hidden columns, pinned columns, filters, sorting, and pagination.
+
+```vue
+<template>
+  <GridNexaVue
+    :columns="columns"
+    :rows="[]"
+    :loading="isLoading"
+    :error="error"
+    empty-state="No employees found"
+  />
+</template>
+```
+
+Built-in loading, error, and empty overlays appear inside the grid viewport without breaking header/body alignment.
+
 ## Column Width And Fill Behavior
 
 ```vue

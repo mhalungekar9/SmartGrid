@@ -14,6 +14,8 @@ import type {
   ColumnFilterModel,
   GridOptions,
   GridNexaClassName,
+  GridNexaPreset,
+  GridNexaStateStorageOptions,
   GridNexaAiOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
@@ -34,6 +36,14 @@ export interface GridNexaAngularOptions<T = Record<string, unknown>>
 
 type SortState = { columnId: string; direction: "asc" | "desc" } | null;
 type CellPoint = { rowIndex: number; columnId: string };
+type PersistedGridState = {
+  columnWidths?: Record<string, number>;
+  hiddenColumnIds?: string[];
+  pinnedColumnIds?: Record<string, "left" | "right" | undefined>;
+  sortModel?: SortState;
+  filterModel?: Record<string, ColumnFilterModel>;
+  pageIndex?: number;
+};
 type CellEdit<T> = {
   row: T;
   rowIndex: number;
@@ -238,6 +248,104 @@ function estimateWidth(value: unknown) {
   return String(value ?? "").length * 8 + 44;
 }
 
+function resolvePresetDefaults<T>(preset?: GridNexaPreset): Partial<GridNexaAngularOptions<T>> {
+  if (preset === "admin") {
+    return {
+      rowNumbers: true,
+      checkboxSelection: true,
+      enableRangeSelection: true,
+      enableUndoRedo: true,
+      toolbar: {
+        summary: true,
+        quickFilter: true,
+        find: true,
+        filters: true,
+        advancedFilter: true,
+        columns: true,
+        exportCsv: true,
+        exportExcel: true,
+        saveAll: true,
+        addRow: true,
+        deleteSelectedRows: true,
+      },
+      footer: true,
+      sidePanel: true,
+      fillWidth: true,
+    };
+  }
+  if (preset === "spreadsheet") {
+    return {
+      rowNumbers: true,
+      checkboxSelection: true,
+      enableRangeSelection: true,
+      enableFillHandle: true,
+      enableUndoRedo: true,
+      enableRowReorder: true,
+      toolbar: {
+        quickFilter: true,
+        find: true,
+        undoRedo: true,
+        fill: true,
+        addRow: true,
+        deleteSelectedRows: true,
+        exportCsv: true,
+        exportExcel: true,
+      },
+      footer: true,
+      sidePanel: { enabled: true, columns: true, pivot: false, filters: true },
+      fillWidth: true,
+    };
+  }
+  if (preset === "analytics") {
+    return {
+      rowNumbers: true,
+      toolbar: {
+        summary: true,
+        quickFilter: true,
+        filters: true,
+        advancedFilter: true,
+        columns: true,
+        exportCsv: true,
+        exportExcel: true,
+      },
+      footer: true,
+      sidePanel: { enabled: true, columns: true, pivot: true, filters: true, defaultActivePanel: "columns" },
+      fillWidth: true,
+    };
+  }
+  if (preset === "basic") return { toolbar: false, footer: true, sidePanel: false, fillWidth: true };
+  return {};
+}
+
+function resolveStateStorageOptions(value?: GridNexaStateStorageOptions) {
+  if (!value || typeof value !== "object" || !value.key || value.type !== "localStorage") return null;
+  return {
+    key: value.key,
+    persist: value.persist ?? ["columns", "filters", "sort", "pagination", "sidePanel"],
+  };
+}
+
+function readPersistedGridState(value?: GridNexaStateStorageOptions): PersistedGridState | null {
+  const options = resolveStateStorageOptions(value);
+  if (!options || typeof window === "undefined" || !window.localStorage) return null;
+  try {
+    const raw = window.localStorage.getItem(options.key);
+    return raw ? (JSON.parse(raw) as PersistedGridState) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writePersistedGridState(value: GridNexaStateStorageOptions | undefined, state: PersistedGridState) {
+  const options = resolveStateStorageOptions(value);
+  if (!options || typeof window === "undefined" || !window.localStorage) return;
+  try {
+    window.localStorage.setItem(options.key, JSON.stringify(state));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 @Component({
   selector: "grid-nexa",
   standalone: true,
@@ -254,6 +362,11 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   @Input() height: number | string | undefined;
   @Input() unstyled = false;
   @Input() classNames: GridNexaAngularOptions<T>["classNames"] = {};
+  @Input() preset: GridNexaPreset | undefined;
+  @Input() stateStorage: GridNexaStateStorageOptions | undefined;
+  @Input() loading = false;
+  @Input() error: unknown;
+  @Input() emptyState: unknown;
   @Input() toolbar: GridNexaAngularOptions<T>["toolbar"] = undefined;
   @Input() footer: GridNexaAngularOptions<T>["footer"] = undefined;
   @Input() sidePanel: GridNexaAngularOptions<T>["sidePanel"] = undefined;
@@ -385,6 +498,8 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   private aiError: string | null = null;
   private undoStack: Array<CellEdit<T>> = [];
   private redoStack: Array<CellEdit<T>> = [];
+  private hydratedStorageKey: string | null = null;
+  private persistTimer: number | undefined;
 
   ngAfterViewInit() {
     this.attachApi();
@@ -396,6 +511,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     this.columns.forEach((column) => {
       if (column.width && !this.columnWidths.has(column.id)) this.columnWidths.set(column.id, column.width);
     });
+    this.applyPersistedState();
     this.applyTransaction();
     this.attachApi();
     this.render();
@@ -480,6 +596,84 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     };
   }
 
+  private presetDefaults() {
+    return resolvePresetDefaults<T>(this.preset);
+  }
+
+  private effectiveToolbar() {
+    return this.toolbar ?? this.presetDefaults().toolbar;
+  }
+
+  private effectiveFooter() {
+    return this.footer ?? this.presetDefaults().footer;
+  }
+
+  private effectiveFillWidth() {
+    return this.fillWidth ?? this.presetDefaults().fillWidth;
+  }
+
+  private effectivePageSize() {
+    return this.pageSize ?? this.presetDefaults().pageSize;
+  }
+
+  private effectiveRowNumbers() {
+    return this.rowNumbers || Boolean(this.presetDefaults().rowNumbers);
+  }
+
+  private effectiveCheckboxSelection() {
+    return this.checkboxSelection || Boolean(this.presetDefaults().checkboxSelection);
+  }
+
+  private effectiveRangeSelection() {
+    return this.enableRangeSelection || Boolean(this.presetDefaults().enableRangeSelection);
+  }
+
+  private effectiveFillHandle() {
+    return this.enableFillHandle || Boolean(this.presetDefaults().enableFillHandle);
+  }
+
+  private effectiveUndoRedo() {
+    return this.enableUndoRedo || Boolean(this.presetDefaults().enableUndoRedo);
+  }
+
+  private applyPersistedState() {
+    const storage = resolveStateStorageOptions(this.stateStorage);
+    if (!storage || this.hydratedStorageKey === storage.key) return;
+    const persisted = readPersistedGridState(this.stateStorage);
+    this.hydratedStorageKey = storage.key;
+    if (!persisted) return;
+    if (storage.persist.includes("columns")) {
+      if (persisted.hiddenColumnIds) this.hiddenColumnIds = new Set(persisted.hiddenColumnIds);
+      Object.entries(persisted.columnWidths ?? {}).forEach(([columnId, width]) => this.columnWidths.set(columnId, width));
+      this.columns = this.columns.map((column) => ({
+        ...column,
+        width: persisted.columnWidths?.[column.id] ?? column.width,
+        pinned: persisted.pinnedColumnIds?.[column.id] ?? column.pinned,
+      }));
+    }
+    if (storage.persist.includes("filters") && persisted.filterModel) this.columnFilters = persisted.filterModel;
+    if (storage.persist.includes("sort")) this.sortState = persisted.sortModel ?? this.sortState;
+    if (storage.persist.includes("pagination") && typeof persisted.pageIndex === "number") this.pageIndex = persisted.pageIndex;
+  }
+
+  private schedulePersistState() {
+    const storage = resolveStateStorageOptions(this.stateStorage);
+    if (!storage) return;
+    if (this.persistTimer != null) window.clearTimeout(this.persistTimer);
+    this.persistTimer = window.setTimeout(() => {
+      const state: PersistedGridState = {};
+      if (storage.persist.includes("columns")) {
+        state.columnWidths = Object.fromEntries(this.columnWidths.entries());
+        state.hiddenColumnIds = Array.from(this.hiddenColumnIds);
+        state.pinnedColumnIds = Object.fromEntries(this.columns.map((column) => [column.id, column.pinned]));
+      }
+      if (storage.persist.includes("filters")) state.filterModel = this.columnFilters;
+      if (storage.persist.includes("sort")) state.sortModel = this.sortState;
+      if (storage.persist.includes("pagination")) state.pageIndex = this.pageIndex;
+      writePersistedGridState(this.stateStorage, state);
+    }, 120);
+  }
+
   private applyTransaction() {
     if (!this.transaction) return;
     const removeIds = new Set((this.transaction.remove ?? []).map((row, index) => this.rowId(row, index)));
@@ -528,7 +722,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const oldValue = rawValue(row, column);
     const newValue = typeof oldValue === "number" ? Number(nextValue) : nextValue;
 
-    if (trackHistory && this.enableUndoRedo) {
+    if (trackHistory && this.effectiveUndoRedo()) {
       this.undoStack.push({ row, rowIndex, column, oldValue, newValue });
       this.redoStack = [];
     }
@@ -555,7 +749,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   }
 
   private fillDown() {
-    if (!this.activeCell || !this.enableFillHandle) return;
+    if (!this.activeCell || !this.effectiveFillHandle()) return;
     const column = this.columns.find((entry) => entry.id === this.activeCell?.columnId);
     if (this.rangeAnchor && this.rangeEnd && column) {
       const minRow = Math.min(this.rangeAnchor.rowIndex, this.rangeEnd.rowIndex);
@@ -686,7 +880,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   }
 
   private isCellInRange(rowIndex: number, columnId: string, columns: Column<T>[]) {
-    if (!this.rangeAnchor || !this.rangeEnd || !this.enableRangeSelection) return false;
+    if (!this.rangeAnchor || !this.rangeEnd || !this.effectiveRangeSelection()) return false;
     const columnIndex = columns.findIndex((column) => column.id === columnId);
     const anchorIndex = columns.findIndex((column) => column.id === this.rangeAnchor?.columnId);
     const endIndex = columns.findIndex((column) => column.id === this.rangeEnd?.columnId);
@@ -885,7 +1079,8 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const columns = pivot.columns
       .filter((column) => !this.hiddenColumnIds.has(column.id) && !column.hidden)
       .sort((left, right) => (left.pinned === "left" ? 0 : left.pinned === "right" ? 2 : 1) - (right.pinned === "left" ? 0 : right.pinned === "right" ? 2 : 1));
-    const pageRows = this.pageSize ? pivot.rows.slice(this.pageIndex * this.pageSize, this.pageIndex * this.pageSize + this.pageSize) : pivot.rows;
+    const pageSize = this.effectivePageSize();
+    const pageRows = pageSize ? pivot.rows.slice(this.pageIndex * pageSize, this.pageIndex * pageSize + pageSize) : pivot.rows;
     const displayRows = pivot.active ? pageRows.map((row) => ({ kind: "data" as const, row, rowIndex: pivot.rows.indexOf(row) })) : this.makeDisplayRows(pageRows);
     const root = document.createElement("div");
     root.className = ["gridnexa-angular-grid", this.className]
@@ -893,10 +1088,13 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       .join(" ");
     root.dataset.gnxTheme = this.theme ?? "dark";
     root.dataset.gnxDensity = this.density ?? "standard";
+    root.style.position = "relative";
     if (this.height != null) root.style.height = typeof this.height === "number" ? `${this.height}px` : this.height;
     const toolbar = this.renderToolbar(columns, pivot.rows);
     if (toolbar) root.appendChild(toolbar);
     root.appendChild(this.renderTable(columns, displayRows));
+    const overlay = this.renderOverlay(displayRows.length);
+    if (overlay) root.appendChild(overlay);
     root.appendChild(this.renderStatus(pivot.rows.length));
     if (this.contextMenu) root.appendChild(this.renderContextMenu());
     this.host.nativeElement.replaceChildren(root);
@@ -906,7 +1104,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       advancedFilterModel: this.advancedFilterModel,
       selectedRowIds: Array.from(this.selected),
       pageIndex: this.pageIndex,
-      pageSize: this.pageSize,
+      pageSize,
       groupBy: this.groupBy,
       pivotBy: this.pivotBy,
       pivotValueColumns: this.pivotValueColumns,
@@ -914,15 +1112,42 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       treeData: Boolean(this.getTreeDataPath),
       masterDetail: Boolean(this.masterDetailRenderer),
     });
+    this.schedulePersistState();
+  }
+
+  private renderOverlay(displayRowCount: number) {
+    const hasError = this.error != null && this.error !== false;
+    const isEmpty = !this.loading && !hasError && displayRowCount === 0;
+    if (!this.loading && !hasError && !isEmpty) return null;
+    const overlay = document.createElement("div");
+    overlay.style.cssText = "position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(248,251,255,.78);backdrop-filter:blur(3px);pointer-events:none";
+    const card = document.createElement("div");
+    card.style.cssText = `max-width:min(420px,calc(100% - 32px));padding:18px 20px;border:1px solid ${hasError ? "rgba(220,38,38,.24)" : "rgba(30,64,175,.16)"};border-radius:14px;background:#fff;color:${hasError ? "#991b1b" : "#172033"};box-shadow:0 22px 60px rgba(15,23,42,.16);font-weight:800;text-align:center`;
+    card.textContent = this.loading
+      ? "Loading data..."
+      : hasError
+        ? this.error instanceof Error
+          ? this.error.message
+          : typeof this.error === "string"
+            ? this.error
+            : "Something went wrong while loading the grid."
+        : typeof this.emptyState === "string"
+          ? this.emptyState
+          : this.emptyState == null
+            ? "No rows to display"
+            : String(this.emptyState);
+    overlay.appendChild(card);
+    return overlay;
   }
 
   private renderToolbar(columns: Column<T>[], rows: T[]) {
-    const defaults = typeof this.toolbar === "object"
+    const toolbarConfig = this.effectiveToolbar();
+    const defaults = typeof toolbarConfig === "object"
       ? { summary: false, pagination: false, quickFilter: false, find: false, undoRedo: false, fillHandle: false, fill: false, filters: false, advancedFilter: false, columns: false, columnSelector: false, exportCsv: false, exportExcel: false, prevNextPage: false, saveAll: false, addRow: false, deleteRow: false, deleteSelectedRows: false, ai: false }
       : { summary: true, pagination: true, quickFilter: true, find: true, undoRedo: true, fillHandle: true, fill: true, filters: true, advancedFilter: true, columns: true, columnSelector: true, exportCsv: true, exportExcel: true, prevNextPage: true, saveAll: this.saveAll.observed, addRow: false, deleteRow: false, deleteSelectedRows: false, ai: true };
-    const raw = { ...defaults, ...(typeof this.toolbar === "object" ? this.toolbar : {}) };
+    const raw = { ...defaults, ...(typeof toolbarConfig === "object" ? toolbarConfig : {}) };
     const toolbarOptions = { ...raw, pagination: raw.pagination || raw.prevNextPage, fillHandle: raw.fillHandle || raw.fill, columns: raw.columns || raw.columnSelector };
-    if (this.toolbar === false || !Object.values(toolbarOptions).some(Boolean)) return null;
+    if (toolbarConfig === false || !Object.values(toolbarOptions).some(Boolean)) return null;
     const toolbar = document.createElement("div");
     toolbar.style.cssText = "display:flex;gap:8px;justify-content:space-between;align-items:center;padding:10px;background:#f8fbff;border:1px solid #dbe3ef";
     if (toolbarOptions.summary) toolbar.append(`${rows.length} rows`);
@@ -949,8 +1174,9 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       this.pageIndex = 0;
       this.render();
     });
-    const pageCount = this.pageSize ? Math.max(1, Math.ceil(rows.length / this.pageSize)) : 1;
-    if (false && toolbarOptions.pagination && this.pageSize) {
+    const pageSize = this.effectivePageSize();
+    const pageCount = pageSize ? Math.max(1, Math.ceil(rows.length / pageSize)) : 1;
+    if (false && toolbarOptions.pagination && pageSize) {
       const prev = this.button("Prev", () => {
         this.pageIndex = Math.max(0, this.pageIndex - 1);
         this.render();
@@ -965,14 +1191,14 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     }
     if (toolbarOptions.quickFilter) actions.appendChild(quickFilter);
     if (toolbarOptions.find) actions.appendChild(find);
-    if (toolbarOptions.undoRedo && this.enableUndoRedo) {
+    if (toolbarOptions.undoRedo && this.effectiveUndoRedo()) {
       const undo = this.button("Undo", () => this.undo());
       undo.disabled = !this.undoStack.length;
       const redo = this.button("Redo", () => this.redo());
       redo.disabled = !this.redoStack.length;
       actions.append(undo, redo);
     }
-    if (toolbarOptions.fillHandle && this.enableFillHandle) actions.appendChild(this.button("Fill", () => this.fillDown()));
+    if (toolbarOptions.fillHandle && this.effectiveFillHandle()) actions.appendChild(this.button("Fill", () => this.fillDown()));
     if (toolbarOptions.addRow) actions.appendChild(this.button("Add row", () => this.addRow()));
     if (toolbarOptions.deleteRow) actions.appendChild(this.button("Delete row", () => this.deleteRow(this.activeCell?.rowIndex ?? 0)));
     if (toolbarOptions.deleteSelectedRows) actions.appendChild(this.button("Delete selected", () => this.deleteSelectedRows()));
@@ -1020,17 +1246,20 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   }
 
   private renderTable(columns: Column<T>[], rows: Array<DisplayRow<T>>) {
+    const fillWidth = this.effectiveFillWidth();
     const fillWidthEnabled =
-      this.fillWidth === true ||
-      (typeof this.fillWidth === "object" && this.fillWidth?.enabled !== false);
+      fillWidth === true ||
+      (typeof fillWidth === "object" && fillWidth?.enabled !== false);
     const table = document.createElement("table");
     table.style.cssText = `width:${fillWidthEnabled ? "100%" : "max-content"};min-width:max-content;border-collapse:collapse`;
     const thead = document.createElement("thead");
-    const leading = Number(this.checkboxSelection) + Number(this.rowNumbers);
+    const checkboxSelection = this.effectiveCheckboxSelection();
+    const rowNumbers = this.effectiveRowNumbers();
+    const leading = Number(checkboxSelection) + Number(rowNumbers);
     if (this.mergedHeaders?.length) thead.appendChild(this.renderMergedHeaders(columns, leading));
     const header = document.createElement("tr");
-    if (this.checkboxSelection) header.appendChild(cell("", "th"));
-    if (this.rowNumbers) header.appendChild(cell("#", "th"));
+    if (checkboxSelection) header.appendChild(cell("", "th"));
+    if (rowNumbers) header.appendChild(cell("#", "th"));
     columns.forEach((column, columnIndex) => {
       const tools = resolveToolOptions(this.columnTools, column);
       const th = cell(`${column.headerName}${this.sortState?.columnId === column.id ? (this.sortState.direction === "asc" ? " ↑" : " ↓") : ""}`, "th");
@@ -1131,21 +1360,21 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       this.classNames?.row,
       this.getRowClassName?.({ row, rowIndex, selected: rowSelected }),
     );
-    tr.draggable = this.enableRowReorder;
+    tr.draggable = this.enableRowReorder || Boolean(this.presetDefaults().enableRowReorder);
     tr.addEventListener("dragstart", () => {
-      if (!this.enableRowReorder) return;
+      if (!tr.draggable) return;
       this.draggedRowIndex = rowIndex;
     });
     tr.addEventListener("dragover", (event) => {
-      if (this.enableRowReorder) event.preventDefault();
+      if (tr.draggable) event.preventDefault();
     });
     tr.addEventListener("drop", (event) => {
-      if (!this.enableRowReorder) return;
+      if (!tr.draggable) return;
       event.preventDefault();
       if (this.draggedRowIndex != null) this.reorderRow(this.draggedRowIndex, rowIndex);
       this.draggedRowIndex = null;
     });
-    if (this.checkboxSelection) {
+    if (this.effectiveCheckboxSelection()) {
       const td = document.createElement("td");
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
@@ -1161,9 +1390,9 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       td.appendChild(checkbox);
       tr.appendChild(td);
     }
-    if (this.rowNumbers) {
+    if (this.effectiveRowNumbers()) {
       const rowNumber = cell(String(rowIndex + 1));
-      if (this.enableRowReorder) {
+      if (tr.draggable) {
         const up = this.button("↑", () => this.moveRow(rowIndex, -1));
         up.disabled = rowIndex <= 0;
         const down = this.button("↓", () => this.moveRow(rowIndex, 1));
@@ -1403,7 +1632,8 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   }
 
   private renderStatus(totalRows: number) {
-    if (this.footer === false) return document.createDocumentFragment();
+    const footer = this.effectiveFooter();
+    if (footer === false) return document.createDocumentFragment();
     const footerOptions = {
       rowCount: true,
       selectedRows: true,
@@ -1412,7 +1642,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       filterCount: true,
       sortStatus: true,
       pagination: true,
-      ...(typeof this.footer === "object" ? this.footer : {}),
+      ...(typeof footer === "object" ? footer : {}),
     };
     const status = document.createElement("div");
     status.style.cssText = "display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:10px;border:1px solid #dbe3ef;border-top:0;font-weight:700";
@@ -1424,9 +1654,9 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       filterCountLabel: `${Object.keys(this.columnFilters ?? {}).length + Number(Boolean(this.advancedFilterModel))} filters`,
       sortStatusLabel: this.sortState ? `Sorted ${this.sortState.direction}` : "Unsorted",
       pageIndex: this.pageIndex,
-      pageCount: this.pageSize ? Math.max(1, Math.ceil(totalRows / this.pageSize)) : 1,
+      pageCount: this.effectivePageSize() ? Math.max(1, Math.ceil(totalRows / this.effectivePageSize()!)) : 1,
     };
-    const renderer = typeof this.footer === "object" ? this.footer.renderer : undefined;
+    const renderer = typeof footer === "object" ? footer.renderer : undefined;
     if (typeof renderer === "function") {
       const content = renderer(state);
       content instanceof Node ? status.appendChild(content) : status.append(String(content ?? ""));
@@ -1438,12 +1668,13 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     if (footerOptions.sortStatus) status.append(state.sortStatusLabel);
     if (footerOptions.filterCount) status.append(state.filterCountLabel);
     if (footerOptions.selectedRange) status.append(state.selectedRangeLabel);
+    const toolbar = this.effectiveToolbar();
     const paginationEnabled =
-      this.toolbar === undefined ||
-      this.toolbar === true ||
-      (typeof this.toolbar === "object" &&
-        Boolean((this.toolbar as Record<string, boolean>).pagination || (this.toolbar as Record<string, boolean>).prevNextPage));
-    if (footerOptions.pagination && paginationEnabled && this.pageSize) {
+      toolbar === undefined ||
+      toolbar === true ||
+      (typeof toolbar === "object" &&
+        Boolean((toolbar as Record<string, boolean>).pagination || (toolbar as Record<string, boolean>).prevNextPage));
+    if (footerOptions.pagination && paginationEnabled && this.effectivePageSize()) {
       const pageCount = state.pageCount;
       const pager = document.createElement("span");
       pager.style.marginLeft = "auto";
