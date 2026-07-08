@@ -196,6 +196,76 @@ Presets provide sensible defaults for common product screens without taking away
 
 Built-in overlays cover loading, error, and empty states inside the grid viewport, so product apps do not need wrapper logic for common states.
 
+## Productivity Layer
+
+Copy this:
+
+```tsx
+<GridNexa
+  columns={columns}
+  rows={rows}
+  views={{ key: "employees-grid-views" }}
+  commandPalette
+  changeReview
+  validation={{
+    blockSave: true,
+    rules: {
+      name: { required: true, message: "Name is required" },
+      score: { type: "number", min: 70, max: 100 },
+    },
+  }}
+  diagnostics
+/>
+```
+
+What this solves:
+
+- `views` gives users a saved-view switcher for column order, hidden columns, pinned columns, filters, sorting, pagination, and panel state.
+- `commandPalette` adds a keyboard-first action launcher with Ctrl+K / Cmd+K.
+- `changeReview` tracks edits, row additions, and row deletions before Save All.
+- `validation` highlights invalid cells and can block Save All.
+- `diagnostics` exposes runtime counts while integrating complex grids.
+
+When to use:
+
+Use this layer for admin tools, data operations, spreadsheet-like workflows, and any screen where users repeatedly shape data and need confidence before save.
+
+Common mistakes:
+
+- Reusing the same `views.key` for unrelated grids.
+- Making validation callbacks expensive; keep cell validation fast and handle async checks in your save workflow.
+- Forgetting `import "@gridnexa/react/index.css";` in installed apps.
+
+External app setup:
+
+```tsx
+import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+```
+
+Next.js example:
+
+```tsx
+"use client";
+
+import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+
+export default function EmployeesGrid() {
+  return (
+    <GridNexa
+      columns={columns}
+      rows={rows}
+      views={{ key: "employees-grid-views" }}
+      commandPalette
+      changeReview
+      validation={{ rules: { name: { required: true } } }}
+      diagnostics
+    />
+  );
+}
+```
+
 ## Column And Range Summaries
 
 Copy this:

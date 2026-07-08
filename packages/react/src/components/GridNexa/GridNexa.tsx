@@ -17,6 +17,11 @@ import type {
   GridNexaFillWidthOptions,
   GridNexaStateStorageOptions,
   GridNexaSummaryOptions,
+  GridNexaSavedViewsOptions,
+  GridNexaCommandPaletteOptions,
+  GridNexaChangeReviewOptions,
+  GridNexaValidationOptions,
+  GridNexaDiagnosticsOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
   GridNexaCommandPlan,
@@ -274,6 +279,11 @@ export interface GridNexaExtendedProps<T>
   fillWidth?: GridNexaFillWidthOptions;
   stateStorage?: GridNexaStateStorageOptions;
   summaries?: GridNexaSummaryOptions;
+  views?: GridNexaSavedViewsOptions;
+  commandPalette?: GridNexaCommandPaletteOptions;
+  changeReview?: GridNexaChangeReviewOptions;
+  validation?: GridNexaValidationOptions;
+  diagnostics?: GridNexaDiagnosticsOptions;
   loading?: boolean;
   error?: ReactNode;
   emptyState?: ReactNode;
@@ -486,6 +496,20 @@ type PersistedGridState = {
   };
 };
 
+type SavedGridView = {
+  id: string;
+  name: string;
+  state: PersistedGridState;
+  createdAt: number;
+};
+
+type ChangeReviewEntry = {
+  id: string;
+  type: "edit" | "add" | "delete" | "bulkDelete";
+  label: string;
+  timestamp: number;
+};
+
 function readPersistedGridState(key: string): PersistedGridState | null {
   if (!key || typeof window === "undefined") {
     return null;
@@ -509,6 +533,42 @@ function writePersistedGridState(key: string, state: PersistedGridState) {
     window.localStorage.setItem(key, JSON.stringify(state));
   } catch {
     // Storage can fail in private browsing or locked-down embedded contexts.
+  }
+}
+
+function resolveSavedViewsOptions(value?: GridNexaSavedViewsOptions) {
+  if (!value) return { enabled: false, key: "", storage: "localStorage" as const, allowUserViews: false };
+  if (value === true) return { enabled: true, key: "gridnexa-views", storage: "localStorage" as const, allowUserViews: true };
+  return {
+    enabled: value.enabled ?? true,
+    key: value.key ?? "gridnexa-views",
+    storage: value.storage ?? "localStorage" as const,
+    allowUserViews: value.allowUserViews ?? true,
+  };
+}
+
+function resolveEnabledOption(value: unknown) {
+  if (!value) return false;
+  if (value === true) return true;
+  return typeof value === "object" ? ((value as { enabled?: boolean }).enabled ?? true) : false;
+}
+
+function readSavedGridViews(key: string): SavedGridView[] {
+  if (!key || typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? JSON.parse(raw) as SavedGridView[] : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSavedGridViews(key: string, views: SavedGridView[]) {
+  if (!key || typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(views));
+  } catch {
+    // User preferences should not interrupt grid work.
   }
 }
 
@@ -1412,6 +1472,11 @@ export function GridNexa<T>({
   fillWidth: fillWidthProp,
   stateStorage,
   summaries,
+  views,
+  commandPalette,
+  changeReview,
+  validation,
+  diagnostics,
   loading = false,
   error,
   emptyState,
@@ -1556,6 +1621,23 @@ export function GridNexa<T>({
   const [aiPlan, setAiPlan] = useState<GridNexaCommandPlan | null>(null);
   const [aiBusy, setAiBusy] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const savedViewsOptions = resolveSavedViewsOptions(views);
+  const commandPaletteEnabled = resolveEnabledOption(commandPalette);
+  const changeReviewEnabled = resolveEnabledOption(changeReview);
+  const diagnosticsEnabled = resolveEnabledOption(diagnostics);
+  const changeReviewToolbarVisible =
+    typeof changeReview === "object" ? changeReview.showToolbarButton !== false : true;
+  const [savedViews, setSavedViews] = useState<SavedGridView[]>(() =>
+    savedViewsOptions.enabled ? readSavedGridViews(savedViewsOptions.key) : [],
+  );
+  const [activeViewId, setActiveViewId] = useState("");
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [commandQuery, setCommandQuery] = useState("");
+  const [changeReviewOpen, setChangeReviewOpen] = useState(false);
+  const [diagnosticsOpen, setDiagnosticsOpen] = useState(
+    diagnosticsEnabled && typeof diagnostics === "object" ? diagnostics.showPanel === true : false,
+  );
+  const [changeLog, setChangeLog] = useState<ChangeReviewEntry[]>([]);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [advancedFilterPanelOpen, setAdvancedFilterPanelOpen] =
     useState(false);
@@ -2117,6 +2199,18 @@ export function GridNexa<T>({
     });
   };
 
+  const appendChangeLog = (entry: Omit<ChangeReviewEntry, "id" | "timestamp">) => {
+    if (!changeReviewEnabled) return;
+    setChangeLog((current) => [
+      {
+        ...entry,
+        id: `${Date.now()}-${current.length}`,
+        timestamp: Date.now(),
+      },
+      ...current.slice(0, 49),
+    ]);
+  };
+
   const undo = () => {
     setUndoStack((currentStack) => {
       const previousRows = currentStack.at(-1);
@@ -2303,6 +2397,43 @@ export function GridNexa<T>({
     ? pivotResult.columns
     : orderedColumns;
   const tableRows = pivotResult.active ? pagedPivotRows : visibleDataRows;
+  const validationEnabled = resolveEnabledOption(validation);
+  const validationRules =
+    validationEnabled && typeof validation === "object"
+      ? (validation.rules ?? {}) as Record<string, any>
+      : {};
+  const validationResult = useMemo(() => {
+    const invalid = new Map<string, string>();
+    if (!validationEnabled || pivotResult.active) {
+      return invalid;
+    }
+
+    tableRows.forEach((row, rowIndex) => {
+      tableColumns.forEach((column, columnIndex) => {
+        const rule = validationRules[column.id] ?? validationRules[String(column.field)];
+        if (!rule || rule === true) return;
+        const value = getColumnValue(row, column);
+        const text = String(value ?? "");
+        let message = "";
+        if (rule.required && !text.trim()) message = rule.message ?? "Required";
+        if (!message && rule.type === "email" && text && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) message = rule.message ?? "Invalid email";
+        if (!message && rule.type === "number" && text && Number.isNaN(Number(value))) message = rule.message ?? "Invalid number";
+        if (!message && rule.min != null && Number(value) < rule.min) message = rule.message ?? `Min ${rule.min}`;
+        if (!message && rule.max != null && Number(value) > rule.max) message = rule.message ?? `Max ${rule.max}`;
+        if (!message && rule.pattern) {
+          const pattern = typeof rule.pattern === "string" ? new RegExp(rule.pattern) : rule.pattern;
+          if (!pattern.test(text)) message = rule.message ?? "Invalid format";
+        }
+        if (!message && rule.validate) {
+          const result = rule.validate(value, row);
+          if (result !== true) message = result;
+        }
+        if (message) invalid.set(`${rowIndex}:${columnIndex}`, message);
+      });
+    });
+
+    return invalid;
+  }, [pivotResult.active, tableColumns, tableRows, validationEnabled, validationRules]);
   const getRowSelectionId = (row: T, rowIndex: number) =>
     pivotResult.active || !getRowId ? rowIndex : getRowId(row, rowIndex);
   const visibleSelectedRowIds = useMemo(
@@ -3223,6 +3354,10 @@ export function GridNexa<T>({
       oldValue: row[column.field],
       newValue: parsedValue,
     });
+    appendChangeLog({
+      type: "edit",
+      label: `${column.headerName} row ${editingCell.rowIndex + 1}: ${String(row[column.field] ?? "")} -> ${String(parsedValue ?? "")}`,
+    });
     onCellEditStop?.({
       row,
       rowIndex: editingCell.rowIndex,
@@ -3672,7 +3807,52 @@ export function GridNexa<T>({
   const contextColumn = cellContextMenu
     ? tableColumns[cellContextMenu.columnIndex]
     : null;
+  const invalidCellCount = validationResult.size;
+  const createCurrentViewState = (): PersistedGridState => ({
+    version: 1,
+    columnOrder,
+    columnWidths: Object.fromEntries(tableColumns.map((column, index) => [column.id, tableWidths[index]])),
+    hiddenColumnIds: Array.from(hiddenColumnIds),
+    pinnedColumnIds: Object.fromEntries(
+      Object.entries(pinnedColumnIds).map(([columnId, pinned]) => [columnId, pinned ?? null]),
+    ),
+    filterModel,
+    sortModel,
+    pageIndex,
+    sidePanel: {
+      columnsOpen: pivotPanelOpen,
+      filtersOpen: filterPanelOpen,
+    },
+  });
+  const applySavedView = (view: SavedGridView) => {
+    setActiveViewId(view.id);
+    if (view.state.columnOrder) setColumnOrder(view.state.columnOrder);
+    if (view.state.hiddenColumnIds) setHiddenColumnIds(new Set(view.state.hiddenColumnIds));
+    if (view.state.pinnedColumnIds) setPinnedColumnIds(view.state.pinnedColumnIds);
+    if (view.state.filterModel) setFilterModel(view.state.filterModel);
+    setSortModel(view.state.sortModel ?? null);
+    setPageIndex(view.state.pageIndex ?? 0);
+  };
+  const saveCurrentView = () => {
+    if (!savedViewsOptions.enabled || !savedViewsOptions.allowUserViews) return;
+    const name = window.prompt("Save current view as", "My grid view");
+    if (!name?.trim()) return;
+    const nextViews = [
+      ...savedViews.filter((view) => view.name !== name.trim()),
+      {
+        id: `${Date.now()}`,
+        name: name.trim(),
+        state: createCurrentViewState(),
+        createdAt: Date.now(),
+      },
+    ];
+    setSavedViews(nextViews);
+    writeSavedGridViews(savedViewsOptions.key, nextViews);
+  };
   const saveAllRows = () => {
+    if (validation && typeof validation === "object" && validation.blockSave && invalidCellCount) {
+      return;
+    }
     onSaveAll?.({
       rows: gridRows,
       selectedRows: selectedTableRows,
@@ -3680,6 +3860,30 @@ export function GridNexa<T>({
       reason: "toolbar",
     });
   };
+  const commandItems = [
+    { id: "focus-quick-filter", label: "Focus quick filter", run: () => setCommandPaletteOpen(false) },
+    { id: "clear-filters", label: "Clear filters", run: () => { setFilterModel({}); setAdvancedFilterModel(null); setCommandPaletteOpen(false); } },
+    { id: "save-view", label: "Save current view", run: () => { saveCurrentView(); setCommandPaletteOpen(false); } },
+    { id: "open-columns", label: "Open columns panel", run: () => { setColumnChooserOpen(true); setCommandPaletteOpen(false); } },
+    { id: "open-filters", label: "Open filters panel", run: () => { setFilterPanelOpen(true); setCommandPaletteOpen(false); } },
+    { id: "export-csv", label: "Export CSV", run: () => { exportVisibleRowsToCsv(); setCommandPaletteOpen(false); } },
+    { id: "export-excel", label: "Export Excel", run: () => { exportVisibleRowsToExcel(); setCommandPaletteOpen(false); } },
+    { id: "review-changes", label: "Review changes", run: () => { setChangeReviewOpen(true); setCommandPaletteOpen(false); } },
+    { id: "diagnostics", label: "Open diagnostics", run: () => { setDiagnosticsOpen(true); setCommandPaletteOpen(false); } },
+  ].filter((command) => command.label.toLowerCase().includes(commandQuery.trim().toLowerCase()));
+
+  useEffect(() => {
+    if (!commandPaletteEnabled) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandPaletteOpen((current) => !current);
+      }
+      if (event.key === "Escape") setCommandPaletteOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [commandPaletteEnabled]);
 
   const buildDefaultRow = () => {
     if (createRow) {
@@ -3696,6 +3900,7 @@ export function GridNexa<T>({
     const nextRows = [...gridRows, row];
 
     replaceGridRows(() => nextRows, "rowAdd");
+    appendChangeLog({ type: "add", label: `Added row ${rowIndex + 1}` });
     onRowAdd?.({ row, rowIndex, rows: nextRows });
   };
 
@@ -3730,6 +3935,10 @@ export function GridNexa<T>({
     const remainingRows = gridRows.filter((_, index) => !sourceIndexes.has(index));
 
     replaceGridRows(() => remainingRows, rowsToDelete.length > 1 ? "rowsDelete" : "rowDelete");
+    appendChangeLog({
+      type: rowsToDelete.length > 1 ? "bulkDelete" : "delete",
+      label: rowsToDelete.length > 1 ? `Deleted ${rowsToDelete.length} rows` : `Deleted row ${uniqueIndexes[0] + 1}`,
+    });
     setSelectedRowIds(new Set());
     setSelectedRowIndex(null);
 
@@ -4527,7 +4736,11 @@ export function GridNexa<T>({
         selectionColumnStyle,
         rowNumberColumnStyle,
         getRowClassName: (params) => getRowClassName?.(params),
-        getCellClassName: (params) => getCellClassName?.(params),
+        getCellClassName: (params) =>
+          cx(
+            getCellClassName?.(params),
+            validationResult.has(`${params.rowIndex}:${params.columnIndex}`) && "sg-cell--invalid",
+          ),
         getHeaderClassName: (params) => getHeaderClassName?.(params),
         emitCellClick,
         emitCellDoubleClick,
@@ -4635,6 +4848,47 @@ export function GridNexa<T>({
           ) : null}
 
           <div className={cx("sg-toolbar-actions", mergedClassNames.toolbarActions)}>
+            {savedViewsOptions.enabled ? (
+              <div className="sg-saved-views">
+                <select
+                  className={cx("sg-filter-input sg-filter-input--short", mergedClassNames.input)}
+                  value={activeViewId}
+                  onChange={(event) => {
+                    const view = savedViews.find((entry) => entry.id === event.target.value);
+                    if (view) applySavedView(view);
+                  }}
+                >
+                  <option value="">Default view</option>
+                  {savedViews.map((view) => (
+                    <option key={view.id} value={view.id}>{view.name}</option>
+                  ))}
+                </select>
+                {savedViewsOptions.allowUserViews ? (
+                  <button className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)} type="button" onClick={saveCurrentView}>
+                    Save view
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+
+            {commandPaletteEnabled ? (
+              <button className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)} type="button" onClick={() => setCommandPaletteOpen(true)}>
+                Commands
+              </button>
+            ) : null}
+
+            {changeReviewEnabled && changeReviewToolbarVisible ? (
+              <button className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)} type="button" onClick={() => setChangeReviewOpen((current) => !current)}>
+                Review {changeLog.length ? `(${changeLog.length})` : ""}
+              </button>
+            ) : null}
+
+            {diagnosticsEnabled ? (
+              <button className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)} type="button" onClick={() => setDiagnosticsOpen((current) => !current)}>
+                Diagnostics
+              </button>
+            ) : null}
+
             {false ? (
               <div className="sg-pager">
                 <button
@@ -5053,7 +5307,7 @@ export function GridNexa<T>({
               className={cx("sg-toolbar-button", mergedClassNames.button)}
               type="button"
               onClick={saveAllRows}
-              disabled={!onSaveAll}
+              disabled={!onSaveAll || (typeof validation === "object" && validation.blockSave && invalidCellCount > 0)}
             >
               {renderGridIcon(icons.saveAll)}
               Save all
@@ -5083,6 +5337,65 @@ export function GridNexa<T>({
             ) : null}
           </div>
         </div>
+        ) : null}
+
+        {commandPaletteOpen ? (
+          <div className="sg-product-panel sg-command-palette" role="dialog" aria-label="Command palette" onClick={(event) => event.stopPropagation()}>
+            <input
+              className={cx("sg-filter-input", mergedClassNames.input)}
+              autoFocus
+              value={commandQuery}
+              onChange={(event) => setCommandQuery(event.target.value)}
+              placeholder="Search commands..."
+            />
+            <div className="sg-command-list">
+              {commandItems.map((command) => (
+                <button key={command.id} type="button" className="sg-command-item" onClick={command.run}>
+                  {command.label}
+                </button>
+              ))}
+              {!commandItems.length ? <span className="sg-panel-muted">No commands found</span> : null}
+            </div>
+          </div>
+        ) : null}
+
+        {changeReviewOpen ? (
+          <div className="sg-product-panel">
+            <div className="sg-product-panel-header">
+              <strong>Change review</strong>
+              <button type="button" className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)} onClick={() => setChangeLog([])}>
+                Clear
+              </button>
+            </div>
+            {changeLog.length ? (
+              <ul className="sg-change-list">
+                {changeLog.map((entry) => (
+                  <li key={entry.id}>
+                    <strong>{entry.type}</strong>
+                    <span>{entry.label}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : <span className="sg-panel-muted">No pending changes tracked yet.</span>}
+          </div>
+        ) : null}
+
+        {validationEnabled && typeof validation === "object" && validation.showSummary !== false && invalidCellCount ? (
+          <div className="sg-product-panel sg-validation-panel">
+            <strong>{invalidCellCount} validation issue{invalidCellCount === 1 ? "" : "s"}</strong>
+            <span>Fix highlighted cells before saving.</span>
+          </div>
+        ) : null}
+
+        {diagnosticsOpen ? (
+          <div className="sg-product-panel sg-diagnostics-panel">
+            <strong>Diagnostics</strong>
+            <span>Rows: {gridRows.length} total, {filteredRows.length} filtered, {tableRows.length} rendered</span>
+            <span>Columns: {columns.length} total, {tableColumns.length} visible</span>
+            <span>Filters: {activeFilterCount + activeAdvancedFilterCount}</span>
+            <span>Invalid cells: {invalidCellCount}</span>
+            <span>Changes tracked: {changeLog.length}</span>
+          </div>
         ) : null}
 
         <div className={cx("sg-grid-workspace", mergedClassNames.gridWorkspace)}>

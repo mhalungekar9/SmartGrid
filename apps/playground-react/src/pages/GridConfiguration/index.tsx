@@ -270,6 +270,127 @@ const summariesCode = `<GridNexa
   }}
 />`;
 
+const summariesExternalSetupCode = `import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+
+<GridNexa
+  columns={columns}
+  rows={rows}
+  enableRangeSelection
+  summaries={{ footer: true, selectedRange: true }}
+/>;`;
+
+const summariesNextJsCode = `"use client";
+
+import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+
+export default function EmployeesGrid() {
+  return (
+    <GridNexa
+      columns={columns}
+      rows={rows}
+      enableRangeSelection
+      summaries={{ footer: true, selectedRange: true }}
+    />
+  );
+}`;
+
+const productivityLayerCode = `<GridNexa
+  columns={columns}
+  rows={rows}
+  views={{ key: "employees-grid-views" }}
+  commandPalette
+  changeReview
+  validation={{
+    blockSave: true,
+    rules: {
+      name: { required: true, message: "Name is required" },
+      score: { type: "number", min: 70, max: 100 }
+    }
+  }}
+  diagnostics
+/>`;
+
+const savedViewsCode = `<GridNexa
+  columns={columns}
+  rows={rows}
+  preset="admin"
+  views={{
+    key: "employees-grid-views",
+    storage: "localStorage",
+    allowUserViews: true
+  }}
+/>`;
+
+const commandPaletteCode = `<GridNexa
+  columns={columns}
+  rows={rows}
+  commandPalette
+  toolbar={{ quickFilter: true, filters: true, columns: true, exportCsv: true }}
+/>
+
+// Press Ctrl+K / Cmd+K to open commands.`;
+
+const changeReviewCode = `<GridNexa
+  columns={columns}
+  rows={rows}
+  changeReview
+  toolbar={{ addRow: true, deleteRow: true, saveAll: true }}
+/>`;
+
+const validationCode = `<GridNexa
+  columns={columns}
+  rows={rows}
+  validation={{
+    blockSave: true,
+    showSummary: true,
+    rules: {
+      name: { required: true, message: "Name is required" },
+      score: { type: "number", min: 70, max: 100 }
+    }
+  }}
+/>`;
+
+const diagnosticsCode = `<GridNexa
+  columns={columns}
+  rows={rows}
+  diagnostics
+  commandPalette
+/>`;
+
+const productivityExternalSetupCode = `import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+
+<GridNexa
+  columns={columns}
+  rows={rows}
+  views={{ key: "employees-grid-views" }}
+  commandPalette
+  changeReview
+  validation={{ rules: { name: { required: true } } }}
+  diagnostics
+/>;`;
+
+const productivityNextJsCode = `"use client";
+
+import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+
+export default function EmployeesGrid() {
+  return (
+    <GridNexa
+      columns={columns}
+      rows={rows}
+      views={{ key: "employees-grid-views" }}
+      commandPalette
+      changeReview
+      validation={{ rules: { name: { required: true } } }}
+      diagnostics
+    />
+  );
+}`;
+
 const customFooterCode = `<GridNexa
   columns={columns}
   rows={rows}
@@ -387,6 +508,12 @@ const configurationSections = [
   { id: "custom-icons", name: "Custom icons", type: "GridNexaIconSet", description: "Replace default header, menu, tree, pagination, add, and delete icons." },
   { id: "footer-configuration", name: "Footer configuration", type: "GridNexaFooterOptions", description: "Choose footer labels and keep pagination controls in the footer." },
   { id: "column-range-summaries", name: "Column and range summaries", type: "GridNexaSummaryOptions", description: "Show count, sum, average, min, and max for visible data or selected ranges." },
+  { id: "productivity-layer", name: "Productivity layer", type: "views | commandPalette | changeReview | validation | diagnostics", description: "Opt into saved views, command search, change review, validation, and diagnostics together." },
+  { id: "saved-views-switcher", name: "Saved views switcher", type: "GridNexaSavedViewsOptions", description: "Let users save and restore column, filter, sort, pagination, and panel state." },
+  { id: "command-palette", name: "Command palette", type: "GridNexaCommandPaletteOptions", description: "Expose common grid actions through a searchable keyboard-first launcher." },
+  { id: "change-review-mode", name: "Change review mode", type: "GridNexaChangeReviewOptions", description: "Review edits, row additions, and row deletions before save." },
+  { id: "validation-layer", name: "Validation layer", type: "GridNexaValidationOptions", description: "Mark invalid cells and optionally block Save All until issues are fixed." },
+  { id: "developer-diagnostics", name: "Developer diagnostics", type: "GridNexaDiagnosticsOptions", description: "Show practical runtime counts for debugging grid state during integration." },
   { id: "custom-footer", name: "Custom footer", type: "footer.renderer", description: "Render your own footer UI from GridNexa footer state." },
   { id: "edge-popover-positioning", name: "Edge popover positioning", type: "Popover collision handling", description: "Verify toolbar popovers shift into view near container edges." },
   { id: "css-customization", name: "CSS customization", type: "CSS variables | classNames", description: "Override colors and component styles with variables and stable class names." },
@@ -752,6 +879,99 @@ export function GridConfiguration() {
             summaries={{ footer: true, selectedRange: true }}
           />
           <CodeViewer code={summariesCode} />
+          <div className="developer-docs-grid">
+            <article className="developer-doc-card">
+              <span className="eyebrow">When to use</span>
+              <p>Use summaries when users need spreadsheet-style feedback while comparing numeric columns, validating totals, or checking a selected range before export.</p>
+            </article>
+            <article className="developer-doc-card">
+              <span className="eyebrow">Common mistakes</span>
+              <ul>
+                <li>Enable range selection when using selected range summaries.</li>
+                <li>Keep the footer visible; summaries render in the footer area.</li>
+                <li>Only numeric values are summarized; text cells are ignored.</li>
+              </ul>
+            </article>
+            <article className="developer-doc-card developer-doc-card--wide">
+              <span className="eyebrow">External app setup</span>
+              <CodeViewer code={summariesExternalSetupCode} />
+            </article>
+            <article className="developer-doc-card developer-doc-card--wide">
+              <span className="eyebrow">Next.js example</span>
+              <CodeViewer code={summariesNextJsCode} />
+            </article>
+          </div>
+        </DemoCard>
+
+        <DemoCard {...sectionProps("productivity-layer")} title="Productivity layer" description="Enable the premium workflow layer when users need repeatable views, keyboard actions, validation, review, and integration diagnostics.">
+          <GridNexa
+            columns={columns}
+            rows={rows}
+            theme={theme}
+            rowNumbers
+            checkboxSelection
+            toolbar={{ saveAll: true, addRow: true, deleteSelectedRows: true, filters: true, columns: true, exportCsv: true }}
+            views={{ key: "gridnexa-productivity-demo" }}
+            commandPalette
+            changeReview
+            validation={{ blockSave: true, rules: { name: { required: true }, score: { type: "number", min: 70, max: 100 } } }}
+            diagnostics
+            createRow={rowFactory}
+          />
+          <CodeViewer code={productivityLayerCode} />
+          <div className="developer-docs-grid">
+            <article className="developer-doc-card">
+              <span className="eyebrow">When to use</span>
+              <p>Use this layer for admin tools, internal operations, spreadsheet-style review screens, or any grid where users repeatedly shape the same data and need confidence before saving.</p>
+            </article>
+            <article className="developer-doc-card">
+              <span className="eyebrow">Common mistakes</span>
+              <ul>
+                <li>Use a stable storage key per grid, not one shared key for unrelated screens.</li>
+                <li>Keep validation rules lightweight; expensive async checks belong in your save workflow.</li>
+                <li>Import the package CSS in external apps so panels and invalid cell styles render correctly.</li>
+              </ul>
+            </article>
+            <article className="developer-doc-card developer-doc-card--wide">
+              <span className="eyebrow">External app setup</span>
+              <CodeViewer code={productivityExternalSetupCode} />
+            </article>
+            <article className="developer-doc-card developer-doc-card--wide">
+              <span className="eyebrow">Next.js example</span>
+              <CodeViewer code={productivityNextJsCode} />
+            </article>
+          </div>
+        </DemoCard>
+
+        <DemoCard {...sectionProps("saved-views-switcher")} title="Saved views switcher" description="Save a named view from the toolbar, then switch between saved layouts without rebuilding app state by hand.">
+          <GridNexa columns={columns} rows={rows} theme={theme} preset="admin" views={{ key: "gridnexa-view-switcher-demo" }} />
+          <CodeViewer code={savedViewsCode} />
+        </DemoCard>
+
+        <DemoCard {...sectionProps("command-palette")} title="Command palette" description="Give power users a searchable action launcher for filters, exports, panels, views, review, and diagnostics.">
+          <GridNexa columns={columns} rows={rows} theme={theme} commandPalette toolbar={{ quickFilter: true, filters: true, columns: true, exportCsv: true }} />
+          <CodeViewer code={commandPaletteCode} />
+        </DemoCard>
+
+        <DemoCard {...sectionProps("change-review-mode")} title="Change review mode" description="Track edits, row additions, and row deletions so users can inspect what changed before Save All.">
+          <GridNexa columns={columns} rows={rows} theme={theme} changeReview toolbar={{ addRow: true, deleteRow: true, saveAll: true }} createRow={rowFactory} />
+          <CodeViewer code={changeReviewCode} />
+        </DemoCard>
+
+        <DemoCard {...sectionProps("validation-layer")} title="Validation layer" description="Highlight invalid cells, summarize issues, and optionally block Save All until data is corrected.">
+          <GridNexa
+            columns={columns}
+            rows={[{ ...rows[0], name: "", score: 102 }, ...rows.slice(1)]}
+            theme={theme}
+            toolbar={{ saveAll: true }}
+            validation={{ blockSave: true, showSummary: true, rules: { name: { required: true, message: "Name is required" }, score: { type: "number", min: 70, max: 100 } } }}
+          />
+          <CodeViewer code={validationCode} />
+        </DemoCard>
+
+        <DemoCard {...sectionProps("developer-diagnostics")} title="Developer diagnostics" description="Open a lightweight diagnostics panel while integrating to inspect visible rows, columns, filters, invalid cells, and tracked changes.">
+          <GridNexa columns={columns} rows={rows} theme={theme} diagnostics commandPalette />
+          <CodeViewer code={diagnosticsCode} />
         </DemoCard>
 
         <DemoCard {...sectionProps("custom-footer")} title="Custom footer" description="Replace the built-in footer content with your own renderer.">

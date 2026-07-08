@@ -17,6 +17,11 @@ import type {
   GridNexaPreset,
   GridNexaStateStorageOptions,
   GridNexaSummaryOptions,
+  GridNexaSavedViewsOptions,
+  GridNexaCommandPaletteOptions,
+  GridNexaChangeReviewOptions,
+  GridNexaValidationOptions,
+  GridNexaDiagnosticsOptions,
   GridNexaAiOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
@@ -387,6 +392,11 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   @Input() preset: GridNexaPreset | undefined;
   @Input() stateStorage: GridNexaStateStorageOptions | undefined;
   @Input() summaries: GridNexaSummaryOptions | undefined;
+  @Input() views: GridNexaSavedViewsOptions | undefined;
+  @Input() commandPalette: GridNexaCommandPaletteOptions | undefined;
+  @Input() changeReview: GridNexaChangeReviewOptions | undefined;
+  @Input() validation: GridNexaValidationOptions | undefined;
+  @Input() diagnostics: GridNexaDiagnosticsOptions | undefined;
   @Input() loading = false;
   @Input() error: unknown;
   @Input() emptyState: unknown;

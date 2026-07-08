@@ -190,6 +190,132 @@ textarea {
   gap: 10px;
 }
 
+.global-search,
+.sidebar-search,
+.global-doc-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-panel) 86%, var(--app-soft));
+  color: var(--app-muted);
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.global-search {
+  width: min(380px, 34vw);
+  padding: 0 10px;
+}
+
+.global-search:focus-within,
+.sidebar-search:focus-within,
+.global-doc-search:focus-within {
+  border-color: color-mix(in srgb, var(--app-primary) 58%, var(--app-border));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--app-primary) 16%, transparent);
+  transform: translateY(-1px);
+}
+
+.global-search input,
+.sidebar-search input,
+.global-doc-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--app-text);
+}
+
+.global-search kbd {
+  flex: 0 0 auto;
+  padding: 2px 6px;
+  border: 1px solid var(--app-border);
+  border-radius: 6px;
+  background: var(--app-soft);
+  color: var(--app-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.global-search-popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 80;
+  display: grid;
+  gap: 6px;
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(520px, calc(100vh - 120px));
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-panel);
+  box-shadow: 0 24px 70px color-mix(in srgb, #020617 28%, transparent);
+  animation: popoverIn 160ms ease both;
+}
+
+.global-search-popover button {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  min-height: 54px;
+  padding: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--app-text);
+  text-align: left;
+  transition:
+    background 140ms ease,
+    transform 140ms ease;
+}
+
+.global-search-popover button:hover {
+  background: var(--app-soft);
+  transform: translateX(2px);
+}
+
+.global-search-popover button i {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--app-primary) 14%, transparent);
+  color: var(--app-primary);
+}
+
+.global-search-popover button span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.global-search-popover button strong,
+.global-search-popover button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.global-search-popover button small,
+.global-search-empty {
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
+.global-search-empty {
+  padding: 14px;
+}
+
 .app-content {
   padding: 28px;
 }
@@ -216,6 +342,214 @@ textarea {
   border-radius: var(--app-radius);
   background: var(--app-panel);
   box-shadow: var(--app-shadow);
+}
+
+.sidebar-search {
+  margin: 8px 0 14px;
+  padding: 0 10px;
+}
+
+.showcase-page {
+  display: grid;
+  gap: 22px;
+}
+
+.showcase-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 420px);
+  gap: 20px;
+  align-items: end;
+  padding: 24px;
+  border: 1px solid var(--app-border);
+  border-radius: 18px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--app-primary) 12%, transparent), transparent 42%),
+    var(--app-panel);
+  box-shadow: var(--app-shadow);
+  animation: contentRise 260ms ease both;
+}
+
+.showcase-hero h2 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: clamp(1.8rem, 3vw, 3rem);
+  line-height: 1.05;
+}
+
+.showcase-hero p {
+  max-width: 760px;
+  margin: 12px 0 0;
+  color: var(--app-muted);
+  font-size: 1rem;
+}
+
+.feature-index-search {
+  width: 100%;
+  padding: 0 12px;
+}
+
+.spotlight-grid,
+.feature-directory-grid,
+.setup-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.spotlight-card,
+.feature-directory-card,
+.setup-card {
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-panel);
+  box-shadow: var(--app-shadow);
+}
+
+.spotlight-card {
+  display: grid;
+  gap: 8px;
+  min-height: 150px;
+  padding: 18px;
+  animation: contentRise 280ms ease both;
+}
+
+.spotlight-card i {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--app-primary) 14%, transparent);
+  color: var(--app-primary);
+  font-size: 1.1rem;
+}
+
+.spotlight-card strong,
+.feature-directory-card strong {
+  color: var(--app-heading);
+}
+
+.spotlight-card span,
+.feature-directory-card span {
+  color: var(--app-muted);
+}
+
+.feature-directory {
+  display: grid;
+  gap: 20px;
+}
+
+.feature-directory-group {
+  display: grid;
+  gap: 12px;
+}
+
+.feature-directory-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.feature-directory-heading span {
+  color: var(--app-heading);
+  font-weight: 900;
+}
+
+.feature-directory-heading small {
+  color: var(--app-muted);
+  font-weight: 800;
+}
+
+.feature-directory-card {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 6px 12px;
+  min-height: 124px;
+  padding: 16px;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.feature-directory-card:hover {
+  border-color: color-mix(in srgb, var(--app-primary) 55%, var(--app-border));
+  box-shadow: 0 20px 46px color-mix(in srgb, var(--app-primary) 16%, transparent);
+  transform: translateY(-3px);
+}
+
+.feature-directory-card i {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--app-soft);
+  color: var(--app-primary);
+}
+
+.setup-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  min-width: 0;
+}
+
+.setup-card--wide {
+  grid-column: span 2;
+}
+
+.setup-checklist,
+.setup-steps {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+}
+
+.setup-checklist li,
+.setup-steps li {
+  color: var(--app-text);
+}
+
+.setup-checklist li {
+  display: flex;
+  gap: 10px;
+  list-style: none;
+}
+
+.setup-checklist i {
+  color: var(--app-primary);
+}
+
+.setup-steps {
+  padding-left: 18px;
+}
+
+@keyframes popoverIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes contentRise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 [data-app-theme="light"] .hero-panel,
@@ -507,6 +841,43 @@ textarea {
 
 .preset-comparison-table td[data-state="custom"] {
   color: var(--app-text);
+}
+
+.developer-docs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px;
+  border-top: 1px solid var(--app-border);
+  background: color-mix(in srgb, var(--app-panel-strong) 68%, transparent);
+}
+
+.developer-doc-card {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-panel);
+}
+
+.developer-doc-card--wide {
+  grid-column: 1 / -1;
+}
+
+.developer-doc-card p,
+.developer-doc-card ul {
+  margin: 0;
+  color: var(--app-muted);
+}
+
+.developer-doc-card ul {
+  padding-left: 18px;
+}
+
+.developer-doc-card li + li {
+  margin-top: 6px;
 }
 
 .demo-card.config-section-active {
@@ -2627,12 +2998,24 @@ body.gridnexa-marketing-page .sg-header-menu-divider {
     grid-template-columns: 1fr;
   }
 
+  .showcase-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .setup-card--wide {
+    grid-column: auto;
+  }
+
   .config-doc-panel-header {
     display: grid;
   }
 
   .preset-card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .developer-docs-grid {
+    grid-template-columns: 1fr;
   }
 
   .site-hero,
@@ -2689,8 +3072,36 @@ body.gridnexa-marketing-page .sg-header-menu-divider {
     padding: 16px;
   }
 
+  .header-actions,
+  .global-search {
+    width: 100%;
+  }
+
+  .header-actions {
+    align-items: stretch;
+    flex-wrap: wrap;
+  }
+
+  .global-search {
+    order: -1;
+  }
+
+  .global-search-popover {
+    right: auto;
+    left: 0;
+    width: 100%;
+  }
+
   .app-content {
     padding: 16px;
+  }
+
+  .showcase-hero {
+    padding: 18px;
+  }
+
+  .showcase-hero h2 {
+    font-size: 1.75rem;
   }
 
   .hero-panel,

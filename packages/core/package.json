@@ -1,6 +1,6 @@
 {
   "name": "@gridnexa/core",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Shared TypeScript models, grid options, filtering contracts, and framework-neutral utilities for GridNexa enterprise data grids.",
   "type": "module",
   "main": "./dist/index.js",

@@ -1,5 +1,8 @@
 import type { ComponentType } from "react";
 import { Home } from "../pages/Home";
+import { FeatureIndex } from "../pages/FeatureIndex";
+import { DeveloperSetup } from "../pages/DeveloperSetup";
+import { ProductivitySuite } from "../pages/ProductivitySuite";
 import { BasicGrid } from "../pages/BasicGrid";
 import { Sorting } from "../pages/Sorting";
 import { Filtering } from "../pages/Filtering";
@@ -32,9 +35,40 @@ export interface RouteItem {
   label: string;
   icon: string;
   component: ComponentType;
+  description?: string;
+  tags?: string[];
 }
 
 export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
+  {
+    title: "Start Here",
+    items: [
+      {
+        path: "/docs/feature-index",
+        label: "Feature Index",
+        icon: "bi-search",
+        component: FeatureIndex,
+        description: "Search and browse every playground feature, configuration, and demo.",
+        tags: ["index", "search", "docs", "features"],
+      },
+      {
+        path: "/docs/developer-setup",
+        label: "Developer Setup",
+        icon: "bi-box-arrow-in-down",
+        component: DeveloperSetup,
+        description: "Install, import CSS, Next.js setup, external app checklist, and recommended setup path.",
+        tags: ["install", "css", "nextjs", "vite", "external app"],
+      },
+      {
+        path: "/docs/productivity-suite",
+        label: "Productivity Suite",
+        icon: "bi-command",
+        component: ProductivitySuite,
+        description: "Saved views, command palette, change review, validation, and diagnostics in one workflow.",
+        tags: ["saved views", "command palette", "validation", "diagnostics", "review"],
+      },
+    ],
+  },
   {
     title: "Core Grid",
     items: [

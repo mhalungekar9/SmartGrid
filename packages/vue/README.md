@@ -164,6 +164,34 @@ Explicit props still win over preset defaults. `stateStorage` persists saved-vie
 
 Built-in loading, error, and empty overlays appear inside the grid viewport without breaking header/body alignment.
 
+## Productivity Layer
+
+Copy this:
+
+```vue
+<template>
+  <GridNexaVue
+    :columns="columns"
+    :rows="rows"
+    :views="{ key: 'employees-grid-views' }"
+    command-palette
+    change-review
+    :validation="{
+      blockSave: true,
+      rules: {
+        name: { required: true, message: 'Name is required' },
+        score: { type: 'number', min: 70, max: 100 }
+      }
+    }"
+    diagnostics
+  />
+</template>
+```
+
+When to use: saved views, command search, change review, validation, and diagnostics are useful for admin tools, operations screens, and spreadsheet-style review workflows.
+
+Common mistakes: use a stable `views.key` per grid, keep validation rules fast, and avoid sharing saved-view keys across unrelated screens.
+
 ## Column And Range Summaries
 
 Copy this:

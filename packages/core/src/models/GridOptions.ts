@@ -142,6 +142,50 @@ export type GridNexaSummaryOptions =
       footer: boolean;
       selectedRange: boolean;
     }>;
+export type GridNexaSavedViewsOptions =
+  | boolean
+  | Partial<{
+      enabled: boolean;
+      key: string;
+      storage: "localStorage";
+      allowUserViews: boolean;
+    }>;
+export type GridNexaCommandPaletteOptions =
+  | boolean
+  | Partial<{
+      enabled: boolean;
+      shortcut: string;
+    }>;
+export type GridNexaChangeReviewOptions =
+  | boolean
+  | Partial<{
+      enabled: boolean;
+      showToolbarButton: boolean;
+    }>;
+export type GridNexaValidationRule =
+  | boolean
+  | {
+      required?: boolean;
+      min?: number;
+      max?: number;
+      pattern?: string | RegExp;
+      type?: "email" | "number" | "text";
+      validate?: (value: unknown, row: unknown) => true | string;
+      message?: string;
+    };
+export type GridNexaValidationOptions =
+  | boolean
+  | Partial<{
+      rules: Record<string, GridNexaValidationRule>;
+      showSummary: boolean;
+      blockSave: boolean;
+    }>;
+export type GridNexaDiagnosticsOptions =
+  | boolean
+  | Partial<{
+      enabled: boolean;
+      showPanel: boolean;
+    }>;
 export interface GridNexaIconSet {
   sortAsc?: unknown;
   sortDesc?: unknown;
@@ -309,6 +353,11 @@ export interface GridOptions<T = unknown> {
   toolbar?: GridNexaToolbarOptions;
   footer?: GridNexaFooterOptions;
   summaries?: GridNexaSummaryOptions;
+  views?: GridNexaSavedViewsOptions;
+  commandPalette?: GridNexaCommandPaletteOptions;
+  changeReview?: GridNexaChangeReviewOptions;
+  validation?: GridNexaValidationOptions;
+  diagnostics?: GridNexaDiagnosticsOptions;
   sidePanel?: GridNexaSidePanelOptions;
   fillWidth?: GridNexaFillWidthOptions;
   stateStorage?: GridNexaStateStorageOptions;

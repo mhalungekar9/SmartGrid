@@ -90,6 +90,11 @@ Core includes the typed contracts used by all framework packages:
 - `preset` provides typed shortcuts for common grid modes such as `basic`, `admin`, `spreadsheet`, and `analytics`.
 - `stateStorage` describes saved-view persistence for column, filter, sort, pagination, and side-panel state.
 - `summaries` controls footer and selected-range numeric summaries.
+- `views` describes named saved views and localStorage keys.
+- `commandPalette` enables a command launcher contract for discoverable grid actions.
+- `changeReview` describes pre-save review of edits, row additions, and deletions.
+- `validation` describes fast cell validation rules and save blocking.
+- `diagnostics` describes developer-facing runtime diagnostics.
 - `icons` provides global icon replacement, while `column.icons` can override icons for a specific column.
 - `toolbar` enables or hides quick filter, find, filters, advanced filter, columns, exports, add/delete rows, undo/redo, fill, and save-all tools.
 
