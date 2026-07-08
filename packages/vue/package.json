@@ -1,6 +1,6 @@
 {
   "name": "@gridnexa/vue",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "Enterprise Vue data grid for modern UI apps with Excel-like filtering, editing, formulas, grouping, pivoting, export, and native Vue UX.",
   "type": "module",
   "main": "./dist/index.js",

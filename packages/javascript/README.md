@@ -166,6 +166,26 @@ createGridNexa(document.getElementById("grid")!, {
 
 Built-in loading, error, and empty overlays render inside the grid viewport without changing header or body alignment.
 
+## Column And Range Summaries
+
+Copy this:
+
+```ts
+createGridNexa(document.getElementById("grid")!, {
+  columns,
+  rows,
+  enableRangeSelection: true,
+  summaries: {
+    footer: true,
+    selectedRange: true,
+  },
+});
+```
+
+When to use: show count, sum, average, min, and max for visible numeric data or a selected range.
+
+Common mistakes: keep `enableRangeSelection` on for range summaries, keep the footer visible, and remember that text values are ignored.
+
 ## Column Width And Fill Behavior
 
 ```ts

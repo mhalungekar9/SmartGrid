@@ -16,6 +16,7 @@ import type {
   GridNexaSidePanelOptions,
   GridNexaFillWidthOptions,
   GridNexaStateStorageOptions,
+  GridNexaSummaryOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
   GridNexaCommandPlan,
@@ -105,6 +106,8 @@ type GridNexaFooterOptions =
         selectedRowsLabel: string;
         activeCellLabel: string;
         selectedRangeLabel: string;
+        summaryLabel: string;
+        selectedRangeSummaryLabel: string;
         filterCountLabel: string;
         sortStatusLabel: string;
         pageIndex: number;
@@ -270,6 +273,7 @@ export interface GridNexaExtendedProps<T>
   sidePanel?: GridNexaSidePanelOptions;
   fillWidth?: GridNexaFillWidthOptions;
   stateStorage?: GridNexaStateStorageOptions;
+  summaries?: GridNexaSummaryOptions;
   loading?: boolean;
   error?: ReactNode;
   emptyState?: ReactNode;
@@ -1407,6 +1411,7 @@ export function GridNexa<T>({
   sidePanel: sidePanelProp,
   fillWidth: fillWidthProp,
   stateStorage,
+  summaries,
   loading = false,
   error,
   emptyState,
@@ -3583,6 +3588,12 @@ export function GridNexa<T>({
     ...footerDefaults,
     ...(typeof footer === "object" ? footer : {}),
   };
+  const summaryOptions = {
+    footer: false,
+    selectedRange: false,
+    ...(summaries === true ? { footer: true, selectedRange: true } : {}),
+    ...(typeof summaries === "object" ? summaries : {}),
+  };
   const footerVisible =
     footer !== false &&
     (typeof footer === "object" && footer.renderer
@@ -3604,6 +3615,36 @@ export function GridNexa<T>({
       (cellRange.endColumn - cellRange.startColumn + 1)
     : 0;
   const selectedRangeLabel = rangeSize ? `${rangeSize} cells selected` : "No range";
+  const buildSummaryLabel = (values: unknown[], emptyLabel: string) => {
+    const numbers = values.map(Number).filter(Number.isFinite);
+    if (!numbers.length) return emptyLabel;
+    const sum = numbers.reduce((total, value) => total + value, 0);
+    const average = sum / numbers.length;
+    const formatNumber = (value: number) =>
+      Number.isInteger(value) ? value.toLocaleString() : value.toLocaleString(undefined, { maximumFractionDigits: 2 });
+    return `Count ${numbers.length} | Sum ${formatNumber(sum)} | Avg ${formatNumber(average)} | Min ${formatNumber(Math.min(...numbers))} | Max ${formatNumber(Math.max(...numbers))}`;
+  };
+  const summaryLabel = summaryOptions.footer
+    ? buildSummaryLabel(
+        tableRows.flatMap((row) =>
+          tableColumns.map((column) => getColumnValue(row, column)),
+        ),
+        "No numeric values",
+      )
+    : "";
+  const selectedRangeSummaryLabel =
+    summaryOptions.selectedRange && cellRange
+      ? buildSummaryLabel(
+          tableRows
+            .slice(cellRange.startRow, cellRange.endRow + 1)
+            .flatMap((row) =>
+              tableColumns
+                .slice(cellRange.startColumn, cellRange.endColumn + 1)
+                .map((column) => getColumnValue(row, column)),
+            ),
+          "No numeric values in range",
+        )
+      : "";
   const sortStatusLabel = sortModel ? `Sorted ${sortModel.direction}` : "Unsorted";
   const activeFilterCount =
     Object.values(filterModel).filter(isFilterActive).length;
@@ -5603,6 +5644,8 @@ export function GridNexa<T>({
               selectedRowsLabel,
               activeCellLabel,
               selectedRangeLabel,
+              summaryLabel,
+              selectedRangeSummaryLabel,
               filterCountLabel,
               sortStatusLabel,
               pageIndex,
@@ -5614,6 +5657,8 @@ export function GridNexa<T>({
           {footerOptions.selectedRows ? <span>{selectedRowsLabel}</span> : null}
           {footerOptions.selectedCell ? <span>{activeCellLabel}</span> : null}
           {footerOptions.selectedRange ? <span>{selectedRangeLabel}</span> : null}
+          {summaryOptions.footer && summaryLabel ? <span>{summaryLabel}</span> : null}
+          {summaryOptions.selectedRange && selectedRangeSummaryLabel ? <span>{selectedRangeSummaryLabel}</span> : null}
           {footerOptions.filterCount ? <span>{filterCountLabel}</span> : null}
           {footerOptions.sortStatus ? <span>{sortStatusLabel}</span> : null}
           {footerOptions.pagination && toolbarOptions.pagination && pageSize && pageSize > 0 ? (

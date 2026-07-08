@@ -164,6 +164,28 @@ Explicit props still win over preset defaults. `stateStorage` persists saved-vie
 
 Built-in loading, error, and empty overlays appear inside the grid viewport without breaking header/body alignment.
 
+## Column And Range Summaries
+
+Copy this:
+
+```vue
+<template>
+  <GridNexaVue
+    :columns="columns"
+    :rows="rows"
+    enable-range-selection
+    :summaries="{
+      footer: true,
+      selectedRange: true
+    }"
+  />
+</template>
+```
+
+When to use: show count, sum, average, min, and max for visible numeric data or a selected range.
+
+Common mistakes: keep `enableRangeSelection` on for range summaries, keep the footer visible, and remember that text values are ignored.
+
 ## Column Width And Fill Behavior
 
 ```vue

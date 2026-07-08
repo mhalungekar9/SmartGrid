@@ -196,6 +196,59 @@ Presets provide sensible defaults for common product screens without taking away
 
 Built-in overlays cover loading, error, and empty states inside the grid viewport, so product apps do not need wrapper logic for common states.
 
+## Column And Range Summaries
+
+Copy this:
+
+```tsx
+<GridNexa
+  columns={columns}
+  rows={rows}
+  enableRangeSelection
+  summaries={{
+    footer: true,
+    selectedRange: true,
+  }}
+/>
+```
+
+When to use:
+
+Use summaries when users compare numeric data, audit selected cells, or need spreadsheet-style feedback without exporting to Excel. Footer summaries calculate visible numeric values; selected range summaries calculate the active range.
+
+Common mistakes:
+
+- Forgetting `enableRangeSelection` when expecting selected range summaries.
+- Expecting text columns to be included; summaries intentionally ignore non-numeric values.
+- Hiding the footer with `footer={false}` and then expecting summary text to appear.
+
+External app setup:
+
+```tsx
+import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+```
+
+Next.js example:
+
+```tsx
+"use client";
+
+import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+
+export default function EmployeesGrid() {
+  return (
+    <GridNexa
+      columns={columns}
+      rows={rows}
+      enableRangeSelection
+      summaries={{ footer: true, selectedRange: true }}
+    />
+  );
+}
+```
+
 ## Column Width And Fill Behavior
 
 ```tsx

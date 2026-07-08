@@ -260,6 +260,16 @@ const footerCode = `<GridNexa
   }}
 />`;
 
+const summariesCode = `<GridNexa
+  columns={columns}
+  rows={rows}
+  enableRangeSelection
+  summaries={{
+    footer: true,
+    selectedRange: true
+  }}
+/>`;
+
 const customFooterCode = `<GridNexa
   columns={columns}
   rows={rows}
@@ -376,6 +386,7 @@ const configurationSections = [
   { id: "add-and-delete-rows", name: "Add and delete rows", type: "createRow | GridNexaApi", description: "Add one row, delete one row, delete selected rows, and listen for data changes." },
   { id: "custom-icons", name: "Custom icons", type: "GridNexaIconSet", description: "Replace default header, menu, tree, pagination, add, and delete icons." },
   { id: "footer-configuration", name: "Footer configuration", type: "GridNexaFooterOptions", description: "Choose footer labels and keep pagination controls in the footer." },
+  { id: "column-range-summaries", name: "Column and range summaries", type: "GridNexaSummaryOptions", description: "Show count, sum, average, min, and max for visible data or selected ranges." },
   { id: "custom-footer", name: "Custom footer", type: "footer.renderer", description: "Render your own footer UI from GridNexa footer state." },
   { id: "edge-popover-positioning", name: "Edge popover positioning", type: "Popover collision handling", description: "Verify toolbar popovers shift into view near container edges." },
   { id: "css-customization", name: "CSS customization", type: "CSS variables | classNames", description: "Override colors and component styles with variables and stable class names." },
@@ -730,6 +741,17 @@ export function GridConfiguration() {
         <DemoCard {...sectionProps("footer-configuration")} title="Footer configuration" description="Choose which footer facts appear and keep pagination in the footer.">
           <GridNexa columns={columns} rows={rows} theme={theme} checkboxSelection pageSize={3} footer={{ rowCount: true, selectedRows: true, selectedCell: true, selectedRange: false, filterCount: true, sortStatus: true, pagination: true }} />
           <CodeViewer code={footerCode} />
+        </DemoCard>
+
+        <DemoCard {...sectionProps("column-range-summaries")} title="Column and range summaries" description="Show count, sum, average, minimum, and maximum for visible numeric data and selected ranges.">
+          <GridNexa
+            columns={columns}
+            rows={rows}
+            theme={theme}
+            enableRangeSelection
+            summaries={{ footer: true, selectedRange: true }}
+          />
+          <CodeViewer code={summariesCode} />
         </DemoCard>
 
         <DemoCard {...sectionProps("custom-footer")} title="Custom footer" description="Replace the built-in footer content with your own renderer.">

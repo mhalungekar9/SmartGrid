@@ -136,6 +136,12 @@ export type GridNexaStateStorageOptions =
       type: "localStorage";
       persist: GridNexaPersistedStateKey[];
     }>;
+export type GridNexaSummaryOptions =
+  | boolean
+  | Partial<{
+      footer: boolean;
+      selectedRange: boolean;
+    }>;
 export interface GridNexaIconSet {
   sortAsc?: unknown;
   sortDesc?: unknown;
@@ -302,6 +308,7 @@ export interface GridOptions<T = unknown> {
   rowReorderPosition?: GridNexaRowReorderPosition;
   toolbar?: GridNexaToolbarOptions;
   footer?: GridNexaFooterOptions;
+  summaries?: GridNexaSummaryOptions;
   sidePanel?: GridNexaSidePanelOptions;
   fillWidth?: GridNexaFillWidthOptions;
   stateStorage?: GridNexaStateStorageOptions;

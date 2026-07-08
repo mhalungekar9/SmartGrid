@@ -7,6 +7,7 @@ import type {
   GridNexaClassName,
   GridNexaPreset,
   GridNexaStateStorageOptions,
+  GridNexaSummaryOptions,
   GridNexaAiOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
@@ -79,6 +80,18 @@ function value<T>(row: T, column: Column<T>, columns: Column<T>[]) {
 function format<T>(row: T, column: Column<T>, columns: Column<T>[]) {
   const current = value(row, column, columns);
   return column.valueFormatter ? column.valueFormatter(current) : String(current ?? "");
+}
+
+function buildSummaryLabel(values: unknown[], emptyLabel: string) {
+  const numbers = values.map(Number).filter(Number.isFinite);
+  if (!numbers.length) return emptyLabel;
+  const sum = numbers.reduce((total, entry) => total + entry, 0);
+  const average = sum / numbers.length;
+  const formatNumber = (entry: number) =>
+    Number.isInteger(entry)
+      ? entry.toLocaleString()
+      : entry.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return `Count ${numbers.length} | Sum ${formatNumber(sum)} | Avg ${formatNumber(average)} | Min ${formatNumber(Math.min(...numbers))} | Max ${formatNumber(Math.max(...numbers))}`;
 }
 
 function matches<T>(row: T, column: Column<T>, filter: ColumnFilterModel, columns: Column<T>[]) {
@@ -316,6 +329,15 @@ function resolveStateStorageOptions(value?: GridNexaStateStorageOptions) {
   };
 }
 
+function resolveSummaryOptions(value?: GridNexaSummaryOptions) {
+  return {
+    footer: false,
+    selectedRange: false,
+    ...(value === true ? { footer: true, selectedRange: true } : {}),
+    ...(value && typeof value === "object" ? value : {}),
+  };
+}
+
 function readPersistedGridState(value?: GridNexaStateStorageOptions): PersistedGridState | null {
   const options = resolveStateStorageOptions(value);
   if (!options || typeof window === "undefined" || !window.localStorage) return null;
@@ -350,6 +372,7 @@ export const GridNexaVue = defineComponent({
     classNames: { type: Object as PropType<GridNexaVueOptions<RowRecord>["classNames"]>, default: () => ({}) },
     preset: { type: String as PropType<GridNexaPreset>, default: undefined },
     stateStorage: { type: Object as PropType<GridNexaStateStorageOptions>, default: undefined },
+    summaries: { type: [Boolean, Object] as PropType<GridNexaSummaryOptions>, default: undefined },
     loading: { type: Boolean, default: false },
     error: { type: [String, Object, Boolean] as PropType<unknown>, default: undefined },
     emptyState: { type: [String, Object] as PropType<unknown>, default: undefined },
@@ -1476,6 +1499,9 @@ export const GridNexaVue = defineComponent({
     const renderStatus = (totalRows: number) => {
       const footer = effectiveFooter();
       if (footer === false) return document.createDocumentFragment();
+      const columns = workingColumns.filter((column) => !column.hidden && !hiddenColumnIds.has(column.id));
+      const visible = visibleRows();
+      const summaryOptions = resolveSummaryOptions(props.summaries);
       const footerOptions = {
         rowCount: true,
         selectedRows: true,
@@ -1493,6 +1519,34 @@ export const GridNexaVue = defineComponent({
         selectedRowsLabel: `${selected.size} selected`,
         activeCellLabel: activeCell ? `Cell ${activeCell.rowIndex + 1}:${activeCell.columnId}` : "No cell",
         selectedRangeLabel: rangeAnchor && rangeEnd ? "Range selected" : "No range",
+        summaryLabel: summaryOptions.footer
+          ? buildSummaryLabel(
+              visible.flatMap((row) => columns.map((column) => value(row, column, workingColumns))),
+              "No numeric values",
+            )
+          : "",
+        selectedRangeSummaryLabel:
+          summaryOptions.selectedRange && rangeAnchor && rangeEnd
+            ? buildSummaryLabel(
+                visible
+                  .slice(Math.min(rangeAnchor.rowIndex, rangeEnd.rowIndex), Math.max(rangeAnchor.rowIndex, rangeEnd.rowIndex) + 1)
+                  .flatMap((row) =>
+                    columns
+                      .slice(
+                        Math.min(
+                          columns.findIndex((column) => column.id === rangeAnchor?.columnId),
+                          columns.findIndex((column) => column.id === rangeEnd?.columnId),
+                        ),
+                        Math.max(
+                          columns.findIndex((column) => column.id === rangeAnchor?.columnId),
+                          columns.findIndex((column) => column.id === rangeEnd?.columnId),
+                        ) + 1,
+                      )
+                      .map((column) => value(row, column, workingColumns)),
+                  ),
+                "No numeric values in range",
+              )
+            : "",
         filterCountLabel: `${Object.keys(props.columnFilters ?? {}).length + Number(Boolean(props.advancedFilterModel))} filters`,
         sortStatusLabel: sortState ? `Sorted ${sortState.direction}` : "Unsorted",
         pageIndex: pageIndex.value,
@@ -1508,6 +1562,8 @@ export const GridNexaVue = defineComponent({
       if (footerOptions.selectedRows) status.append(state.selectedRowsLabel);
       if (footerOptions.selectedCell) status.append(state.activeCellLabel);
       if (footerOptions.sortStatus) status.append(state.sortStatusLabel);
+      if (summaryOptions.footer && state.summaryLabel) status.append(state.summaryLabel);
+      if (summaryOptions.selectedRange && state.selectedRangeSummaryLabel) status.append(state.selectedRangeSummaryLabel);
       if (footerOptions.filterCount) status.append(state.filterCountLabel);
       if (footerOptions.selectedRange) status.append(state.selectedRangeLabel);
       const toolbar = effectiveToolbar();
