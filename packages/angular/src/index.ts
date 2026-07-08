@@ -413,7 +413,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   @Input() getCellClassName: GridNexaAngularOptions<T>["getCellClassName"];
   @Input() getHeaderClassName: GridNexaAngularOptions<T>["getHeaderClassName"];
   @Input() mergedHeaders: MergedHeader[] | undefined;
-  @Input() rowNumbers = false;
+  @Input() rowNumbers: boolean | undefined = undefined;
   @Input() checkboxSelection = false;
   @Input() enableRangeSelection = true;
   @Input() enableFillHandle = true;
@@ -650,7 +650,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   }
 
   private effectiveRowNumbers() {
-    return this.rowNumbers || Boolean(this.presetDefaults().rowNumbers);
+    return this.rowNumbers ?? Boolean(this.presetDefaults().rowNumbers);
   }
 
   private effectiveCheckboxSelection() {
@@ -1388,6 +1388,8 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
 
   private appendRow(tbody: HTMLTableSectionElement, row: T, rowIndex: number, columns: Column<T>[], leading: number, display?: Extract<DisplayRow<T>, { kind: "data" }>) {
     const tr = document.createElement("tr");
+    const pageSize = this.effectivePageSize();
+    const displayRowNumber = (pageSize && pageSize > 0 ? this.pageIndex * pageSize : 0) + rowIndex + 1;
     const rowSelected = this.selected.has(this.rowId(row, rowIndex));
     tr.className = classNameList(
       this.classNames?.row,
@@ -1424,7 +1426,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       tr.appendChild(td);
     }
     if (this.effectiveRowNumbers()) {
-      const rowNumber = cell(String(rowIndex + 1));
+      const rowNumber = cell(String(displayRowNumber));
       if (tr.draggable) {
         const up = this.button("↑", () => this.moveRow(rowIndex, -1));
         up.disabled = rowIndex <= 0;

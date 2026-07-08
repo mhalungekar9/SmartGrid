@@ -1621,6 +1621,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       this.draggedRowIndex = null;
     });
     const rowId = this.getRowId(row, rowIndex);
+    const displayRowNumber = (this.options.pageSize && this.options.pageSize > 0 ? this.pageIndex * this.options.pageSize : 0) + rowIndex + 1;
     if (this.options.checkboxSelection) {
       const td = document.createElement("td");
       td.className = "gnx-control";
@@ -1638,7 +1639,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       tr.appendChild(td);
     }
     if (this.options.rowNumbers) {
-      const rowNumber = cell(String(rowIndex + 1));
+      const rowNumber = cell(String(displayRowNumber));
       rowNumber.className = "gnx-control";
       if (this.options.enableRowReorder) {
       const tools = document.createElement("span");

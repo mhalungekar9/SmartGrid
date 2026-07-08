@@ -84,6 +84,7 @@ export function GridRow<T>({
     emitRowDoubleClick,
     dropTargetRowIndex,
     rowNumbers,
+    rowNumberOffset,
     toggleRowSelection,
     enableRowReorder,
     rowReorderPosition,
@@ -155,6 +156,7 @@ export function GridRow<T>({
 
   const dataItem = item as DataRow<T>;
   const { row, rowIndex } = dataItem;
+  const displayRowNumber = rowNumberOffset + rowIndex + 1;
   const rowSelectionId = getRowSelectionId(row, rowIndex);
   const isSelected =
     selectedRowIndex === rowIndex || selectedRowIds.has(rowSelectionId);
@@ -170,7 +172,7 @@ export function GridRow<T>({
         className="sg-row-reorder-button"
         type="button"
         title="Move row up"
-        aria-label={`Move row ${rowIndex + 1} up`}
+        aria-label={`Move row ${displayRowNumber} up`}
         disabled={rowIndex === 0}
         onClick={(event) => {
           event.stopPropagation();
@@ -183,7 +185,7 @@ export function GridRow<T>({
         className="sg-row-reorder-button"
         type="button"
         title="Move row down"
-        aria-label={`Move row ${rowIndex + 1} down`}
+        aria-label={`Move row ${displayRowNumber} down`}
         disabled={rowIndex >= contextRows.length - 1}
         onClick={(event) => {
           event.stopPropagation();
@@ -274,7 +276,7 @@ export function GridRow<T>({
             className="sg-selection-checkbox"
             type="checkbox"
             checked={selectedRowIds.has(rowSelectionId)}
-            aria-label={`Select row ${rowIndex + 1}`}
+            aria-label={`Select row ${displayRowNumber}`}
             onChange={() => toggleRowSelection(row, rowIndex)}
             onClick={(event) => event.stopPropagation()}
           />
@@ -286,7 +288,7 @@ export function GridRow<T>({
           data-gnx-pinned="left"
           style={rowNumberColumnStyle}
         >
-          {rowIndex + 1}
+          {displayRowNumber}
         </div>
       ) : null}
       {visibleColumns

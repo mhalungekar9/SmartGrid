@@ -2397,6 +2397,7 @@ export function GridNexa<T>({
     ? pivotResult.columns
     : orderedColumns;
   const tableRows = pivotResult.active ? pagedPivotRows : visibleDataRows;
+  const rowNumberOffset = pageSize && pageSize > 0 ? pageIndex * pageSize : 0;
   const validationEnabled = resolveEnabledOption(validation);
   const validationRules =
     validationEnabled && typeof validation === "object"
@@ -4720,6 +4721,7 @@ export function GridNexa<T>({
         toggleRowSelection,
         toggleAllRowsSelection,
         rowNumbers,
+        rowNumberOffset,
         enableRowReorder,
         rowReorderPosition,
         getColumnStyle: (columnId: string) => tableColumnStyles[columnId] ?? {},

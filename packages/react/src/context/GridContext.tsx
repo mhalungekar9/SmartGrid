@@ -45,6 +45,7 @@ export interface GridContextValue<T> {
   toggleRowSelection: (row: T, rowIndex: number) => void;
   toggleAllRowsSelection: () => void;
   rowNumbers: boolean;
+  rowNumberOffset: number;
   enableRowReorder: boolean;
   rowReorderPosition: GridNexaRowReorderPosition;
   getColumnStyle: (columnId: string) => CSSProperties;

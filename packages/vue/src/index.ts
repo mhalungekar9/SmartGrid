@@ -399,7 +399,7 @@ export const GridNexaVue = defineComponent({
     getCellClassName: { type: Function as PropType<GridNexaVueOptions<RowRecord>["getCellClassName"]>, default: undefined },
     getHeaderClassName: { type: Function as PropType<GridNexaVueOptions<RowRecord>["getHeaderClassName"]>, default: undefined },
     mergedHeaders: { type: Array as PropType<MergedHeader[]>, default: undefined },
-    rowNumbers: { type: Boolean, default: false },
+    rowNumbers: { type: Boolean, default: undefined },
     checkboxSelection: { type: Boolean, default: false },
     enableRangeSelection: { type: Boolean, default: true },
     enableFillHandle: { type: Boolean, default: true },
@@ -484,7 +484,7 @@ export const GridNexaVue = defineComponent({
     const effectiveFooter = () => props.footer ?? presetDefaults().footer;
     const effectiveFillWidth = () => props.fillWidth ?? presetDefaults().fillWidth;
     const effectivePageSize = () => props.pageSize ?? presetDefaults().pageSize;
-    const effectiveRowNumbers = () => props.rowNumbers || Boolean(presetDefaults().rowNumbers);
+    const effectiveRowNumbers = () => props.rowNumbers ?? Boolean(presetDefaults().rowNumbers);
     const effectiveCheckboxSelection = () => props.checkboxSelection || Boolean(presetDefaults().checkboxSelection);
     const effectiveRangeSelection = () => props.enableRangeSelection || Boolean(presetDefaults().enableRangeSelection);
     const effectiveFillHandle = () => props.enableFillHandle || Boolean(presetDefaults().enableFillHandle);
@@ -1232,6 +1232,8 @@ export const GridNexaVue = defineComponent({
         props.classNames?.row,
         props.getRowClassName?.({ row, rowIndex, selected: rowSelected }),
       );
+      const currentPageSize = effectivePageSize();
+      const displayRowNumber = (currentPageSize && currentPageSize > 0 ? pageIndex.value * currentPageSize : 0) + rowIndex + 1;
       tr.draggable = effectiveRowReorder();
       tr.addEventListener("dragstart", () => {
         if (!effectiveRowReorder()) return;
@@ -1263,7 +1265,7 @@ export const GridNexaVue = defineComponent({
         tr.appendChild(td);
       }
       if (effectiveRowNumbers()) {
-        const rowNumber = cell(String(rowIndex + 1));
+        const rowNumber = cell(String(displayRowNumber));
         if (effectiveRowReorder()) {
           const up = button("↑", () => moveRow(rowIndex, -1));
           up.disabled = rowIndex <= 0;
