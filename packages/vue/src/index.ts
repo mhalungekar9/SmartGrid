@@ -943,6 +943,44 @@ export const GridNexaVue = defineComponent({
         reason,
       });
     };
+    const exportDiagnostics = () => {
+      const snapshot = {
+        schemaVersion: 1,
+        packageName: "@gridnexa/vue",
+        generatedAt: new Date().toISOString(),
+        counts: {
+          rows: workingRows.length,
+          visibleRows: visibleRows().length,
+          columns: workingColumns.length,
+          selectedRows: selected.size,
+        },
+        columns: workingColumns.map((column) => ({
+          id: column.id,
+          field: column.field,
+          headerName: column.headerName,
+          width: column.width,
+          pinned: column.pinned,
+          hidden: column.hidden,
+          sortable: column.sortable,
+          filter: column.filter,
+        })),
+        rows: workingRows.slice(0, 50),
+        state: {
+          sortModel: sortState,
+          filterModel: localColumnFilters,
+          pageIndex,
+          hiddenColumnIds: Array.from(hiddenColumnIds),
+          selectedRowIds: Array.from(selected),
+        },
+      };
+      const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json;charset=utf-8;" });
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = downloadUrl;
+      link.download = "gridnexa-vue-repro.json";
+      link.click();
+      URL.revokeObjectURL(downloadUrl);
+    };
     const attachApi = () => {
       if (!props.apiRef) return;
       props.apiRef.current = {
@@ -956,6 +994,7 @@ export const GridNexaVue = defineComponent({
         addRow,
         deleteRow,
         deleteSelectedRows,
+        exportDiagnostics,
         saveAll: () => saveAllRows("api"),
       };
     };

@@ -185,6 +185,11 @@ export type GridNexaDiagnosticsOptions =
   | Partial<{
       enabled: boolean;
       showPanel: boolean;
+      recorder: boolean;
+      exportRepro: boolean;
+      maxEvents: number;
+      rowSampleSize: number;
+      fileName: string;
     }>;
 export interface GridNexaIconSet {
   sortAsc?: unknown;
@@ -292,6 +297,7 @@ export interface GridNexaApi<T = unknown> {
   addRow: (row?: T) => void;
   deleteRow: (rowIndex: number) => void;
   deleteSelectedRows: () => void;
+  exportDiagnostics: () => void;
   saveAll: () => void;
 }
 

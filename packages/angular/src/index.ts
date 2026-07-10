@@ -656,6 +656,45 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     });
   }
 
+  exportDiagnostics() {
+    const snapshot = {
+      schemaVersion: 1,
+      packageName: "@gridnexa/angular",
+      generatedAt: new Date().toISOString(),
+      counts: {
+        rows: this.rows.length,
+        visibleRows: this.visibleRows().length,
+        columns: this.columns.length,
+        selectedRows: this.selected.size,
+      },
+      columns: this.columns.map((column) => ({
+        id: column.id,
+        field: column.field,
+        headerName: column.headerName,
+        width: column.width,
+        pinned: column.pinned,
+        hidden: column.hidden,
+        sortable: column.sortable,
+        filter: column.filter,
+      })),
+      rows: this.rows.slice(0, 50),
+      state: {
+        sortModel: this.sortState,
+        filterModel: this.columnFilters ?? {},
+        pageIndex: this.pageIndex,
+        hiddenColumnIds: Array.from(this.hiddenColumnIds),
+        selectedRowIds: Array.from(this.selected),
+      },
+    };
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json;charset=utf-8;" });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = "gridnexa-angular-repro.json";
+    link.click();
+    URL.revokeObjectURL(downloadUrl);
+  }
+
   private createRowValue() {
     return this.createRow ? this.createRow() : Object.fromEntries(this.columns.map((column) => [column.field, ""])) as T;
   }
@@ -672,6 +711,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       addRow: (row?: T) => this.addRow(row),
       deleteRow: (rowIndex: number) => this.deleteRow(rowIndex),
       deleteSelectedRows: () => this.deleteSelectedRows(),
+      exportDiagnostics: () => this.exportDiagnostics(),
       saveAll: () => this.saveAllRows("api"),
     };
   }

@@ -355,7 +355,11 @@ const validationCode = `<GridNexa
 const diagnosticsCode = `<GridNexa
   columns={columns}
   rows={rows}
-  diagnostics
+  diagnostics={{
+    recorder: true,
+    exportRepro: true,
+    rowSampleSize: 50
+  }}
   commandPalette
 />`;
 
@@ -969,8 +973,8 @@ export function GridConfiguration() {
           <CodeViewer code={validationCode} />
         </DemoCard>
 
-        <DemoCard {...sectionProps("developer-diagnostics")} title="Developer diagnostics" description="Open a lightweight diagnostics panel while integrating to inspect visible rows, columns, filters, invalid cells, and tracked changes.">
-          <GridNexa columns={columns} rows={rows} theme={theme} diagnostics commandPalette />
+        <DemoCard {...sectionProps("developer-diagnostics")} title="Developer diagnostics" description="Inspect runtime counts, record recent grid actions, and export a compact repro snapshot for bug reports.">
+          <GridNexa columns={columns} rows={rows} theme={theme} diagnostics={{ recorder: true, exportRepro: true, rowSampleSize: 50 }} commandPalette />
           <CodeViewer code={diagnosticsCode} />
         </DemoCard>
 

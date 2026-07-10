@@ -87,6 +87,7 @@ interface GridNexaApi<T> {
   addRow: (row?: T) => void;
   deleteRow: (rowIndex: number) => void;
   deleteSelectedRows: () => void;
+  exportDiagnostics: () => void;
   saveAll: () => void;
 }
 
@@ -515,6 +516,14 @@ type ChangeReviewEntry = {
   timestamp: number;
 };
 
+type DiagnosticEvent = {
+  id: string;
+  type: string;
+  label: string;
+  timestamp: number;
+  details?: Record<string, unknown>;
+};
+
 function readPersistedGridState(key: string): PersistedGridState | null {
   if (!key || typeof window === "undefined") {
     return null;
@@ -556,6 +565,42 @@ function resolveEnabledOption(value: unknown) {
   if (!value) return false;
   if (value === true) return true;
   return typeof value === "object" ? ((value as { enabled?: boolean }).enabled ?? true) : false;
+}
+
+function resolveDiagnosticsOptions(value?: GridNexaDiagnosticsOptions) {
+  if (!value) {
+    return {
+      enabled: false,
+      showPanel: false,
+      recorder: false,
+      exportRepro: false,
+      maxEvents: 30,
+      rowSampleSize: 50,
+      fileName: "gridnexa-repro.json",
+    };
+  }
+
+  if (value === true) {
+    return {
+      enabled: true,
+      showPanel: false,
+      recorder: true,
+      exportRepro: true,
+      maxEvents: 30,
+      rowSampleSize: 50,
+      fileName: "gridnexa-repro.json",
+    };
+  }
+
+  return {
+    enabled: value.enabled ?? true,
+    showPanel: value.showPanel ?? false,
+    recorder: value.recorder ?? true,
+    exportRepro: value.exportRepro ?? true,
+    maxEvents: value.maxEvents ?? 30,
+    rowSampleSize: value.rowSampleSize ?? 50,
+    fileName: value.fileName ?? "gridnexa-repro.json",
+  };
 }
 
 function readSavedGridViews(key: string): SavedGridView[] {
@@ -1610,6 +1655,7 @@ export function GridNexa<T>({
   const [gridRows, setGridRows] = useState(rows);
   const skipNextRowsHistoryResetRef = useRef(false);
   const pendingInternalRowsRef = useRef<T[] | null>(null);
+  const pendingInternalRowsEchoDeadlineRef = useRef(0);
   const rowsHaveSameValues = (leftRow: T, rightRow: T) => {
     if (Object.is(leftRow, rightRow)) {
       return true;
@@ -1650,6 +1696,7 @@ export function GridNexa<T>({
   const markInternalRowsChange = (nextRows: T[]) => {
     skipNextRowsHistoryResetRef.current = true;
     pendingInternalRowsRef.current = nextRows;
+    pendingInternalRowsEchoDeadlineRef.current = Date.now() + 1500;
   };
   const [columnWidths, setColumnWidths] = useState<Array<number | undefined>>(
     () =>
@@ -1681,7 +1728,8 @@ export function GridNexa<T>({
   const savedViewsOptions = resolveSavedViewsOptions(views);
   const commandPaletteEnabled = resolveEnabledOption(commandPalette);
   const changeReviewEnabled = resolveEnabledOption(changeReview);
-  const diagnosticsEnabled = resolveEnabledOption(diagnostics);
+  const diagnosticsOptions = resolveDiagnosticsOptions(diagnostics);
+  const diagnosticsEnabled = diagnosticsOptions.enabled;
   const changeReviewToolbarVisible =
     typeof changeReview === "object" ? changeReview.showToolbarButton !== false : true;
   const [savedViews, setSavedViews] = useState<SavedGridView[]>(() =>
@@ -1694,9 +1742,11 @@ export function GridNexa<T>({
   const [commandQuery, setCommandQuery] = useState("");
   const [changeReviewOpen, setChangeReviewOpen] = useState(false);
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(
-    diagnosticsEnabled && typeof diagnostics === "object" ? diagnostics.showPanel === true : false,
+    diagnosticsEnabled ? diagnosticsOptions.showPanel === true : false,
   );
   const [changeLog, setChangeLog] = useState<ChangeReviewEntry[]>([]);
+  const [diagnosticEvents, setDiagnosticEvents] = useState<DiagnosticEvent[]>([]);
+  const diagnosticEventsRef = useRef<DiagnosticEvent[]>([]);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [advancedFilterPanelOpen, setAdvancedFilterPanelOpen] =
     useState(false);
@@ -1826,6 +1876,36 @@ export function GridNexa<T>({
   }, [redoStack]);
 
   useEffect(() => {
+    diagnosticEventsRef.current = diagnosticEvents;
+  }, [diagnosticEvents]);
+
+  const recordDiagnosticEvent = (
+    type: string,
+    label: string,
+    details?: Record<string, unknown>,
+  ) => {
+    if (!diagnosticsEnabled || !diagnosticsOptions.recorder) {
+      return;
+    }
+
+    const event: DiagnosticEvent = {
+      id: `${Date.now()}-${diagnosticEventsRef.current.length}`,
+      type,
+      label,
+      timestamp: Date.now(),
+      details,
+    };
+
+    const nextEvents = [
+      event,
+      ...diagnosticEventsRef.current,
+    ].slice(0, Math.max(1, diagnosticsOptions.maxEvents));
+
+    diagnosticEventsRef.current = nextEvents;
+    setDiagnosticEvents(nextEvents);
+  };
+
+  useEffect(() => {
     if (readyEmittedRef.current) {
       return;
     }
@@ -1839,11 +1919,13 @@ export function GridNexa<T>({
       skipNextRowsHistoryResetRef.current &&
       (rows === pendingInternalRowsRef.current ||
         rowsMatchByReference(rows, pendingInternalRowsRef.current) ||
-        rowsMatchInternalEcho(rows, pendingInternalRowsRef.current));
+        rowsMatchInternalEcho(rows, pendingInternalRowsRef.current) ||
+        Date.now() <= pendingInternalRowsEchoDeadlineRef.current);
 
     if (isInternalRowsEcho) {
       skipNextRowsHistoryResetRef.current = false;
       pendingInternalRowsRef.current = null;
+      pendingInternalRowsEchoDeadlineRef.current = 0;
       gridRowsRef.current = rows;
       setGridRows(rows);
       return;
@@ -1851,6 +1933,7 @@ export function GridNexa<T>({
 
     skipNextRowsHistoryResetRef.current = false;
     pendingInternalRowsRef.current = null;
+    pendingInternalRowsEchoDeadlineRef.current = 0;
     gridRowsRef.current = rows;
     undoStackRef.current = [];
     redoStackRef.current = [];
@@ -2296,6 +2379,11 @@ export function GridNexa<T>({
       const changeParams = { rows: nextRows, previousRows: currentRows, reason };
       gridRowsRef.current = nextRows;
       markInternalRowsChange(nextRows);
+      recordDiagnosticEvent("rows", `Rows changed: ${reason}`, {
+        reason,
+        previousRowCount: currentRows.length,
+        nextRowCount: nextRows.length,
+      });
       onRowsChange?.(changeParams);
       onDataChange?.(changeParams);
 
@@ -2338,6 +2426,12 @@ export function GridNexa<T>({
       reason: "undo",
     } as const;
     markInternalRowsChange(previousRows);
+    recordDiagnosticEvent("undo", "Undo applied", {
+      previousRowCount: currentRows.length,
+      nextRowCount: previousRows.length,
+      remainingUndoSteps: nextUndoStack.length,
+      redoSteps: nextRedoStack.length,
+    });
     onRowsChange?.(changeParams);
     onDataChange?.(changeParams);
   };
@@ -2361,6 +2455,12 @@ export function GridNexa<T>({
     setGridRows(nextRows);
     const changeParams = { rows: nextRows, previousRows: currentRows, reason: "redo" } as const;
     markInternalRowsChange(nextRows);
+    recordDiagnosticEvent("redo", "Redo applied", {
+      previousRowCount: currentRows.length,
+      nextRowCount: nextRows.length,
+      undoSteps: nextUndoStack.length,
+      remainingRedoSteps: nextRedoStack.length,
+    });
     onRowsChange?.(changeParams);
     onDataChange?.(changeParams);
   };
@@ -3541,14 +3641,29 @@ export function GridNexa<T>({
     }
 
     setSortModel((currentSort) => {
+      let nextSort: SortModel | null;
+
       if (currentSort?.columnId !== columnId) {
-        return { columnId, direction: "asc" };
+        nextSort = { columnId, direction: "asc" };
+        recordDiagnosticEvent("sort", `Sorted ${column.headerName} ascending`, {
+          columnId,
+          direction: "asc",
+        });
+        return nextSort;
       }
 
       if (currentSort.direction === "asc") {
-        return { columnId, direction: "desc" };
+        nextSort = { columnId, direction: "desc" };
+        recordDiagnosticEvent("sort", `Sorted ${column.headerName} descending`, {
+          columnId,
+          direction: "desc",
+        });
+        return nextSort;
       }
 
+      recordDiagnosticEvent("sort", `Cleared sort for ${column.headerName}`, {
+        columnId,
+      });
       return null;
     });
   };
@@ -3775,18 +3890,47 @@ export function GridNexa<T>({
     }
 
     setSortModel(direction ? { columnId, direction } : null);
+    recordDiagnosticEvent(
+      "sort",
+      direction
+        ? `Sorted ${column.headerName} ${direction === "asc" ? "ascending" : "descending"}`
+        : `Cleared sort for ${column.headerName}`,
+      { columnId, direction },
+    );
     setColumnMenuColumnId(null);
   };
 
   const goToPreviousPage = () => {
-    setPageIndex((current) => Math.max(0, current - 1));
+    setPageIndex((current) => {
+      const next = Math.max(0, current - 1);
+
+      if (next !== current) {
+        recordDiagnosticEvent("pagination", `Changed to page ${next + 1}`, {
+          previousPage: current + 1,
+          nextPage: next + 1,
+        });
+      }
+
+      return next;
+    });
     setSelectedRowIndex(null);
     setActiveCellState(null);
     setSelectionAnchorState(null);
   };
 
   const goToNextPage = () => {
-    setPageIndex((current) => Math.min(pageCount - 1, current + 1));
+    setPageIndex((current) => {
+      const next = Math.min(pageCount - 1, current + 1);
+
+      if (next !== current) {
+        recordDiagnosticEvent("pagination", `Changed to page ${next + 1}`, {
+          previousPage: current + 1,
+          nextPage: next + 1,
+        });
+      }
+
+      return next;
+    });
     setSelectedRowIndex(null);
     setActiveCellState(null);
     setSelectionAnchorState(null);
@@ -3986,8 +4130,174 @@ export function GridNexa<T>({
     getDefaultSavedView(),
     ...savedViews.filter((view) => view.id !== DEFAULT_VIEW_ID && !view.system),
   ];
+  const sanitizeReproValue = (value: unknown, depth = 0): unknown => {
+    if (depth > 8) {
+      return "[Max depth]";
+    }
+
+    if (
+      value == null ||
+      typeof value === "string" ||
+      typeof value === "number" ||
+      typeof value === "boolean"
+    ) {
+      return value;
+    }
+
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    if (typeof value === "function") {
+      return `[Function ${value.name || "anonymous"}]`;
+    }
+
+    if (typeof value === "symbol" || typeof value === "bigint") {
+      return String(value);
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((entry) => sanitizeReproValue(entry, depth + 1));
+    }
+
+    if (typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>).map(([key, entry]) => [
+          key,
+          sanitizeReproValue(entry, depth + 1),
+        ]),
+      );
+    }
+
+    return String(value);
+  };
+  const createDiagnosticsSnapshot = () => {
+    const rowSampleSize = Math.max(0, diagnosticsOptions.rowSampleSize);
+    const sampledRows = gridRows.slice(0, rowSampleSize);
+    const sampledVisibleRows = tableRows.slice(0, rowSampleSize);
+    const reproColumns = sanitizeReproValue(columns);
+    const reproRows = sanitizeReproValue(sampledRows);
+    const reproProps = {
+      theme,
+      density,
+      preset,
+      height,
+      rowNumbers,
+      checkboxSelection,
+      enableRangeSelection,
+      enableFillHandle,
+      enableUndoRedo,
+      enableRowReorder,
+      pageSize,
+      fillWidth,
+      toolbar,
+      footer,
+      sidePanel,
+      summaries,
+      commandPalette,
+      changeReview,
+      diagnostics,
+    };
+
+    return {
+      schemaVersion: 1,
+      packageName: "@gridnexa/react",
+      generatedAt: new Date().toISOString(),
+      environment: {
+        userAgent:
+          typeof navigator === "undefined" ? undefined : navigator.userAgent,
+        viewport:
+          typeof window === "undefined"
+            ? undefined
+            : { width: window.innerWidth, height: window.innerHeight },
+      },
+      counts: {
+        rows: gridRows.length,
+        sampledRows: sampledRows.length,
+        filteredRows: filteredRows.length,
+        renderedRows: tableRows.length,
+        sampledRenderedRows: sampledVisibleRows.length,
+        columns: columns.length,
+        visibleColumns: tableColumns.length,
+        filters: activeFilterCount + activeAdvancedFilterCount,
+        changes: changeLog.length,
+        diagnosticEvents: diagnosticEventsRef.current.length,
+        invalidCells: invalidCellCount,
+      },
+      props: sanitizeReproValue(reproProps),
+      columns: reproColumns,
+      rows: reproRows,
+      visibleRows: sanitizeReproValue(sampledVisibleRows),
+      state: sanitizeReproValue({
+        ...createCurrentViewState(),
+        groupBy,
+        pivotBy,
+        pivotValueColumns,
+        pivotAggregation,
+        selectedRowIndex,
+        selectedRowIds: Array.from(selectedRowIds),
+        activeCell,
+        cellRange,
+        quickFilterText: quickFilterTextProp ?? quickFilterText,
+        findText,
+      }),
+      changeReview: sanitizeReproValue(changeLog),
+      events: sanitizeReproValue(diagnosticEventsRef.current),
+      reactExample: `import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+
+const columns = ${JSON.stringify(reproColumns, null, 2)};
+const rows = ${JSON.stringify(reproRows, null, 2)};
+
+export default function GridNexaRepro() {
+  return (
+    <GridNexa
+      columns={columns}
+      rows={rows}
+      theme=${JSON.stringify(theme)}
+      density=${JSON.stringify(density)}
+      rowNumbers={${String(rowNumbers)}}
+      checkboxSelection={${String(checkboxSelection)}}
+      enableRangeSelection={${String(enableRangeSelection)}}
+      enableFillHandle={${String(enableFillHandle)}}
+      enableUndoRedo={${String(enableUndoRedo)}}
+      enableRowReorder={${String(enableRowReorder)}}
+      pageSize={${pageSize ?? "undefined"}}
+      fillWidth={${JSON.stringify(fillWidth)}}
+    />
+  );
+}
+`,
+    };
+  };
+  const exportDiagnosticsSnapshot = () => {
+    if (!diagnosticsEnabled || !diagnosticsOptions.exportRepro) {
+      return;
+    }
+
+    const snapshot = createDiagnosticsSnapshot();
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
+      type: "application/json;charset=utf-8;",
+    });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = downloadUrl;
+    link.download = diagnosticsOptions.fileName;
+    link.click();
+
+    URL.revokeObjectURL(downloadUrl);
+    recordDiagnosticEvent("diagnostics", "Exported repro snapshot", {
+      fileName: diagnosticsOptions.fileName,
+      rows: gridRows.length,
+      columns: columns.length,
+    });
+  };
   const applySavedView = (view: SavedGridView) => {
     setActiveViewId(view.id);
+    recordDiagnosticEvent("view", `Applied view: ${view.name}`, {
+      viewId: view.id,
+    });
     setColumnOrder(view.state.columnOrder ?? columns.map((column) => column.id));
     setColumnWidths(
       columns.map((column, index) =>
@@ -4027,6 +4337,9 @@ export function GridNexa<T>({
       ...currentUserViews.filter((view) => view.id !== nextView.id),
       nextView,
     ];
+    recordDiagnosticEvent("view", `Saved view: ${trimmedName}`, {
+      viewId: nextView.id,
+    });
     setSavedViews(nextViews);
     setActiveViewId(nextView.id);
     writeSavedGridViews(savedViewsOptions.key, nextViews);
@@ -4050,6 +4363,11 @@ export function GridNexa<T>({
     if (validation && typeof validation === "object" && validation.blockSave && invalidCellCount) {
       return;
     }
+    recordDiagnosticEvent("save", "Save all triggered", {
+      rows: gridRows.length,
+      selectedRows: selectedTableRows.length,
+      visibleRows: tableRows.length,
+    });
     onSaveAll?.({
       rows: gridRows,
       selectedRows: selectedTableRows,
@@ -4066,7 +4384,14 @@ export function GridNexa<T>({
     { id: "export-csv", label: "Export CSV", run: () => { exportVisibleRowsToCsv(); setCommandPaletteOpen(false); } },
     { id: "export-excel", label: "Export Excel", run: () => { exportVisibleRowsToExcel(); setCommandPaletteOpen(false); } },
     { id: "review-changes", label: "Review changes", run: () => { setChangeReviewOpen(true); setCommandPaletteOpen(false); } },
-    { id: "diagnostics", label: "Open diagnostics", run: () => { setDiagnosticsOpen(true); setCommandPaletteOpen(false); } },
+    ...(diagnosticsEnabled
+      ? [
+          { id: "diagnostics", label: "Open diagnostics", run: () => { setDiagnosticsOpen(true); setCommandPaletteOpen(false); } },
+          ...(diagnosticsOptions.exportRepro
+            ? [{ id: "export-repro", label: "Export repro snapshot", run: () => { exportDiagnosticsSnapshot(); setCommandPaletteOpen(false); } }]
+            : []),
+        ]
+      : []),
   ].filter((command) => command.label.toLowerCase().includes(commandQuery.trim().toLowerCase()));
 
   const updateCommandPalettePosition = () => {
@@ -4256,6 +4581,7 @@ export function GridNexa<T>({
       addRow,
       deleteRow,
       deleteSelectedRows,
+      exportDiagnostics: exportDiagnosticsSnapshot,
       saveAll: saveAllRows,
     };
 
@@ -4272,6 +4598,8 @@ export function GridNexa<T>({
     columnId: string,
     filter: ColumnFilterModel | null,
   ) => {
+    const column = columns.find((entry) => entry.id === columnId);
+
     setFilterModel((current) => {
       const next = { ...current };
 
@@ -4283,6 +4611,13 @@ export function GridNexa<T>({
 
       return next;
     });
+    recordDiagnosticEvent(
+      "filter",
+      filter
+        ? `Filtered ${column?.headerName ?? columnId}`
+        : `Cleared filter for ${column?.headerName ?? columnId}`,
+      { columnId, filter: sanitizeReproValue(filter) as Record<string, unknown> | null },
+    );
     setPageIndex(0);
   };
 
@@ -5663,12 +5998,54 @@ export function GridNexa<T>({
 
         {diagnosticsOpen ? (
           <div className="sg-product-panel sg-diagnostics-panel">
-            <strong>Diagnostics</strong>
-            <span>Rows: {gridRows.length} total, {filteredRows.length} filtered, {tableRows.length} rendered</span>
-            <span>Columns: {columns.length} total, {tableColumns.length} visible</span>
-            <span>Filters: {activeFilterCount + activeAdvancedFilterCount}</span>
-            <span>Invalid cells: {invalidCellCount}</span>
-            <span>Changes tracked: {changeLog.length}</span>
+            <div className="sg-product-panel-header">
+              <strong>Diagnostics</strong>
+              <div className="sg-diagnostics-actions">
+                {diagnosticsOptions.exportRepro ? (
+                  <button
+                    type="button"
+                    className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                    onClick={exportDiagnosticsSnapshot}
+                  >
+                    Export repro
+                  </button>
+                ) : null}
+                {diagnosticsOptions.recorder ? (
+                  <button
+                    type="button"
+                    className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                    onClick={() => {
+                      diagnosticEventsRef.current = [];
+                      setDiagnosticEvents([]);
+                    }}
+                  >
+                    Clear log
+                  </button>
+                ) : null}
+              </div>
+            </div>
+            <div className="sg-diagnostics-grid">
+              <span>Rows: {gridRows.length} total, {filteredRows.length} filtered, {tableRows.length} rendered</span>
+              <span>Columns: {columns.length} total, {tableColumns.length} visible</span>
+              <span>Filters: {activeFilterCount + activeAdvancedFilterCount}</span>
+              <span>Invalid cells: {invalidCellCount}</span>
+              <span>Changes tracked: {changeLog.length}</span>
+              <span>Events recorded: {diagnosticEvents.length}</span>
+            </div>
+            {diagnosticsOptions.recorder ? (
+              diagnosticEvents.length ? (
+                <ol className="sg-diagnostics-events">
+                  {diagnosticEvents.slice(0, 8).map((entry) => (
+                    <li key={entry.id}>
+                      <strong>{entry.type}</strong>
+                      <span>{entry.label}</span>
+                    </li>
+                  ))}
+                </ol>
+              ) : (
+                <span className="sg-panel-muted">No diagnostic events recorded yet.</span>
+              )
+            ) : null}
           </div>
         ) : null}
 

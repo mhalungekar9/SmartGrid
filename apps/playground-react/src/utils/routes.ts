@@ -29,6 +29,7 @@ import { StylingConfiguration } from "../pages/StylingConfiguration";
 import { GridConfiguration } from "../pages/GridConfiguration";
 import { Events } from "../pages/Events";
 import { Performance } from "../pages/Performance";
+import { Diagnostics } from "../pages/Diagnostics";
 
 export interface RouteItem {
   path: string;
@@ -103,6 +104,14 @@ export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
       { path: "/docs/virtual-scrolling", label: "Virtual Scrolling", icon: "bi-window-stack", component: VirtualScrolling },
       { path: "/docs/remote-data", label: "Remote Data", icon: "bi-cloud-arrow-down", component: RemoteData },
       { path: "/docs/export", label: "Export", icon: "bi-download", component: Export },
+      {
+        path: "/docs/diagnostics",
+        label: "Diagnostics",
+        icon: "bi-bug",
+        component: Diagnostics,
+        description: "Record grid actions and export compact repro snapshots for integration debugging.",
+        tags: ["diagnostics", "repro", "debug", "recorder", "bug report"],
+      },
       { path: "/docs/events", label: "Events", icon: "bi-broadcast", component: Events },
       { path: "/docs/performance", label: "Performance", icon: "bi-speedometer2", component: Performance },
     ],

@@ -638,6 +638,47 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     });
   }
 
+  exportDiagnostics() {
+    const snapshot = {
+      schemaVersion: 1,
+      packageName: "@gridnexa/javascript",
+      generatedAt: new Date().toISOString(),
+      counts: {
+        rows: this.options.rows.length,
+        visibleRows: this.visibleRows().length,
+        columns: this.options.columns.length,
+        selectedRows: this.selectedIds.size,
+        changes: this.changeLog.length,
+      },
+      columns: this.options.columns.map((column) => ({
+        id: column.id,
+        field: column.field,
+        headerName: column.headerName,
+        width: column.width,
+        pinned: column.pinned,
+        hidden: column.hidden,
+        sortable: column.sortable,
+        filter: column.filter,
+      })),
+      rows: this.options.rows.slice(0, 50),
+      state: {
+        sortModel: this.sortState,
+        filterModel: this.options.columnFilters ?? {},
+        pageIndex: this.pageIndex,
+        hiddenColumnIds: Array.from(this.hiddenColumnIds),
+        selectedRowIds: Array.from(this.selectedIds),
+      },
+      changeReview: this.changeLog,
+    };
+    const blob = new Blob([JSON.stringify(snapshot, null, 2)], { type: "application/json;charset=utf-8;" });
+    const downloadUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = downloadUrl;
+    link.download = "gridnexa-javascript-repro.json";
+    link.click();
+    URL.revokeObjectURL(downloadUrl);
+  }
+
   private createRow() {
     if (this.options.createRow) return this.options.createRow();
     return Object.fromEntries(this.options.columns.map((column) => [column.field, ""])) as T;
@@ -736,6 +777,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       addRow: (row?: T) => this.addRow(row),
       deleteRow: (rowIndex: number) => this.deleteRow(rowIndex),
       deleteSelectedRows: () => this.deleteSelectedRows(),
+      exportDiagnostics: () => this.exportDiagnostics(),
       saveAll: () => this.saveAll(),
     };
   }

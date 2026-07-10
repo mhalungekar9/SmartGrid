@@ -216,7 +216,11 @@ Copy this:
       score: { type: "number", min: 70, max: 100 },
     },
   }}
-  diagnostics
+  diagnostics={{
+    recorder: true,
+    exportRepro: true,
+    rowSampleSize: 50,
+  }}
 />
 ```
 
@@ -226,7 +230,7 @@ What this solves:
 - `commandPalette` adds a keyboard-first action launcher with Ctrl+K / Cmd+K.
 - `changeReview` tracks edits, row additions, and row deletions before Save All.
 - `validation` highlights invalid cells and can block Save All.
-- `diagnostics` exposes runtime counts while integrating complex grids.
+- `diagnostics` exposes runtime counts, records recent grid actions, and can export a repro snapshot with sanitized columns, sampled rows, current grid state, change review entries, and a React example.
 
 When to use:
 

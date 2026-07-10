@@ -94,7 +94,7 @@ Core includes the typed contracts used by all framework packages:
 - `commandPalette` enables a command launcher contract for discoverable grid actions.
 - `changeReview` describes pre-save review of edits, row additions, and deletions.
 - `validation` describes fast cell validation rules and save blocking.
-- `diagnostics` describes developer-facing runtime diagnostics.
+- `diagnostics` describes developer-facing runtime diagnostics, action recording, and one-click repro snapshot export.
 - `icons` provides global icon replacement, while `column.icons` can override icons for a specific column.
 - `toolbar` enables or hides quick filter, find, filters, advanced filter, columns, exports, add/delete rows, undo/redo, fill, and save-all tools.
 
