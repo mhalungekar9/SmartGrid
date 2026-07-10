@@ -125,7 +125,7 @@ Set `toolbar`, `columnTools`, and `footer` to `false` to hide those surfaces. Us
 
 Set `sidePanel` to `false` or `{ enabled: false }` to hide the right-side tools. Use `{ columns, pivot, filters, defaultActivePanel }` to choose which side tabs appear and which tab opens first.
 
-## Presets, Saved Views, And Overlays
+## Presets And Overlays
 
 ```ts
 createGridNexa(document.getElementById("grid")!, {
@@ -150,9 +150,9 @@ Presets make common screens fast to ship:
 - `basic` for clean read-only tables
 - `admin` for CRUD-heavy internal tools
 - `spreadsheet` for Excel-like data entry
-- `analytics` for reporting, pivoting, and saved exploration
+- `analytics` for reporting and pivoting
 
-Any explicit option still wins over the preset. `stateStorage` persists saved-view state such as column widths, hidden columns, pinned columns, filters, sorting, pagination, and side panel state.
+Any explicit option still wins over the preset. `stateStorage` persists grid state such as column widths, hidden columns, pinned columns, filters, sorting, pagination, and side panel state.
 
 ```ts
 createGridNexa(document.getElementById("grid")!, {
@@ -166,31 +166,11 @@ createGridNexa(document.getElementById("grid")!, {
 
 Built-in loading, error, and empty overlays render inside the grid viewport without changing header or body alignment.
 
-## Productivity Layer
+## Feature Parity Note
 
-Copy this:
+React is the reference package and currently has the fullest productivity layer: saved views UI, command palette, change review, validation UI, and diagnostics panel.
 
-```ts
-createGridNexa(document.getElementById("grid")!, {
-  columns,
-  rows,
-  views: { key: "employees-grid-views" },
-  commandPalette: true,
-  changeReview: true,
-  validation: {
-    blockSave: true,
-    rules: {
-      name: { required: true, message: "Name is required" },
-      score: { type: "number", min: 70, max: 100 },
-    },
-  },
-  diagnostics: true,
-});
-```
-
-When to use: saved views, command search, change review, validation, and diagnostics are useful for admin tools, operations screens, and spreadsheet-style review workflows.
-
-Common mistakes: use a stable `views.key` per grid, keep validation rules fast, and avoid sharing saved-view keys across unrelated screens.
+The JavaScript package supports the shared core grid surface used in the playground: presets, overlays, sorting, filtering, editing, formulas, selection, range fill, undo/redo, column tools, grouping, pivoting, tree data, master/detail, export, AI actions, and server-side operation callbacks. The React-only productivity layer is planned for parity work before those docs are promoted for JavaScript.
 
 ## Column And Range Summaries
 
@@ -248,7 +228,13 @@ The browser sends grid state to your endpoint. Your server can use OpenAI, Azure
 
 Use `className`, `classNames`, `getRowClassName`, `getCellClassName`, `getHeaderClassName`, and column-level class hooks to plug into Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS.
 
-When testing the React package in an external app, import `@gridnexa/react/index.css` once in the app entry. The CSS export contains the shared header layout, drag handles, drop indicators, pinned-column rules, popovers, scrollbars, and theme variables that make installed-package behavior match the playground.
+GridNexa injects runtime styles automatically. For the closest match to the playground and to keep bundlers aware of the stylesheet, import the package CSS once in your app entry:
+
+```ts
+import "@gridnexa/javascript/index.css";
+```
+
+Pass `unstyled: true` when your design system owns every grid rule.
 
 ## Feature Highlights
 

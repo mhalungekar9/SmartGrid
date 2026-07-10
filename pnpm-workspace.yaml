@@ -2,5 +2,6 @@ packages:
   - packages/*
   - apps/*
   - react-test
+  - vue-test
 allowBuilds:
   esbuild: true

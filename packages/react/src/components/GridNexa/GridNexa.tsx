@@ -1608,6 +1608,16 @@ export function GridNexa<T>({
         : null;
 
   const [gridRows, setGridRows] = useState(rows);
+  const skipNextRowsHistoryResetRef = useRef(false);
+  const markInternalRowsChange = () => {
+    skipNextRowsHistoryResetRef.current = true;
+
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => {
+        skipNextRowsHistoryResetRef.current = false;
+      }, 0);
+    }
+  };
   const [columnWidths, setColumnWidths] = useState<Array<number | undefined>>(
     () =>
       columns.map((column) =>
@@ -1775,6 +1785,12 @@ export function GridNexa<T>({
   }, [columns, gridRows, onGridReady]);
 
   useEffect(() => {
+    if (skipNextRowsHistoryResetRef.current) {
+      skipNextRowsHistoryResetRef.current = false;
+      setGridRows(rows);
+      return;
+    }
+
     setGridRows(rows);
     setUndoStack([]);
     setRedoStack([]);
@@ -2215,6 +2231,7 @@ export function GridNexa<T>({
       }
 
       const changeParams = { rows: nextRows, previousRows: currentRows, reason };
+      markInternalRowsChange();
       onRowsChange?.(changeParams);
       onDataChange?.(changeParams);
 
@@ -2249,6 +2266,7 @@ export function GridNexa<T>({
         previousRows: gridRows,
         reason: "undo",
       } as const;
+      markInternalRowsChange();
       onRowsChange?.(changeParams);
       onDataChange?.(changeParams);
 
@@ -2267,6 +2285,7 @@ export function GridNexa<T>({
       setUndoStack((currentUndo) => [...currentUndo.slice(-19), gridRows]);
       setGridRows(nextRows);
       const changeParams = { rows: nextRows, previousRows: gridRows, reason: "redo" } as const;
+      markInternalRowsChange();
       onRowsChange?.(changeParams);
       onDataChange?.(changeParams);
 

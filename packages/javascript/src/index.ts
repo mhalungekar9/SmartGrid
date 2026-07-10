@@ -1,3 +1,17 @@
+import "../../react/src/styles/gridnexa.css";
+
+import {
+  GRIDNEXA_DEFAULT_VIEW_ID,
+  getGridNexaValidationMessage,
+  readGridNexaSavedViews,
+  resolveGridNexaEnabled,
+  resolveGridNexaSavedViews,
+  resolveGridNexaValidation,
+  shouldShowGridNexaDiagnostics,
+  writeGridNexaSavedViews,
+  type GridNexaDomChangeEntry,
+  type GridNexaDomSavedView,
+} from "@gridnexa/core";
 import type {
   AdvancedFilterModel,
   Column,
@@ -56,6 +70,7 @@ type PersistedGridState = {
   pageIndex?: number;
   sidePanel?: "columns" | "filters" | null;
 };
+type DomViewState = PersistedGridState;
 type CellEdit<T> = {
   row: T;
   rowIndex: number;
@@ -76,15 +91,17 @@ function injectStyles() {
   const style = document.createElement("style");
   style.id = styleId;
   style.textContent = `
-    .gnx-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;border:1px solid rgba(30,64,175,.16);border-radius:12px;background:#fff;color:#0f172a;font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif;overflow:hidden;box-shadow:0 18px 48px rgba(15,23,42,.12);--gnx-bg:#fff;--gnx-header-bg:#f8fbff;--gnx-border:rgba(30,64,175,.16);--gnx-row-hover:rgba(37,99,235,.07);--gnx-primary:#2563eb}
-    .gnx-main{position:relative;min-width:0;overflow:auto}.gnx-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border-bottom:1px solid rgba(30,64,175,.12);background:#f8fbff}.gnx-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-    .gnx-button,.gnx-panel button{min-height:32px;padding:0 10px;border:1px solid rgba(30,64,175,.16);border-radius:8px;background:#fff;color:#1d4ed8;font:inherit;font-weight:800;cursor:pointer}.gnx-button:disabled{opacity:.48;cursor:not-allowed}
-    .gnx-table{width:max-content;min-width:max-content;border-collapse:separate;border-spacing:0}.gnx-grid[data-gnx-fill-width=true] .gnx-table{width:100%}.gnx-table th,.gnx-table td{min-height:42px;padding:10px 12px;border-right:1px solid var(--gnx-border);border-bottom:1px solid rgba(30,64,175,.1);text-align:left;white-space:nowrap}
-    .gnx-table th{position:sticky;top:0;z-index:1;background:var(--gnx-header-bg);color:#172033;font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;user-select:none}.gnx-table th[draggable=true]{cursor:grab}.gnx-table thead tr:first-child th{background:#e8f1ff;color:#153e90;text-align:center}.gnx-table tbody tr:hover td{background:var(--gnx-row-hover)}
+    .gnx-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0;width:100%;min-width:0;border:1px solid var(--gnx-border);border-radius:12px;background:var(--gnx-bg);color:var(--gnx-text);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif;overflow:hidden;box-shadow:var(--gnx-shadow);--gnx-bg:#fff;--gnx-panel:#fff;--gnx-panel-strong:#f8fafc;--gnx-text:#0f172a;--gnx-muted:#64748b;--gnx-heading:#111827;--gnx-header-bg:#f8fbff;--gnx-border:rgba(30,64,175,.16);--gnx-row-hover:rgba(37,99,235,.07);--gnx-primary:#2563eb;--gnx-shadow:0 18px 48px rgba(15,23,42,.12);--gnx-row-height:42px;--gnx-cell-pad:12px}
+    .gnx-grid[data-gnx-theme=dark]{--gnx-bg:#070b18;--gnx-panel:#0f172a;--gnx-panel-strong:#111827;--gnx-text:#e5edf7;--gnx-muted:#9ca3af;--gnx-heading:#f8fafc;--gnx-header-bg:#0b1220;--gnx-border:rgba(148,163,184,.2);--gnx-row-hover:rgba(96,165,250,.12);--gnx-primary:#60a5fa;--gnx-shadow:0 24px 70px rgba(4,8,20,.38)}
+    .gnx-grid[data-gnx-density=compact]{--gnx-row-height:34px;--gnx-cell-pad:8px}.gnx-grid[data-gnx-density=comfortable]{--gnx-row-height:50px;--gnx-cell-pad:16px}
+    .gnx-grid,.gnx-grid *{box-sizing:border-box}.gnx-main{position:relative;display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-width:0;overflow:hidden}.gnx-main .sg-grid-root{position:relative;width:100%;min-width:0;max-height:100%;overflow:auto;border:1px solid var(--gnx-border);border-radius:14px;background:var(--gnx-bg);box-shadow:var(--gnx-shadow);outline:none}.gnx-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px;border-bottom:1px solid var(--gnx-border);background:var(--gnx-panel)}.gnx-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+    .gnx-button,.gnx-panel button{min-height:32px;padding:0 10px;border:1px solid var(--gnx-border);border-radius:8px;background:var(--gnx-panel);color:var(--gnx-primary);font:inherit;font-weight:800;cursor:pointer}.gnx-button:disabled{opacity:.48;cursor:not-allowed}
+    .gnx-table{width:max-content;min-width:max-content;table-layout:fixed;border:0;border-radius:0;background:transparent;box-shadow:none;border-collapse:separate;border-spacing:0}.gnx-grid[data-gnx-fill-width=true] .gnx-table{width:100%;min-width:100%}.gnx-table th,.gnx-table td{min-height:var(--gnx-row-height);height:var(--gnx-row-height);padding:0 var(--gnx-cell-pad);border-right:1px solid var(--gnx-border);border-bottom:1px solid var(--gnx-border);text-align:left;white-space:nowrap}
+    .gnx-table th{position:relative;top:auto;z-index:1;height:44px;min-height:44px;padding:0 14px;background:var(--gnx-header-bg);color:var(--gnx-heading);font-size:.78rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;overflow:hidden;cursor:pointer;user-select:none}.gnx-table th[draggable=true]{cursor:grab}.gnx-table thead tr:first-child th{background:var(--gnx-header-bg);color:var(--gnx-heading);text-align:left}.gnx-table tbody tr:hover td{background:var(--gnx-row-hover)}.gnx-table .sg-header-content{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;height:100%;min-width:0}.gnx-table .sg-header-main{display:inline-flex;align-items:center;gap:8px;min-width:0}.gnx-table .sg-header-label{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.gnx-table .sg-header-actions{display:inline-flex;flex:0 0 auto;align-items:center;gap:4px}.gnx-table .sg-header-icon-button{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--gnx-muted);cursor:pointer}.gnx-table .sg-header-icon-button:hover{background:var(--gnx-row-hover);color:var(--gnx-primary)}.gnx-table .sg-column-drag-handle{flex:0 0 auto;width:10px;height:18px;border-radius:4px;opacity:.72;background-image:radial-gradient(currentColor 1px,transparent 1.5px);background-size:5px 5px;color:var(--gnx-muted);cursor:grab}.gnx-table .sg-resize-handle{position:absolute;top:0;right:0;width:10px;height:100%;margin:0;border-right:2px solid color-mix(in srgb,var(--gnx-primary) 28%,transparent);cursor:col-resize}.gnx-table .sg-selection-cell,.gnx-table .sg-selection-header{width:44px;min-width:44px;max-width:44px;padding:0;text-align:center}.gnx-table .sg-row-number,.gnx-table .sg-row-number-header{width:72px;min-width:72px;max-width:72px;padding:0;text-align:center}.gnx-table .sg-row-number{position:relative;padding-right:30px}
     .gnx-cell-ellipsis{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.gnx-cell-clip{white-space:nowrap;overflow:hidden;text-overflow:clip}.gnx-cell-wrap{white-space:normal;overflow-wrap:anywhere;text-overflow:clip}
-    .gnx-control{width:44px;text-align:center!important}.gnx-detail{background:#f8fbff;color:#334155}.gnx-empty{padding:18px;color:#64748b}.gnx-status{display:flex;gap:18px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid rgba(30,64,175,.12);font-size:12px;font-weight:800;color:#334155;background:#fff}.gnx-find{min-height:32px;padding:0 9px;border:1px solid rgba(30,64,175,.16);border-radius:8px}.gnx-cell-active{outline:2px solid #2563eb;outline-offset:-2px;background:rgba(37,99,235,.08)!important}.gnx-cell-range{background:rgba(37,99,235,.12)!important}.gnx-row-tools{display:inline-flex;gap:3px}.gnx-row-tools button{min-height:24px;padding:0 5px;border:1px solid rgba(30,64,175,.14);border-radius:6px;background:#fff;color:#1d4ed8;font-weight:900}.gnx-drop-target{box-shadow:inset 3px 0 #2563eb}.gnx-resizer{float:right;width:7px;height:24px;cursor:col-resize;border-right:2px solid rgba(30,64,175,.24)}.gnx-group-row td{background:#eef4ff!important;color:#153e90;font-weight:900;text-transform:uppercase;letter-spacing:.04em}.gnx-tree-toggle,.gnx-detail-toggle{min-height:24px;margin-right:6px;border:1px solid rgba(30,64,175,.18);border-radius:6px;background:#fff;color:#1d4ed8;font-weight:900}.gnx-context{position:fixed;z-index:9999;display:grid;min-width:150px;padding:6px;border:1px solid rgba(30,64,175,.16);border-radius:10px;background:#fff;box-shadow:0 18px 48px rgba(15,23,42,.18)}.gnx-context button{min-height:30px;border:0;background:transparent;text-align:left;color:#0f172a;font:inherit}.gnx-context button:hover{background:#eef4ff}
-    .gnx-side{position:relative;z-index:2;display:flex;min-width:42px;border-left:1px solid rgba(30,64,175,.14);background:#f8fbff;overflow:hidden}.gnx-tabs{display:grid;grid-auto-rows:116px;width:42px;background:#eef4ff}.gnx-tab{border:0;border-bottom:1px solid rgba(30,64,175,.12);background:transparent;color:#334155;cursor:pointer;touch-action:manipulation;font:inherit;font-weight:800;writing-mode:vertical-rl}.gnx-tab.active,.gnx-tab:hover{background:rgba(37,99,235,.1);color:#1d4ed8}
-    .gnx-panel{width:min(340px,calc(100vw - 64px));max-height:620px;overflow:auto;padding:14px;background:#fff;box-shadow:-18px 0 42px rgba(15,23,42,.1)}.gnx-panel h3{margin:0 0 8px;font-size:14px}.gnx-section{display:grid;gap:8px;padding:12px 0;border-top:1px solid rgba(30,64,175,.12)}.gnx-panel label{display:flex;align-items:center;gap:8px;min-height:30px}.gnx-panel select,.gnx-panel input{min-height:34px;padding:0 9px;border:1px solid rgba(30,64,175,.16);border-radius:8px;background:#fff;color:#0f172a}.gnx-rule{display:grid;gap:8px;padding:10px;border:1px solid rgba(30,64,175,.12);border-radius:10px;background:#f8fbff}.gnx-overlay{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(248,251,255,.78);backdrop-filter:blur(3px);pointer-events:none}.gnx-overlay-card{max-width:min(420px,calc(100% - 32px));padding:18px 20px;border:1px solid rgba(30,64,175,.16);border-radius:14px;background:#fff;color:#172033;box-shadow:0 22px 60px rgba(15,23,42,.16);font-weight:800;text-align:center}.gnx-overlay-card[data-kind=error]{border-color:rgba(220,38,38,.24);color:#991b1b}
+    .gnx-control{width:44px;text-align:center!important}.gnx-detail{background:var(--gnx-panel-strong);color:var(--gnx-text)}.gnx-empty{padding:18px;color:var(--gnx-muted)}.gnx-status{display:flex;gap:18px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid var(--gnx-border);font-size:12px;font-weight:800;color:var(--gnx-muted);background:var(--gnx-panel)}.gnx-find{min-height:32px;padding:0 9px;border:1px solid var(--gnx-border);border-radius:8px;background:var(--gnx-panel-strong);color:var(--gnx-text)}.gnx-cell-active{outline:2px solid var(--gnx-primary);outline-offset:-2px;background:color-mix(in srgb,var(--gnx-primary) 12%,transparent)!important}.gnx-cell-range{background:color-mix(in srgb,var(--gnx-primary) 16%,transparent)!important}.gnx-row-tools{position:absolute;top:50%;right:4px;display:inline-flex;gap:2px;opacity:0;pointer-events:none;transform:translateY(-50%);transition:opacity .12s ease}.sg-row:hover .gnx-row-tools,.sg-row-number:focus-within .gnx-row-tools{opacity:1;pointer-events:auto}.gnx-row-tools button{width:22px;min-height:22px;padding:0;border:1px solid var(--gnx-border);border-radius:6px;background:var(--gnx-panel);color:var(--gnx-primary);font-weight:900}.gnx-drop-target{box-shadow:inset 3px 0 var(--gnx-primary)}.gnx-resizer{float:right;width:7px;height:24px;cursor:col-resize;border-right:2px solid var(--gnx-border)}.gnx-group-row td{background:var(--gnx-panel-strong)!important;color:var(--gnx-heading);font-weight:900;text-transform:uppercase;letter-spacing:.04em}.gnx-tree-toggle,.gnx-detail-toggle{min-height:24px;margin-right:6px;border:1px solid var(--gnx-border);border-radius:6px;background:var(--gnx-panel);color:var(--gnx-primary);font-weight:900}.gnx-context{position:fixed;z-index:9999;display:grid;min-width:150px;padding:6px;border:1px solid var(--gnx-border);border-radius:10px;background:var(--gnx-panel);box-shadow:var(--gnx-shadow)}.gnx-context button{min-height:30px;border:0;background:transparent;text-align:left;color:var(--gnx-text);font:inherit}.gnx-context button:hover{background:var(--gnx-row-hover)}
+    .gnx-side{position:relative;z-index:2;display:flex;min-width:42px;border-left:1px solid var(--gnx-border);background:var(--gnx-panel);overflow:hidden}.gnx-tabs{display:grid;grid-auto-rows:116px;width:42px;background:var(--gnx-panel-strong)}.gnx-tab{border:0;border-bottom:1px solid var(--gnx-border);background:transparent;color:var(--gnx-muted);cursor:pointer;touch-action:manipulation;font:inherit;font-weight:800;writing-mode:vertical-rl}.gnx-tab.active,.gnx-tab:hover{background:var(--gnx-row-hover);color:var(--gnx-primary)}
+    .gnx-panel{width:min(340px,calc(100vw - 64px));max-height:620px;overflow:auto;padding:14px;background:var(--gnx-panel);color:var(--gnx-text);box-shadow:-18px 0 42px rgba(15,23,42,.1)}.gnx-panel h3{margin:0 0 8px;font-size:14px}.gnx-section{display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--gnx-border)}.gnx-panel label{display:flex;align-items:center;gap:8px;min-height:30px}.gnx-panel select,.gnx-panel input{min-height:34px;padding:0 9px;border:1px solid var(--gnx-border);border-radius:8px;background:var(--gnx-panel);color:var(--gnx-text)}.gnx-rule{display:grid;gap:8px;padding:10px;border:1px solid var(--gnx-border);border-radius:10px;background:var(--gnx-panel-strong)}.gnx-overlay{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:24px;background:color-mix(in srgb,var(--gnx-bg) 78%,transparent);backdrop-filter:blur(3px);pointer-events:none}.gnx-overlay-card{max-width:min(420px,calc(100% - 32px));padding:18px 20px;border:1px solid var(--gnx-border);border-radius:14px;background:var(--gnx-panel);color:var(--gnx-heading);box-shadow:var(--gnx-shadow);font-weight:800;text-align:center}.gnx-overlay-card[data-kind=error]{border-color:rgba(220,38,38,.24);color:#991b1b}
     @media(max-width:900px){.gnx-grid{grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto;overflow:visible}.gnx-side{width:100%;border-top:1px solid rgba(30,64,175,.14);border-left:0;overflow:visible}.gnx-tabs{grid-auto-flow:column;grid-auto-columns:minmax(96px,1fr);grid-auto-rows:auto;width:100%}.gnx-tab{min-height:42px;writing-mode:horizontal-tb}.gnx-panel{position:fixed;right:12px;bottom:64px;left:12px;z-index:10020;width:auto;max-height:min(70vh,620px);border:1px solid rgba(30,64,175,.16);border-radius:14px;box-shadow:0 24px 80px rgba(15,23,42,.32)}}
   `;
   document.head.appendChild(style);
@@ -503,6 +520,12 @@ export class GridNexaGrid<T = Record<string, unknown>> {
   private aiError: string | null = null;
   private undoStack: Array<CellEdit<T>> = [];
   private redoStack: Array<CellEdit<T>> = [];
+  private savedViews: Array<GridNexaDomSavedView<DomViewState>> = [];
+  private activeViewId = GRIDNEXA_DEFAULT_VIEW_ID;
+  private commandOpen = false;
+  private reviewOpen = false;
+  private diagnosticsOpen = false;
+  private changeLog: GridNexaDomChangeEntry[] = [];
   private persistTimer: number | undefined;
 
   constructor(private readonly container: HTMLElement, options: GridNexaJavaScriptOptions<T>) {
@@ -523,7 +546,8 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       ...this.hiddenColumnIds,
     ]);
     this.hydratePersistedState();
-    injectStyles();
+    this.initProductivity();
+    if (this.options.unstyled !== true) injectStyles();
     this.applyTransaction();
     this.bindKeyboard();
     this.attachApi();
@@ -567,6 +591,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     const previousRows = this.options.rows;
     const rows = [...previousRows, row];
     this.options = { ...this.options, rows };
+    this.appendChange("add", `Added row ${rows.length}`);
     this.emitRowsChange(rows, previousRows, "rowAdd");
     this.options.onRowAdd?.({ row, rowIndex: rows.length - 1, rows });
     this.render();
@@ -578,6 +603,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     const previousRows = this.options.rows;
     const rows = previousRows.filter((_, index) => index !== rowIndex);
     this.options = { ...this.options, rows };
+    this.appendChange("delete", `Deleted row ${rowIndex + 1}`);
     this.selectedIds.delete(this.getRowId(row, rowIndex));
     this.emitRowsChange(rows, previousRows, "rowDelete");
     this.options.onRowDelete?.({ row, rowIndex, rows: [row], remainingRows: rows });
@@ -595,6 +621,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     if (!rowsToDelete.length) return;
     const rows = previousRows.filter((row, index) => !this.selectedIds.has(this.getRowId(row, index)));
     this.options = { ...this.options, rows };
+    this.appendChange("bulkDelete", `Deleted ${rowsToDelete.length} rows`);
     this.selectedIds.clear();
     this.emitRowsChange(rows, previousRows, "rowsDelete");
     this.options.onRowsDelete?.({ rows: rowsToDelete, rowIndexes, remainingRows: rows });
@@ -602,6 +629,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
   }
 
   saveAll() {
+    if (this.isSaveBlocked()) return;
     this.options.onSaveAll?.({
       rows: this.options.rows,
       selectedRows: this.options.rows.filter((row, index) => this.selectedIds.has(this.getRowId(row, index))),
@@ -619,6 +647,81 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     const params = { rows, previousRows, reason };
     this.options.onRowsChange?.(params as Parameters<NonNullable<GridNexaJavaScriptOptions<T>["onRowsChange"]>>[0]);
     this.options.onDataChange?.(params);
+  }
+
+  private initProductivity() {
+    const views = resolveGridNexaSavedViews(this.options.views);
+    this.savedViews = views.enabled ? readGridNexaSavedViews<DomViewState>(views.key) : [];
+    this.diagnosticsOpen = shouldShowGridNexaDiagnostics(this.options.diagnostics);
+    if (resolveGridNexaEnabled(this.options.commandPalette)) {
+      window.addEventListener("keydown", (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+          event.preventDefault();
+          this.commandOpen = !this.commandOpen;
+          this.render();
+        }
+      });
+    }
+  }
+
+  private captureViewState(): DomViewState {
+    return {
+      columnWidths: Object.fromEntries(this.options.columns.map((column) => [column.id, this.columnWidth(column)])),
+      hiddenColumnIds: Array.from(this.hiddenColumnIds),
+      pinnedColumnIds: Object.fromEntries(this.options.columns.filter((column) => column.pinned).map((column) => [column.id, column.pinned])),
+      sortModel: this.sortState,
+      filterModel: this.options.columnFilters,
+      pageIndex: this.pageIndex,
+      sidePanel: this.sideOpen,
+    };
+  }
+
+  private applyViewState(state: DomViewState) {
+    this.hiddenColumnIds = new Set(state.hiddenColumnIds ?? []);
+    Object.entries(state.columnWidths ?? {}).forEach(([id, width]) => this.columnWidths.set(id, width));
+    this.sortState = state.sortModel ?? null;
+    this.options = { ...this.options, columnFilters: state.filterModel };
+    this.pageIndex = state.pageIndex ?? 0;
+    this.sideOpen = state.sidePanel ?? this.sideOpen;
+    this.render();
+  }
+
+  private saveCurrentView() {
+    const options = resolveGridNexaSavedViews(this.options.views);
+    if (!options.enabled || !options.allowUserViews) return;
+    const name = window.prompt("View name", this.activeViewId === GRIDNEXA_DEFAULT_VIEW_ID ? "My view" : this.savedViews.find((view) => view.id === this.activeViewId)?.name);
+    if (!name) return;
+    const now = Date.now();
+    const existing = this.savedViews.find((view) => view.name === name);
+    const view = { id: existing?.id ?? `${now}`, name, state: this.captureViewState(), createdAt: existing?.createdAt ?? now, updatedAt: now };
+    this.savedViews = [view, ...this.savedViews.filter((entry) => entry.id !== view.id)].slice(0, 20);
+    this.activeViewId = view.id;
+    writeGridNexaSavedViews(options.key, this.savedViews);
+    this.render();
+  }
+
+  private appendChange(type: GridNexaDomChangeEntry["type"], label: string) {
+    if (!resolveGridNexaEnabled(this.options.changeReview)) return;
+    this.changeLog = [{ id: `${Date.now()}-${this.changeLog.length}`, type, label, timestamp: Date.now() }, ...this.changeLog.slice(0, 49)];
+  }
+
+  private validationIssues() {
+    const validation = resolveGridNexaValidation(this.options.validation);
+    if (!validation.enabled) return [];
+    const issues: Array<{ key: string; label: string }> = [];
+    this.options.rows.forEach((row, rowIndex) => {
+      this.options.columns.forEach((column, columnIndex) => {
+        const rule = validation.rules[column.id] ?? validation.rules[String(column.field)];
+        const message = getGridNexaValidationMessage(rule, getValue(row, column), row);
+        if (message) issues.push({ key: `${rowIndex}:${columnIndex}`, label: `${column.headerName} row ${rowIndex + 1}: ${message}` });
+      });
+    });
+    return issues;
+  }
+
+  private isSaveBlocked() {
+    const validation = resolveGridNexaValidation(this.options.validation);
+    return validation.blockSave && this.validationIssues().length > 0;
   }
 
   private getRowId(row: T, index: number) {
@@ -988,6 +1091,31 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     return Math.min(column.maxWidth ?? 1000, Math.max(column.minWidth ?? 72, contentWidth));
   }
 
+  private tableMinimumWidth(columns: Column<T>[]) {
+    return (
+      (this.options.checkboxSelection ? 44 : 0) +
+      (this.options.rowNumbers ? 72 : 0) +
+      columns.reduce((total, column) => total + this.columnWidth(column), 0)
+    );
+  }
+
+  private fillWidthColumnIds(columns: Column<T>[]) {
+    const fillWidth = resolveFillWidthOptions(this.options.fillWidth);
+    if (!fillWidth.enabled || !columns.length) return new Set<string>();
+    const fillableColumns = columns.filter((entry) => !entry.pinned);
+    if (!fillableColumns.length) return new Set<string>();
+    const flexColumns = fillableColumns.filter((entry) => (entry.flex ?? 0) > 0);
+    const hasConfiguredWidths = fillableColumns.some(
+      (entry) =>
+        this.columnWidths.has(entry.id) ||
+        entry.width != null ||
+        (entry.flex ?? 0) > 0,
+    );
+    if (!hasConfiguredWidths) return new Set(fillableColumns.map((entry) => entry.id));
+    if (fillWidth.mode !== "lastColumn" && flexColumns.length) return new Set(flexColumns.map((entry) => entry.id));
+    return new Set([fillableColumns[fillableColumns.length - 1].id]);
+  }
+
   private moveRow(rowIndex: number, direction: -1 | 1) {
     const nextIndex = rowIndex + direction;
     if (nextIndex < 0 || nextIndex >= this.options.rows.length) return;
@@ -1016,7 +1144,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
   private pinnedStyle(column: Column<T>, columns: Column<T>[]) {
     if (!column.pinned) return {};
     const index = columns.findIndex((entry) => entry.id === column.id);
-    const width = (entry: Column<T>) => this.columnWidths.get(entry.id) ?? entry.width ?? 150;
+    const width = (entry: Column<T>) => this.columnWidth(entry);
     const offset =
       column.pinned === "left"
         ? columns.slice(0, index).filter((entry) => entry.pinned === "left").reduce((sum, entry) => sum + width(entry), 0)
@@ -1024,9 +1152,9 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     return {
       position: "sticky",
       [column.pinned]: `${offset}px`,
-      zIndex: column.pinned === "left" ? "3" : "2",
-      background: "#fff",
-      boxShadow: column.pinned === "left" ? "inset -1px 0 rgba(30,64,175,.18)" : "inset 1px 0 rgba(30,64,175,.18)",
+      zIndex: "3",
+      background: "var(--gnx-pinned-bg,var(--gnx-bg))",
+      boxShadow: column.pinned === "left" ? "inset -1px 0 0 var(--gnx-border)" : "inset 1px 0 0 var(--gnx-border)",
     } as Partial<CSSStyleDeclaration>;
   }
 
@@ -1054,7 +1182,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
         ? this.makeDisplayRows(rows)
         : rows.map((row) => ({ kind: "data" as const, row, rowIndex: pivot.rows.indexOf(row) }));
     const root = document.createElement("div");
-    root.className = ["gnx-grid", this.options.className]
+    root.className = ["sg-shell", "gnx-grid", this.options.className]
       .filter(Boolean)
       .join(" ");
     root.dataset.gnxTheme = this.options.theme ?? "dark";
@@ -1064,7 +1192,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       root.style.height = typeof this.options.height === "number" ? `${this.options.height}px` : this.options.height;
     }
     const main = document.createElement("div");
-    main.className = "gnx-main";
+    main.className = "sg-grid-workspace gnx-main";
     const toolbar = this.renderToolbar(columns, pivot.rows);
     if (toolbar) main.appendChild(toolbar);
     main.appendChild(this.renderTable(columns, displayRows));
@@ -1074,6 +1202,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     const sidePanel = this.renderSidePanel();
     sidePanel ? root.append(main, sidePanel) : root.appendChild(main);
     if (this.contextMenu) root.appendChild(this.renderContextMenu());
+    this.appendProductivityPanels(root);
     this.container.replaceChildren(root);
     this.options.onServerSideOperation?.({
       sortModel: this.sortState ? [this.sortState] : [],
@@ -1178,7 +1307,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     if (this.options.toolbar === false || !Object.values(toolbarOptions).some(Boolean)) return null;
 
     const toolbar = document.createElement("div");
-    toolbar.className = "gnx-toolbar";
+    toolbar.className = "sg-toolbar gnx-toolbar";
     const summary = document.createElement("span");
     summary.textContent = `${rows.length} rows`;
     const actions = document.createElement("div");
@@ -1205,7 +1334,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       this.render();
     });
     const pageCount = this.options.pageSize ? Math.max(1, Math.ceil(rows.length / this.options.pageSize)) : 1;
-    if (false && toolbarOptions.pagination && this.options.pageSize) {
+    if (toolbarOptions.pagination && this.options.pageSize) {
       const prev = this.button("Prev", () => {
         this.pageIndex = Math.max(0, this.pageIndex - 1);
         this.render();
@@ -1233,12 +1362,78 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     if (toolbarOptions.addRow) actions.appendChild(this.button("Add row", () => this.addRow()));
     if (toolbarOptions.deleteRow) actions.appendChild(this.button("Delete row", () => this.deleteRow(this.activeCell?.rowIndex ?? 0)));
     if (toolbarOptions.deleteSelectedRows) actions.appendChild(this.button("Delete selected", () => this.deleteSelectedRows()));
-    if (toolbarOptions.saveAll) actions.appendChild(this.button("Save all", () => this.saveAll()));
+    if (resolveGridNexaSavedViews(this.options.views).enabled) actions.append(this.renderViewsControl());
+    if (resolveGridNexaEnabled(this.options.commandPalette)) actions.appendChild(this.button("Commands", () => { this.commandOpen = true; this.render(); }));
+    if (resolveGridNexaEnabled(this.options.changeReview)) actions.appendChild(this.button(`Review${this.changeLog.length ? ` (${this.changeLog.length})` : ""}`, () => { this.reviewOpen = !this.reviewOpen; this.render(); }));
+    if (resolveGridNexaEnabled(this.options.diagnostics)) actions.appendChild(this.button("Diagnostics", () => { this.diagnosticsOpen = !this.diagnosticsOpen; this.render(); }));
+    if (toolbarOptions.saveAll) {
+      const save = this.button("Save all", () => this.saveAll());
+      save.disabled = this.isSaveBlocked();
+      actions.appendChild(save);
+    }
     if (toolbarOptions.exportCsv) actions.appendChild(this.button("Export CSV", () => this.exportCsv(columns, rows)));
     if (toolbarOptions.exportExcel) actions.appendChild(this.button("Export Excel", () => this.exportExcel(columns, rows)));
     if (toolbarOptions.summary) toolbar.appendChild(summary);
     toolbar.appendChild(actions);
     return toolbar;
+  }
+
+  private renderViewsControl() {
+    const wrap = document.createElement("span");
+    const select = document.createElement("select");
+    const defaultOption = document.createElement("option");
+    defaultOption.value = GRIDNEXA_DEFAULT_VIEW_ID;
+    defaultOption.textContent = "Default view";
+    select.appendChild(defaultOption);
+    this.savedViews.forEach((view) => {
+      const option = document.createElement("option");
+      option.value = view.id;
+      option.textContent = view.name;
+      select.appendChild(option);
+    });
+    select.value = this.activeViewId;
+    select.addEventListener("change", () => {
+      this.activeViewId = select.value;
+      const view = this.savedViews.find((entry) => entry.id === select.value);
+      view ? this.applyViewState(view.state) : this.applyViewState({});
+    });
+    wrap.append(select, this.button("Save view", () => this.saveCurrentView()));
+    return wrap;
+  }
+
+  private appendProductivityPanels(root: HTMLElement) {
+    const issues = this.validationIssues();
+    const validation = resolveGridNexaValidation(this.options.validation);
+    if (validation.showSummary && issues.length) root.appendChild(this.panel(`${issues.length} validation issues`, issues.slice(0, 5).map((issue) => issue.label)));
+    if (this.reviewOpen) root.appendChild(this.panel("Change review", this.changeLog.length ? this.changeLog.map((entry) => entry.label) : ["No tracked changes"]));
+    if (this.diagnosticsOpen) root.appendChild(this.panel("Diagnostics", [`Rows: ${this.options.rows.length}`, `Columns: ${this.options.columns.length}`, `Selected: ${this.selectedIds.size}`, `Changes: ${this.changeLog.length}`]));
+    if (this.commandOpen) {
+      const actions = [
+        ["Save view", () => this.saveCurrentView()],
+        ["Save all", () => this.saveAll()],
+        ["Export CSV", () => this.exportCsv(this.effectiveColumns(), this.visibleRows())],
+        ["Export Excel", () => this.exportExcel(this.effectiveColumns(), this.visibleRows())],
+        ["Diagnostics", () => { this.diagnosticsOpen = true; }],
+      ] as const;
+      const panel = this.panel("Commands", []);
+      actions.forEach(([label, run]) => panel.appendChild(this.button(label, () => { run(); this.commandOpen = false; this.render(); })));
+      root.appendChild(panel);
+    }
+  }
+
+  private panel(title: string, lines: string[]) {
+    const panel = document.createElement("div");
+    panel.className = "gnx-panel";
+    panel.style.cssText = "position:relative;z-index:20;margin:8px;padding:12px;border:1px solid rgba(30,64,175,.16);border-radius:10px;background:#fff;color:#0f172a;box-shadow:0 18px 48px rgba(15,23,42,.12)";
+    const strong = document.createElement("strong");
+    strong.textContent = title;
+    panel.appendChild(strong);
+    lines.forEach((line) => {
+      const div = document.createElement("div");
+      div.textContent = line;
+      panel.appendChild(div);
+    });
+    return panel;
   }
 
   private createAiRequest(prompt: string): GridNexaAiRequest {
@@ -1381,31 +1576,97 @@ export class GridNexaGrid<T = Record<string, unknown>> {
 
   private renderTable(columns: Column<T>[], rows: Array<DisplayRow<T>>) {
     const fillWidth = resolveFillWidthOptions(this.options.fillWidth);
-    const flexColumns = columns.filter((entry) => (entry.flex ?? 0) > 0);
+    const fillColumnIds = this.fillWidthColumnIds(columns);
+    const viewport = document.createElement("div");
+    viewport.className = "sg-grid-root";
     const table = document.createElement("table");
-    table.className = "gnx-table";
+    table.className = "sg-grid-table gnx-table";
+    const minTableWidth = this.tableMinimumWidth(columns);
+    table.style.cssText = fillWidth.enabled
+      ? `width:max(100%,${minTableWidth}px);min-width:${minTableWidth}px`
+      : `width:${minTableWidth}px;min-width:${minTableWidth}px`;
     const thead = document.createElement("thead");
     const leading = Number(this.options.checkboxSelection) + Number(this.options.rowNumbers);
+    const colgroup = document.createElement("colgroup");
+    if (this.options.checkboxSelection) {
+      const selectionCol = document.createElement("col");
+      selectionCol.style.width = "44px";
+      colgroup.appendChild(selectionCol);
+    }
+    if (this.options.rowNumbers) {
+      const rowNumberCol = document.createElement("col");
+      rowNumberCol.style.width = "72px";
+      colgroup.appendChild(rowNumberCol);
+    }
+    columns.forEach((column) => {
+      const col = document.createElement("col");
+      col.style.width = fillColumnIds.has(column.id) ? "auto" : `${this.columnWidth(column)}px`;
+      col.style.minWidth = `${this.columnWidth(column)}px`;
+      colgroup.appendChild(col);
+    });
+    table.appendChild(colgroup);
     if (this.options.mergedHeaders?.length) thead.appendChild(this.renderMergedHeaders(columns, leading));
+    thead.className = "sg-header";
     const header = document.createElement("tr");
-    if (this.options.checkboxSelection) header.appendChild(cell("", "th")).className = "gnx-control";
-    if (this.options.rowNumbers) header.appendChild(cell("#", "th")).className = "gnx-control";
+    header.className = "sg-column-header-row";
+    if (this.options.checkboxSelection) header.appendChild(cell("", "th")).className = "sg-header-cell sg-selection-header gnx-control";
+    if (this.options.rowNumbers) header.appendChild(cell("#", "th")).className = "sg-header-cell sg-row-number-header gnx-control";
     columns.forEach((column, columnIndex) => {
       const tools = resolveToolOptions(this.options, column);
       const th = cell(column.headerName, "th");
       th.className = classNameList(
+        "sg-header-cell",
         this.options.classNames?.headerCell,
         typeof column.headerClassName === "function"
           ? column.headerClassName({ column })
           : column.headerClassName,
         this.options.getHeaderClassName?.({ column, columnIndex }),
       );
-      const shouldFill =
-        fillWidth.enabled &&
-        ((column.flex ?? 0) > 0 ||
-          ((fillWidth.mode === "lastColumn" ||
-            (fillWidth.mode === "flexOrLast" && flexColumns.length === 0)) &&
-            columnIndex === columns.length - 1));
+      th.dataset.gnxDraggable = String(Boolean(tools.menu));
+      const existingLabel = th.textContent ?? "";
+      th.textContent = "";
+      const content = document.createElement("span");
+      content.className = "sg-header-content";
+      const main = document.createElement("span");
+      main.className = "sg-header-main";
+      const dragHandle = document.createElement("span");
+      dragHandle.className = "sg-column-drag-handle";
+      dragHandle.setAttribute("aria-hidden", "true");
+      const label = document.createElement("span");
+      label.className = "sg-header-label";
+      label.textContent = existingLabel;
+      const actions = document.createElement("span");
+      actions.className = "sg-header-actions";
+      const addHeaderButton = (text: string, title: string, onClick: () => void) => {
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = "sg-header-icon-button";
+        action.title = title;
+        action.setAttribute("aria-label", title);
+        action.textContent = text;
+        action.addEventListener("click", (event) => {
+          event.stopPropagation();
+          onClick();
+        });
+        actions.appendChild(action);
+      };
+      if (tools.sort) addHeaderButton("↕", `Sort ${column.headerName}`, () => {
+        this.sortState = this.sortState?.columnId !== column.id ? { columnId: column.id, direction: "asc" } : this.sortState.direction === "asc" ? { columnId: column.id, direction: "desc" } : null;
+        const model = this.sortState ? [this.sortState] : [];
+        this.options.onSortModelChange?.(model);
+        this.options.onSortChanged?.(model);
+        this.render();
+      });
+      if (tools.filter || tools.filterPanel) addHeaderButton("▽", `Add filter for ${column.headerName}`, () => {
+        return;
+      });
+      if (tools.menu) addHeaderButton("⋮", `Column menu for ${column.headerName}`, () => {
+        return;
+      });
+      main.append(dragHandle, label);
+      content.append(main, actions);
+      th.appendChild(content);
+      const shouldFill = fillColumnIds.has(column.id);
       th.style.width = shouldFill ? "auto" : `${this.columnWidth(column)}px`;
       th.style.minWidth = `${this.columnWidth(column)}px`;
       Object.assign(th.style, this.pinnedStyle(column, columns));
@@ -1434,7 +1695,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       });
       if (tools.resize && column.resizable !== false) {
         const resizer = document.createElement("span");
-        resizer.className = "gnx-resizer";
+        resizer.className = "sg-resize-handle gnx-resizer";
         resizer.addEventListener("mousedown", (event) => this.startColumnResize(event, column));
         th.appendChild(resizer);
       }
@@ -1454,7 +1715,8 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       }
     });
     table.appendChild(tbody);
-    return table;
+    viewport.appendChild(table);
+    return viewport;
   }
 
   private renderStatus(totalRows: number) {
@@ -1474,7 +1736,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       ...(typeof footer === "object" ? footer : {}),
     };
     const status = document.createElement("div");
-    status.className = "gnx-status";
+    status.className = "sg-status-bar gnx-status";
     const state = {
       rowCountLabel: `${totalRows} rows`,
       selectedRowsLabel: `${this.selectedIds.size} selected`,
@@ -1519,14 +1781,19 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       content instanceof Node ? status.appendChild(content) : status.append(String(content ?? ""));
       return status;
     }
-    if (footerOptions.rowCount) status.append(state.rowCountLabel);
-    if (footerOptions.selectedRows) status.append(state.selectedRowsLabel);
-    if (footerOptions.selectedCell) status.append(state.activeCellLabel);
-    if (footerOptions.sortStatus) status.append(state.sortStatusLabel);
-    if (summaryOptions.footer && state.summaryLabel) status.append(state.summaryLabel);
-    if (summaryOptions.selectedRange && state.selectedRangeSummaryLabel) status.append(state.selectedRangeSummaryLabel);
-    if (footerOptions.filterCount) status.append(state.filterCountLabel);
-    if (footerOptions.selectedRange) status.append(state.selectedRangeLabel);
+    const appendStatus = (label: string) => {
+      const item = document.createElement("span");
+      item.textContent = label;
+      status.appendChild(item);
+    };
+    if (footerOptions.rowCount) appendStatus(state.rowCountLabel);
+    if (footerOptions.selectedRows) appendStatus(state.selectedRowsLabel);
+    if (footerOptions.selectedCell) appendStatus(state.activeCellLabel);
+    if (footerOptions.sortStatus) appendStatus(state.sortStatusLabel);
+    if (summaryOptions.footer && state.summaryLabel) appendStatus(state.summaryLabel);
+    if (summaryOptions.selectedRange && state.selectedRangeSummaryLabel) appendStatus(state.selectedRangeSummaryLabel);
+    if (footerOptions.filterCount) appendStatus(state.filterCountLabel);
+    if (footerOptions.selectedRange) appendStatus(state.selectedRangeLabel);
     const toolbar = this.options.toolbar;
     const paginationEnabled =
       toolbar === undefined ||
@@ -1555,8 +1822,10 @@ export class GridNexaGrid<T = Record<string, unknown>> {
 
   private renderMergedHeaders(columns: Column<T>[], leading: number) {
     const row = document.createElement("tr");
+    row.className = "sg-merged-header-row";
     if (leading) {
       const spacer = cell("", "th");
+      spacer.className = "sg-merged-header-cell";
       spacer.colSpan = leading;
       row.appendChild(spacer);
     }
@@ -1564,6 +1833,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       const count = header.columnIds.filter((columnId) => columns.some((column) => column.id === columnId)).length;
       if (!count) return;
       const th = cell(header.headerName, "th");
+      th.className = "sg-merged-header-cell";
       th.colSpan = count;
       row.appendChild(th);
     });
@@ -1572,8 +1842,9 @@ export class GridNexaGrid<T = Record<string, unknown>> {
 
   private appendGroupRow(tbody: HTMLTableSectionElement, entry: Extract<DisplayRow<T>, { kind: "group" }>, colSpan: number) {
     const tr = document.createElement("tr");
-    tr.className = "gnx-group-row";
+    tr.className = "sg-row sg-row--group gnx-group-row";
     const td = document.createElement("td");
+    td.className = "sg-cell sg-group-label";
     td.colSpan = colSpan;
     const toggle = document.createElement("button");
     toggle.type = "button";
@@ -1591,7 +1862,8 @@ export class GridNexaGrid<T = Record<string, unknown>> {
   private appendDetailRow(tbody: HTMLTableSectionElement, row: T, colSpan: number) {
     const detailRow = document.createElement("tr");
     const detail = document.createElement("td");
-    detail.className = "gnx-detail";
+    detailRow.className = "sg-row sg-detail-row";
+    detail.className = "sg-cell sg-detail-content gnx-detail";
     detail.colSpan = colSpan;
     const content = this.options.masterDetailRenderer?.(row);
     content instanceof Node ? detail.appendChild(content) : detail.textContent = String(content ?? "");
@@ -1603,6 +1875,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     const tr = document.createElement("tr");
     const rowSelected = this.selectedIds.has(this.getRowId(row, rowIndex));
     tr.className = classNameList(
+      "sg-row",
       this.options.classNames?.row,
       this.options.getRowClassName?.({ row, rowIndex, selected: rowSelected }),
     );
@@ -1624,7 +1897,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     const displayRowNumber = (this.options.pageSize && this.options.pageSize > 0 ? this.pageIndex * this.options.pageSize : 0) + rowIndex + 1;
     if (this.options.checkboxSelection) {
       const td = document.createElement("td");
-      td.className = "gnx-control";
+      td.className = "sg-cell sg-selection-cell gnx-control";
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.checked = this.selectedIds.has(rowId);
@@ -1640,7 +1913,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
     }
     if (this.options.rowNumbers) {
       const rowNumber = cell(String(displayRowNumber));
-      rowNumber.className = "gnx-control";
+      rowNumber.className = "sg-cell sg-row-number gnx-control";
       if (this.options.enableRowReorder) {
       const tools = document.createElement("span");
       tools.className = "gnx-row-tools";
@@ -1670,6 +1943,7 @@ export class GridNexaGrid<T = Record<string, unknown>> {
       const td = cell(formatValue(row, column, this.options.columns));
       const textDisplay = resolveTextDisplay(this.options, column);
       td.className = classNameList(
+        "sg-cell",
         `gnx-cell-${textDisplay.overflow ?? "ellipsis"}`,
         this.options.classNames?.cell,
         resolveClassName(column.className, { value: cellValue, row, rowIndex, column }),
@@ -1683,7 +1957,9 @@ export class GridNexaGrid<T = Record<string, unknown>> {
           selected: rowSelected,
         }),
       );
-      td.style.width = `${this.columnWidth(column)}px`;
+      if (this.fillWidthColumnIds(columns).has(column.id)) td.style.width = "auto";
+      else td.style.width = `${this.columnWidth(column)}px`;
+      td.style.minWidth = `${this.columnWidth(column)}px`;
       if (textDisplay.overflow === "ellipsis" && textDisplay.showTooltip !== false) {
         td.title = formatValue(row, column, this.options.columns);
       }

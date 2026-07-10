@@ -11,11 +11,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    }
+    },
+    "./index.css": "./dist/index.css",
+    "./dist/index.css": "./dist/index.css"
   },
   "files": [
     "dist",
     "README.md"
+  ],
+  "sideEffects": [
+    "*.css"
   ],
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts --external vue",

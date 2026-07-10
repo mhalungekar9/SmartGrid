@@ -8,6 +8,7 @@ import {
   Output,
   ViewChild,
 } from "@angular/core";
+import "../../react/src/styles/gridnexa.css";
 import type {
   AdvancedFilterModel,
   Column,
@@ -33,6 +34,52 @@ import type {
 } from "@gridnexa/core";
 
 export * from "@gridnexa/core";
+
+const runtimeStyleId = "gridnexa-dom-runtime-styles";
+
+const runtimeStyles = `
+.gridnexa-vue-grid,.gridnexa-angular-grid{box-sizing:border-box;display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:10px;width:100%;min-width:0;color:var(--gnx-text,#0f172a);font:14px/1.45 Inter,"Segoe UI",system-ui,sans-serif;--gnx-bg:#fff;--gnx-panel:#fff;--gnx-panel-strong:#f8fafc;--gnx-text:#0f172a;--gnx-muted:#64748b;--gnx-heading:#111827;--gnx-border:#dbe3ef;--gnx-primary:#2563eb;--gnx-row-hover:#eff6ff;--gnx-header-bg:#f8fafc;--gnx-pinned-bg:#fff;--gnx-shadow:0 18px 48px rgba(15,23,42,.12)}
+.gridnexa-vue-grid *,.gridnexa-angular-grid *{box-sizing:border-box}
+.gridnexa-vue-grid[data-gnx-theme="dark"],.gridnexa-angular-grid[data-gnx-theme="dark"]{--gnx-bg:#070b18;--gnx-panel:#0f172a;--gnx-panel-strong:#111827;--gnx-text:#e5edf7;--gnx-muted:#9ca3af;--gnx-heading:#f8fafc;--gnx-border:rgba(148,163,184,.2);--gnx-primary:#60a5fa;--gnx-row-hover:rgba(96,165,250,.12);--gnx-header-bg:#0b1220;--gnx-pinned-bg:#080c18;--gnx-shadow:0 24px 70px rgba(4,8,20,.38);color:var(--gnx-text);background:transparent}
+.gridnexa-vue-grid[data-gnx-density="compact"],.gridnexa-angular-grid[data-gnx-density="compact"]{--gnx-row-height:34px;--gnx-cell-pad:8px}
+.gridnexa-vue-grid[data-gnx-density="standard"],.gridnexa-angular-grid[data-gnx-density="standard"]{--gnx-row-height:42px;--gnx-cell-pad:12px}
+.gridnexa-vue-grid[data-gnx-density="comfortable"],.gridnexa-angular-grid[data-gnx-density="comfortable"]{--gnx-row-height:50px;--gnx-cell-pad:16px}
+.gridnexa-vue-grid table,.gridnexa-angular-grid table{font:inherit;color:inherit;border-collapse:separate;border-spacing:0}
+.gridnexa-vue-grid button,.gridnexa-vue-grid input,.gridnexa-vue-grid select,.gridnexa-angular-grid button,.gridnexa-angular-grid input,.gridnexa-angular-grid select{font:inherit}
+.gridnexa-vue-grid button:disabled,.gridnexa-angular-grid button:disabled{opacity:.48;cursor:not-allowed}
+.gridnexa-vue-grid .sg-grid-workspace,.gridnexa-angular-grid .sg-grid-workspace{display:grid;grid-template-columns:minmax(0,1fr) auto;min-height:0;overflow:hidden}
+.gridnexa-vue-grid .sg-grid-root,.gridnexa-angular-grid .sg-grid-root{position:relative;width:100%;min-width:0;max-height:100%;overflow:auto;border:1px solid var(--gnx-border);border-radius:14px;background:var(--gnx-bg);box-shadow:var(--gnx-shadow);outline:none}
+.gridnexa-vue-grid .sg-grid-table,.gridnexa-angular-grid .sg-grid-table{width:max-content;min-width:max-content;table-layout:fixed;border:0;border-radius:0;background:transparent;box-shadow:none}
+.gridnexa-vue-grid .sg-grid-table[data-gnx-fill-width="true"],.gridnexa-angular-grid .sg-grid-table[data-gnx-fill-width="true"]{width:100%;min-width:100%}
+.gridnexa-vue-grid .sg-header,.gridnexa-angular-grid .sg-header{position:sticky;top:0;z-index:5;background:var(--gnx-header-bg)}
+.gridnexa-vue-grid .sg-header-cell,.gridnexa-angular-grid .sg-header-cell{position:relative;height:44px;min-height:44px;padding:0 14px;border-right:1px solid var(--gnx-border);border-bottom:1px solid var(--gnx-border);background:var(--gnx-header-bg);color:var(--gnx-heading);font-size:.78rem;font-weight:900;letter-spacing:.04em;text-align:left;text-transform:uppercase;white-space:nowrap;overflow:hidden;user-select:none}
+.gridnexa-vue-grid .sg-header-content,.gridnexa-angular-grid .sg-header-content{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;height:100%;min-width:0}
+.gridnexa-vue-grid .sg-header-main,.gridnexa-angular-grid .sg-header-main{display:inline-flex;align-items:center;gap:8px;min-width:0}
+.gridnexa-vue-grid .sg-header-label,.gridnexa-angular-grid .sg-header-label{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gridnexa-vue-grid .sg-header-actions,.gridnexa-angular-grid .sg-header-actions{display:inline-flex;flex:0 0 auto;align-items:center;gap:4px}
+.gridnexa-vue-grid .sg-header-icon-button,.gridnexa-angular-grid .sg-header-icon-button{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--gnx-muted);cursor:pointer}
+.gridnexa-vue-grid .sg-header-icon-button:hover,.gridnexa-angular-grid .sg-header-icon-button:hover{background:var(--gnx-row-hover);color:var(--gnx-primary)}
+.gridnexa-vue-grid .sg-column-drag-handle,.gridnexa-angular-grid .sg-column-drag-handle{flex:0 0 auto;width:10px;height:18px;border-radius:4px;opacity:.72;background-image:radial-gradient(currentColor 1px,transparent 1.5px);background-size:5px 5px;color:var(--gnx-muted);cursor:grab}
+.gridnexa-vue-grid .sg-resize-handle,.gridnexa-angular-grid .sg-resize-handle{position:absolute;top:0;right:0;width:10px;height:100%;margin:0;border-right:2px solid color-mix(in srgb,var(--gnx-primary) 28%,transparent);cursor:col-resize}
+.gridnexa-vue-grid .sg-row:hover .sg-cell,.gridnexa-angular-grid .sg-row:hover .sg-cell{background:var(--gnx-row-hover)}
+.gridnexa-vue-grid .sg-cell,.gridnexa-angular-grid .sg-cell{min-height:var(--gnx-row-height,42px);height:var(--gnx-row-height,42px);padding:0 var(--gnx-cell-pad,12px);border-right:1px solid var(--gnx-border);border-bottom:1px solid var(--gnx-border);background:var(--gnx-bg);color:var(--gnx-text);text-align:left;vertical-align:middle}
+.gridnexa-vue-grid .sg-selection-cell,.gridnexa-vue-grid .sg-selection-header,.gridnexa-angular-grid .sg-selection-cell,.gridnexa-angular-grid .sg-selection-header{width:44px;min-width:44px;max-width:44px;padding:0;text-align:center;background:var(--gnx-panel-strong);color:var(--gnx-muted)}
+.gridnexa-vue-grid .sg-row-number,.gridnexa-vue-grid .sg-row-number-header,.gridnexa-angular-grid .sg-row-number,.gridnexa-angular-grid .sg-row-number-header{width:72px;min-width:72px;max-width:72px;padding:0;text-align:center;background:var(--gnx-panel-strong);color:var(--gnx-muted)}
+.gridnexa-vue-grid .sg-row-number,.gridnexa-angular-grid .sg-row-number{position:relative;padding-right:30px;text-align:center}
+.gridnexa-vue-grid .sg-row-tools,.gridnexa-angular-grid .sg-row-tools{position:absolute;top:50%;right:4px;display:inline-flex;gap:2px;opacity:0;pointer-events:none;transform:translateY(-50%);transition:opacity .12s ease}
+.gridnexa-vue-grid .sg-row:hover .sg-row-tools,.gridnexa-vue-grid .sg-row-number:focus-within .sg-row-tools,.gridnexa-angular-grid .sg-row:hover .sg-row-tools,.gridnexa-angular-grid .sg-row-number:focus-within .sg-row-tools{opacity:1;pointer-events:auto}
+.gridnexa-vue-grid .sg-row-tools button,.gridnexa-angular-grid .sg-row-tools button{width:22px;min-height:22px;padding:0;border-radius:6px}
+.gridnexa-vue-grid .sg-toolbar,.gridnexa-angular-grid .sg-toolbar{border-color:var(--gnx-border);background:var(--gnx-panel);box-shadow:var(--gnx-shadow)}
+.gridnexa-vue-grid .sg-status-bar,.gridnexa-angular-grid .sg-status-bar{border-color:var(--gnx-border);background:var(--gnx-panel);color:var(--gnx-muted)}
+`;
+
+function injectGridNexaRuntimeStyles() {
+  if (typeof document === "undefined" || document.getElementById(runtimeStyleId)) return;
+  const style = document.createElement("style");
+  style.id = runtimeStyleId;
+  style.textContent = runtimeStyles;
+  document.head.appendChild(style);
+}
 
 export interface GridNexaAngularOptions<T = Record<string, unknown>>
   extends GridOptions<T> {
@@ -950,7 +997,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       column.pinned === "left"
         ? columns.slice(0, index).filter((entry) => entry.pinned === "left").reduce((sum, entry) => sum + width(entry), 0)
         : columns.slice(index + 1).filter((entry) => entry.pinned === "right").reduce((sum, entry) => sum + width(entry), 0);
-    return `position:sticky;${column.pinned}:${offset}px;z-index:2;background:white;box-shadow:${column.pinned === "left" ? "inset -1px 0 #dbe3ef" : "inset 1px 0 #dbe3ef"};`;
+    return `position:sticky;${column.pinned}:${offset}px;z-index:3;background:var(--gnx-pinned-bg,var(--gnx-bg));box-shadow:${column.pinned === "left" ? "inset -1px 0 0 var(--gnx-border)" : "inset 1px 0 0 var(--gnx-border)"};`;
   }
 
   private columnWidth(column: Column<T>) {
@@ -961,6 +1008,36 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       .reduce((max, row) => Math.max(max, estimateWidth(format(row, column, this.columns))), estimateWidth(column.headerName) + 72);
 
     return Math.min(column.maxWidth ?? 1000, Math.max(column.minWidth ?? 72, contentWidth));
+  }
+
+  private fillWidthColumnIds(columns: Column<T>[]) {
+    const fillWidth = this.effectiveFillWidth();
+    const fillWidthEnabled =
+      fillWidth === true ||
+      (typeof fillWidth === "object" && fillWidth?.enabled !== false);
+    if (!fillWidthEnabled || !columns.length) return new Set<string>();
+    const mode = typeof fillWidth === "object" ? fillWidth.mode : undefined;
+    const fillableColumns = columns.filter((entry) => !entry.pinned);
+    if (!fillableColumns.length) return new Set<string>();
+    const flexColumns = fillableColumns.filter((entry) => (entry.flex ?? 0) > 0);
+    const hasConfiguredWidths = fillableColumns.some(
+      (entry) =>
+        this.columnWidths.has(entry.id) ||
+        entry.width != null ||
+        (entry.flex ?? 0) > 0,
+    );
+    if (!hasConfiguredWidths) return new Set(fillableColumns.map((entry) => entry.id));
+    if (mode !== "lastColumn" && flexColumns.length) return new Set(flexColumns.map((entry) => entry.id));
+    if (mode === "lastColumn" || mode === "flexOrLast" || mode == null) return new Set([fillableColumns[fillableColumns.length - 1].id]);
+    return new Set<string>();
+  }
+
+  private tableMinimumWidth(columns: Column<T>[]) {
+    return (
+      (this.effectiveCheckboxSelection() ? 44 : 0) +
+      (this.effectiveRowNumbers() ? 72 : 0) +
+      columns.reduce((total, column) => total + this.columnWidth(column), 0)
+    );
   }
 
   private updateAdvancedFilter(columnId: string, operator: ColumnFilterModel["operator"], filterValue: string) {
@@ -1107,6 +1184,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
 
   private render() {
     if (!this.host) return;
+    if (!this.unstyled) injectGridNexaRuntimeStyles();
     const sourceRows = this.visibleRows();
     const pivot = buildPivot(sourceRows, this.columns, this.groupBy, this.pivotBy, this.pivotValueColumns, this.pivotAggregation);
     const columns = pivot.columns
@@ -1116,7 +1194,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const pageRows = pageSize ? pivot.rows.slice(this.pageIndex * pageSize, this.pageIndex * pageSize + pageSize) : pivot.rows;
     const displayRows = pivot.active ? pageRows.map((row) => ({ kind: "data" as const, row, rowIndex: pivot.rows.indexOf(row) })) : this.makeDisplayRows(pageRows);
     const root = document.createElement("div");
-    root.className = ["gridnexa-angular-grid", this.className]
+    root.className = ["sg-shell", "gridnexa-angular-grid", this.className]
       .filter(Boolean)
       .join(" ");
     root.dataset.gnxTheme = this.theme ?? "dark";
@@ -1124,11 +1202,22 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     root.style.position = "relative";
     if (this.height != null) root.style.height = typeof this.height === "number" ? `${this.height}px` : this.height;
     const toolbar = this.renderToolbar(columns, pivot.rows);
-    if (toolbar) root.appendChild(toolbar);
-    root.appendChild(this.renderTable(columns, displayRows));
+    if (toolbar) {
+      toolbar.classList.add("sg-toolbar");
+      root.appendChild(toolbar);
+    }
+    const workspace = document.createElement("div");
+    workspace.className = "sg-grid-workspace";
+    workspace.appendChild(this.renderTable(columns, displayRows));
+    root.appendChild(workspace);
     const overlay = this.renderOverlay(displayRows.length);
     if (overlay) root.appendChild(overlay);
-    root.appendChild(this.renderStatus(pivot.rows.length));
+    const status = this.renderStatus(pivot.rows.length);
+    if (status instanceof HTMLElement) {
+      status.classList.add("sg-status-bar");
+      status.setAttribute("role", "status");
+    }
+    root.appendChild(status);
     if (this.contextMenu) root.appendChild(this.renderContextMenu());
     this.host.nativeElement.replaceChildren(root);
     this.serverSideOperation.emit({
@@ -1182,7 +1271,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const toolbarOptions = { ...raw, pagination: raw.pagination || raw.prevNextPage, fillHandle: raw.fillHandle || raw.fill, columns: raw.columns || raw.columnSelector };
     if (toolbarConfig === false || !Object.values(toolbarOptions).some(Boolean)) return null;
     const toolbar = document.createElement("div");
-    toolbar.style.cssText = "display:flex;gap:8px;justify-content:space-between;align-items:center;padding:10px;background:#f8fbff;border:1px solid #dbe3ef";
+    toolbar.style.cssText = "display:flex;gap:8px;justify-content:space-between;align-items:center;padding:10px;background:var(--gnx-panel);border:1px solid var(--gnx-border)";
     if (toolbarOptions.summary) toolbar.append(`${rows.length} rows`);
     const actions = document.createElement("div");
     actions.style.cssText = "display:flex;gap:6px;flex-wrap:wrap";
@@ -1192,7 +1281,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     find.type = "search";
     find.placeholder = "Find cell";
     find.value = this.findText;
-    find.style.cssText = "min-height:32px;padding:0 10px;border:1px solid #bfdbfe;border-radius:8px";
+    find.style.cssText = "min-height:32px;padding:0 10px;border:1px solid var(--gnx-border);border-radius:8px;background:var(--gnx-panel-strong);color:var(--gnx-text)";
     find.addEventListener("input", () => {
       this.findText = find.value;
       this.render();
@@ -1201,7 +1290,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     quickFilter.type = "search";
     quickFilter.placeholder = "Quick filter";
     quickFilter.value = this.quickFilterText;
-    quickFilter.style.cssText = "min-height:32px;padding:0 10px;border:1px solid #bfdbfe;border-radius:8px";
+    quickFilter.style.cssText = "min-height:32px;padding:0 10px;border:1px solid var(--gnx-border);border-radius:8px;background:var(--gnx-panel-strong);color:var(--gnx-text)";
     quickFilter.addEventListener("input", () => {
       this.quickFilterText = quickFilter.value;
       this.pageIndex = 0;
@@ -1209,7 +1298,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     });
     const pageSize = this.effectivePageSize();
     const pageCount = pageSize ? Math.max(1, Math.ceil(rows.length / pageSize)) : 1;
-    if (false && toolbarOptions.pagination && pageSize) {
+    if (toolbarOptions.pagination && pageSize) {
       const prev = this.button("Prev", () => {
         this.pageIndex = Math.max(0, this.pageIndex - 1);
         this.render();
@@ -1283,27 +1372,106 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const fillWidthEnabled =
       fillWidth === true ||
       (typeof fillWidth === "object" && fillWidth?.enabled !== false);
+    const viewport = document.createElement("div");
+    viewport.className = "sg-grid-root";
     const table = document.createElement("table");
-    table.style.cssText = `width:${fillWidthEnabled ? "100%" : "max-content"};min-width:max-content;border-collapse:collapse`;
+    table.className = "sg-grid-table";
+    table.dataset.gnxFillWidth = String(fillWidthEnabled);
     const thead = document.createElement("thead");
+    thead.className = "sg-header";
     const checkboxSelection = this.effectiveCheckboxSelection();
     const rowNumbers = this.effectiveRowNumbers();
     const leading = Number(checkboxSelection) + Number(rowNumbers);
+    const minTableWidth = this.tableMinimumWidth(columns);
+    table.style.cssText = fillWidthEnabled
+      ? `width:max(100%,${minTableWidth}px);min-width:${minTableWidth}px`
+      : `width:${minTableWidth}px;min-width:${minTableWidth}px`;
+    const fillColumnIds = this.fillWidthColumnIds(columns);
+    const colgroup = document.createElement("colgroup");
+    if (checkboxSelection) {
+      const selectionCol = document.createElement("col");
+      selectionCol.style.width = "44px";
+      colgroup.appendChild(selectionCol);
+    }
+    if (rowNumbers) {
+      const rowNumberCol = document.createElement("col");
+      rowNumberCol.style.width = "72px";
+      colgroup.appendChild(rowNumberCol);
+    }
+    columns.forEach((column) => {
+      const col = document.createElement("col");
+      col.style.width = fillColumnIds.has(column.id) ? "auto" : `${this.columnWidth(column)}px`;
+      col.style.minWidth = `${this.columnWidth(column)}px`;
+      colgroup.appendChild(col);
+    });
+    table.appendChild(colgroup);
     if (this.mergedHeaders?.length) thead.appendChild(this.renderMergedHeaders(columns, leading));
     const header = document.createElement("tr");
-    if (checkboxSelection) header.appendChild(cell("", "th"));
-    if (rowNumbers) header.appendChild(cell("#", "th"));
+    header.className = "sg-column-header-row";
+    if (checkboxSelection) {
+      const selectionHeader = cell("", "th");
+      selectionHeader.className = "sg-header-cell sg-selection-header";
+      header.appendChild(selectionHeader);
+    }
+    if (rowNumbers) {
+      const rowNumberHeader = cell("#", "th");
+      rowNumberHeader.className = "sg-header-cell sg-row-number-header";
+      header.appendChild(rowNumberHeader);
+    }
     columns.forEach((column, columnIndex) => {
       const tools = resolveToolOptions(this.columnTools, column);
       const th = cell(`${column.headerName}${this.sortState?.columnId === column.id ? (this.sortState.direction === "asc" ? " ↑" : " ↓") : ""}`, "th");
-      th.style.cssText = `padding:10px;border:1px solid #dbe3ef;background:#f8fbff;text-align:left;width:${this.columnWidth(column)}px;${this.pinnedStyle(column, columns)}`;
+      th.style.cssText = `${fillColumnIds.has(column.id) ? "" : `width:${this.columnWidth(column)}px;`}min-width:${this.columnWidth(column)}px;${this.pinnedStyle(column, columns)}`;
       th.className = classNameList(
+        "sg-header-cell",
         this.classNames?.headerCell,
         typeof column.headerClassName === "function"
           ? column.headerClassName({ column })
           : column.headerClassName,
         this.getHeaderClassName?.({ column, columnIndex }),
       );
+      th.dataset.gnxDraggable = String(Boolean(tools.menu));
+      const existingLabel = th.textContent ?? "";
+      th.textContent = "";
+      const content = document.createElement("span");
+      content.className = "sg-header-content";
+      const main = document.createElement("span");
+      main.className = "sg-header-main";
+      const dragHandle = document.createElement("span");
+      dragHandle.className = "sg-column-drag-handle";
+      dragHandle.setAttribute("aria-hidden", "true");
+      const label = document.createElement("span");
+      label.className = "sg-header-label";
+      label.textContent = existingLabel;
+      const actions = document.createElement("span");
+      actions.className = "sg-header-actions";
+      const addHeaderButton = (text: string, title: string, onClick: () => void) => {
+        const action = document.createElement("button");
+        action.type = "button";
+        action.className = "sg-header-icon-button";
+        action.title = title;
+        action.setAttribute("aria-label", title);
+        action.textContent = text;
+        action.addEventListener("click", (event) => {
+          event.stopPropagation();
+          onClick();
+        });
+        actions.appendChild(action);
+      };
+      if (tools.sort) addHeaderButton("↕", `Sort ${column.headerName}`, () => {
+        this.sortState = this.sortState?.columnId !== column.id ? { columnId: column.id, direction: "asc" } : this.sortState.direction === "asc" ? { columnId: column.id, direction: "desc" } : null;
+        this.sortChanged.emit(this.sortState ? [this.sortState] : []);
+        this.render();
+      });
+      if (tools.filter || tools.filterPanel) addHeaderButton("▽", `Add filter for ${column.headerName}`, () => {
+        return;
+      });
+      if (tools.menu) addHeaderButton("⋮", `Column menu for ${column.headerName}`, () => {
+        return;
+      });
+      main.append(dragHandle, label);
+      content.append(main, actions);
+      th.appendChild(content);
       th.draggable = Boolean(tools.menu);
       th.addEventListener("dragstart", () => {
         this.draggedColumnId = column.id;
@@ -1322,7 +1490,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       });
       if (tools.resize && column.resizable !== false) {
         const resizer = document.createElement("span");
-        resizer.style.cssText = "float:right;width:7px;height:24px;cursor:col-resize;border-right:2px solid #bfdbfe";
+        resizer.className = "sg-resize-handle";
         resizer.addEventListener("mousedown", (event) => this.startColumnResize(event, column));
         th.appendChild(resizer);
       }
@@ -1340,13 +1508,16 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       }
     });
     table.appendChild(tbody);
-    return table;
+    viewport.appendChild(table);
+    return viewport;
   }
 
   private renderMergedHeaders(columns: Column<T>[], leading: number) {
     const row = document.createElement("tr");
+    row.className = "sg-merged-header-row";
     if (leading) {
       const spacer = cell("", "th");
+      spacer.className = "sg-merged-header-cell";
       spacer.colSpan = leading;
       row.appendChild(spacer);
     }
@@ -1354,8 +1525,9 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       const count = header.columnIds.filter((columnId) => columns.some((column) => column.id === columnId)).length;
       if (!count) return;
       const th = cell(header.headerName, "th");
+      th.className = "sg-merged-header-cell";
       th.colSpan = count;
-      th.style.cssText = "padding:8px;border:1px solid #bfdbfe;background:#e8f1ff;text-align:center";
+      th.style.cssText = "padding:8px;border:1px solid var(--gnx-border);background:var(--gnx-header-bg);text-align:center";
       row.appendChild(th);
     });
     return row;
@@ -1363,9 +1535,11 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
 
   private appendGroupRow(tbody: HTMLTableSectionElement, entry: Extract<DisplayRow<T>, { kind: "group" }>, colSpan: number) {
     const tr = document.createElement("tr");
+    tr.className = "sg-row sg-row--group";
     const td = document.createElement("td");
+    td.className = "sg-cell sg-group-label";
     td.colSpan = colSpan;
-    td.style.cssText = "padding:10px;border:1px solid #dbe3ef;background:#eef4ff;color:#153e90;font-weight:800;text-transform:uppercase";
+    td.style.cssText = "padding:10px;border:1px solid var(--gnx-border);background:var(--gnx-panel-strong);color:var(--gnx-heading);font-weight:800;text-transform:uppercase";
     const toggle = this.button(this.collapsedGroups.has(entry.key) ? "+" : "-", () => {
       this.collapsedGroups.has(entry.key) ? this.collapsedGroups.delete(entry.key) : this.collapsedGroups.add(entry.key);
       this.render();
@@ -1378,8 +1552,10 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
   private appendDetailRow(tbody: HTMLTableSectionElement, row: T, colSpan: number) {
     const detailRow = document.createElement("tr");
     const detail = document.createElement("td");
+    detailRow.className = "sg-row sg-detail-row";
+    detail.className = "sg-cell sg-detail-content";
     detail.colSpan = colSpan;
-    detail.style.cssText = "padding:12px;border:1px solid #dbe3ef;background:#f8fbff;color:#334155";
+    detail.style.cssText = "padding:12px;border:1px solid var(--gnx-border);background:var(--gnx-panel-strong);color:var(--gnx-text)";
     const content = this.masterDetailRenderer?.(row);
     content instanceof Node ? detail.appendChild(content) : detail.textContent = String(content ?? "");
     detailRow.appendChild(detail);
@@ -1392,6 +1568,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const displayRowNumber = (pageSize && pageSize > 0 ? this.pageIndex * pageSize : 0) + rowIndex + 1;
     const rowSelected = this.selected.has(this.rowId(row, rowIndex));
     tr.className = classNameList(
+      "sg-row",
       this.classNames?.row,
       this.getRowClassName?.({ row, rowIndex, selected: rowSelected }),
     );
@@ -1411,6 +1588,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     });
     if (this.effectiveCheckboxSelection()) {
       const td = document.createElement("td");
+      td.className = "sg-cell sg-selection-cell";
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
       checkbox.checked = this.selected.has(this.rowId(row, rowIndex));
@@ -1427,12 +1605,16 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     }
     if (this.effectiveRowNumbers()) {
       const rowNumber = cell(String(displayRowNumber));
+      rowNumber.className = "sg-cell sg-row-number";
       if (tr.draggable) {
+        const tools = document.createElement("span");
+        tools.className = "sg-row-tools";
         const up = this.button("↑", () => this.moveRow(rowIndex, -1));
         up.disabled = rowIndex <= 0;
         const down = this.button("↓", () => this.moveRow(rowIndex, 1));
         down.disabled = rowIndex >= this.rows.length - 1;
-        rowNumber.append(" ", up, down);
+        tools.append(up, down);
+        rowNumber.appendChild(tools);
       }
       tr.appendChild(rowNumber);
     }
@@ -1441,6 +1623,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       const td = cell(format(row, column, this.columns));
       const textOptions = resolveTextDisplay(this.textDisplay, column);
       td.className = classNameList(
+        "sg-cell",
         this.classNames?.cell,
         resolveClassName(column.className, { value: cellValue, row, rowIndex, column }),
         resolveClassName(column.cellClassName, { value: cellValue, row, rowIndex, column }),
@@ -1453,7 +1636,8 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
           selected: rowSelected,
         }),
       );
-      td.style.cssText = `padding:10px;border:1px solid #dbe3ef;width:${this.columnWidth(column)}px;white-space:${textOptions.overflow === "wrap" ? "normal" : "nowrap"};overflow:hidden;text-overflow:${textOptions.overflow === "clip" ? "clip" : "ellipsis"};${this.pinnedStyle(column, columns)}`;
+      const isFillColumn = this.fillWidthColumnIds(columns).has(column.id);
+      td.style.cssText = `padding:10px;border:1px solid var(--gnx-border);${isFillColumn ? "" : `width:${this.columnWidth(column)}px;`}min-width:${this.columnWidth(column)}px;white-space:${textOptions.overflow === "wrap" ? "normal" : "nowrap"};overflow:hidden;text-overflow:${textOptions.overflow === "clip" ? "clip" : "ellipsis"};${this.pinnedStyle(column, columns)}`;
       if (textOptions.overflow === "ellipsis" && textOptions.showTooltip !== false) td.title = format(row, column, this.columns);
       if (this.activeCell?.rowIndex === rowIndex && this.activeCell.columnId === column.id) {
         td.style.outline = "2px solid #2563eb";
@@ -1586,7 +1770,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
 
   private renderToolsPanel() {
     const panel = document.createElement("div");
-    panel.style.cssText = `flex:1 1 100%;z-index:10001;width:min(720px,calc(100vw - 24px));max-width:100%;max-height:min(620px,calc(100vh - 96px));overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:12px;border:1px solid #dbe3ef;border-radius:12px;background:#f8fbff;box-shadow:0 18px 48px rgba(15,23,42,.18)`;
+    panel.style.cssText = `flex:1 1 100%;z-index:10001;width:min(720px,calc(100vw - 24px));max-width:100%;max-height:min(620px,calc(100vh - 96px));overflow:auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;padding:12px;border:1px solid var(--gnx-border);border-radius:12px;background:var(--gnx-panel-strong);box-shadow:var(--gnx-shadow)`;
     const columnsSection = document.createElement("section");
     columnsSection.appendChild(document.createElement("strong")).textContent = "Columns";
     this.columns.forEach((column) => {
@@ -1683,7 +1867,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       ...(typeof footer === "object" ? footer : {}),
     };
     const status = document.createElement("div");
-    status.style.cssText = "display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:10px;border:1px solid #dbe3ef;border-top:0;font-weight:700";
+    status.style.cssText = "display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:10px;border:1px solid var(--gnx-border);border-top:0;font-weight:700";
     const state = {
       rowCountLabel: `${totalRows} rows`,
       selectedRowsLabel: `${this.selected.size} selected`,
@@ -1728,14 +1912,19 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
       content instanceof Node ? status.appendChild(content) : status.append(String(content ?? ""));
       return status;
     }
-    if (footerOptions.rowCount) status.append(state.rowCountLabel);
-    if (footerOptions.selectedRows) status.append(state.selectedRowsLabel);
-    if (footerOptions.selectedCell) status.append(state.activeCellLabel);
-    if (footerOptions.sortStatus) status.append(state.sortStatusLabel);
-    if (summaryOptions.footer && state.summaryLabel) status.append(state.summaryLabel);
-    if (summaryOptions.selectedRange && state.selectedRangeSummaryLabel) status.append(state.selectedRangeSummaryLabel);
-    if (footerOptions.filterCount) status.append(state.filterCountLabel);
-    if (footerOptions.selectedRange) status.append(state.selectedRangeLabel);
+    const appendStatus = (label: string) => {
+      const item = document.createElement("span");
+      item.textContent = label;
+      status.appendChild(item);
+    };
+    if (footerOptions.rowCount) appendStatus(state.rowCountLabel);
+    if (footerOptions.selectedRows) appendStatus(state.selectedRowsLabel);
+    if (footerOptions.selectedCell) appendStatus(state.activeCellLabel);
+    if (footerOptions.sortStatus) appendStatus(state.sortStatusLabel);
+    if (summaryOptions.footer && state.summaryLabel) appendStatus(state.summaryLabel);
+    if (summaryOptions.selectedRange && state.selectedRangeSummaryLabel) appendStatus(state.selectedRangeSummaryLabel);
+    if (footerOptions.filterCount) appendStatus(state.filterCountLabel);
+    if (footerOptions.selectedRange) appendStatus(state.selectedRangeLabel);
     const toolbar = this.effectiveToolbar();
     const paginationEnabled =
       toolbar === undefined ||
@@ -1766,7 +1955,7 @@ export class GridNexaAngularComponent<T = Record<string, unknown>>
     const button = document.createElement("button");
     button.type = "button";
     button.textContent = text;
-    button.style.cssText = "min-height:32px;padding:0 10px;border:1px solid #bfdbfe;border-radius:8px;background:#fff;color:#1d4ed8;font-weight:800";
+    button.style.cssText = "min-height:32px;padding:0 10px;border:1px solid var(--gnx-border);border-radius:8px;background:var(--gnx-panel);color:var(--gnx-primary);font-weight:800";
     button.addEventListener("click", onClick);
     return button;
   }

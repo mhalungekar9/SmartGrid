@@ -15,3 +15,4 @@ export * from "./models/Cell";
 export * from "./models/GridOptions";
 export * from "./models/GridState";
 export * from "./types/GridCommand";
+export * from "./utils/productivity";

@@ -123,7 +123,7 @@ Use `columnTools` for global header-button defaults and `column.tools` for per-c
 
 Use `:side-panel="false"` or `:side-panel="{ enabled: false }"` to hide right-side tools. Use `columns`, `pivot`, `filters`, and `defaultActivePanel` to control which side tabs appear and which one opens first.
 
-## Presets, Saved Views, And Overlays
+## Presets And Overlays
 
 ```vue
 <template>
@@ -146,9 +146,9 @@ Presets reduce setup for common product surfaces:
 - `basic` for clean read-only tables
 - `admin` for CRUD-heavy internal tools
 - `spreadsheet` for Excel-like editing and fill workflows
-- `analytics` for reporting, pivoting, and saved exploration
+- `analytics` for reporting and pivoting
 
-Explicit props still win over preset defaults. `stateStorage` persists saved-view state such as column widths, hidden columns, pinned columns, filters, sorting, and pagination.
+Explicit props still win over preset defaults. `stateStorage` persists grid state such as column widths, hidden columns, pinned columns, filters, sorting, and pagination.
 
 ```vue
 <template>
@@ -164,33 +164,11 @@ Explicit props still win over preset defaults. `stateStorage` persists saved-vie
 
 Built-in loading, error, and empty overlays appear inside the grid viewport without breaking header/body alignment.
 
-## Productivity Layer
+## Feature Parity Note
 
-Copy this:
+React is the reference package and currently has the fullest productivity layer: saved views UI, command palette, change review, validation UI, and diagnostics panel.
 
-```vue
-<template>
-  <GridNexaVue
-    :columns="columns"
-    :rows="rows"
-    :views="{ key: 'employees-grid-views' }"
-    command-palette
-    change-review
-    :validation="{
-      blockSave: true,
-      rules: {
-        name: { required: true, message: 'Name is required' },
-        score: { type: 'number', min: 70, max: 100 }
-      }
-    }"
-    diagnostics
-  />
-</template>
-```
-
-When to use: saved views, command search, change review, validation, and diagnostics are useful for admin tools, operations screens, and spreadsheet-style review workflows.
-
-Common mistakes: use a stable `views.key` per grid, keep validation rules fast, and avoid sharing saved-view keys across unrelated screens.
+The Vue package supports the shared core grid surface used in the playground: presets, overlays, sorting, filtering, editing, formulas, selection, range fill, undo/redo, column tools, grouping, pivoting, tree data, master/detail, export, AI actions, and server-side operation events. The React-only productivity layer is planned for parity work before those docs are promoted for Vue.
 
 ## Column And Range Summaries
 
@@ -254,7 +232,13 @@ Keep AI provider keys on your backend. GridNexa receives only safe action-plan J
 
 Use `className`, `classNames`, `getRowClassName`, `getCellClassName`, `getHeaderClassName`, and column class callbacks to connect Vue apps to Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS.
 
-If you compare behavior with an installed React app, import `@gridnexa/react/index.css` once in that app entry. The CSS export includes the shared header layout, drag handles, drop indicators, pinned-column rules, popovers, scrollbars, and theme variables used by the playground.
+GridNexa injects baseline runtime styles automatically. For the closest match to the playground and to keep bundlers aware of the stylesheet, import the package CSS once in your app entry:
+
+```ts
+import "@gridnexa/vue/index.css";
+```
+
+Pass `unstyled` when your design system owns every grid rule.
 
 ## Feature Highlights
 
