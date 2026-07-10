@@ -303,7 +303,7 @@ export function GridCell<T>({
     >
       {leadingAction}
       {detailAction}
-      {renderedValue}
+      <span className="sg-cell-value">{renderedValue}</span>
       {trailingAction}
     </div>
   );

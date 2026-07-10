@@ -86,10 +86,27 @@
 }
 
 .sg-header-actions {
+  position: absolute;
+  top: 50%;
+  right: 8px;
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   gap: 4px;
+  max-width: calc(100% - 18px);
+  padding-left: 8px;
+  background: linear-gradient(90deg, transparent, var(--gnx-header-bg, #0b1220) 12px);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 0.12s ease;
+}
+
+.sg-header-cell:hover .sg-header-actions,
+.sg-header-cell:focus-within .sg-header-actions,
+.sg-header-cell--dragging .sg-header-actions {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .sg-header-icon-button {

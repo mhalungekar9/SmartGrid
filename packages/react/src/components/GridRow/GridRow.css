@@ -1,7 +1,7 @@
 .sg-row {
   display: grid;
   position: relative;
-  align-items: center;
+  align-items: stretch;
   width: var(--gnx-table-width, var(--gnx-table-min-width, max-content));
   min-width: var(--gnx-table-min-width, max-content);
   min-height: 42px;
@@ -12,6 +12,12 @@
 
 .sg-row:hover {
   background: rgba(148, 163, 184, 0.08);
+}
+
+.sg-row:hover .sg-cell,
+.sg-row:hover .sg-selection-cell,
+.sg-row:hover .sg-row-number {
+  background: var(--gnx-row-hover, rgba(148, 163, 184, 0.08));
 }
 
 .sg-row[data-selected="true"] {

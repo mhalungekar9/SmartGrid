@@ -5,6 +5,7 @@
   gap: 6px;
 
   min-height: 42px;
+  height: 100%;
   padding: 0 14px;
 
   border-right: 1px solid rgba(255, 255, 255, 0.06);
@@ -24,19 +25,42 @@
   text-overflow: ellipsis;
 }
 
+.sg-cell-value {
+  min-width: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.sg-cell[data-text-overflow="ellipsis"] .sg-cell-value {
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .sg-cell[data-text-overflow="clip"] {
   white-space: nowrap;
   text-overflow: clip;
 }
 
+.sg-cell[data-text-overflow="clip"] .sg-cell-value {
+  white-space: nowrap;
+  text-overflow: clip;
+}
+
 .sg-cell[data-text-overflow="wrap"] {
-  min-height: auto;
+  min-height: 42px;
+  height: auto;
   align-items: flex-start;
   white-space: normal;
   overflow-wrap: anywhere;
   text-overflow: clip;
   padding-top: 10px;
   padding-bottom: 10px;
+}
+
+.sg-cell[data-text-overflow="wrap"] .sg-cell-value {
+  white-space: normal;
+  overflow: visible;
+  overflow-wrap: anywhere;
 }
 
 .sg-cell--range {

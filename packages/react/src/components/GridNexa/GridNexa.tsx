@@ -1609,14 +1609,14 @@ export function GridNexa<T>({
 
   const [gridRows, setGridRows] = useState(rows);
   const skipNextRowsHistoryResetRef = useRef(false);
-  const markInternalRowsChange = () => {
+  const pendingInternalRowsRef = useRef<T[] | null>(null);
+  const rowsMatchByReference = (left: T[], right: T[] | null) =>
+    right != null &&
+    left.length === right.length &&
+    left.every((row, index) => row === right[index]);
+  const markInternalRowsChange = (nextRows: T[]) => {
     skipNextRowsHistoryResetRef.current = true;
-
-    if (typeof window !== "undefined") {
-      window.setTimeout(() => {
-        skipNextRowsHistoryResetRef.current = false;
-      }, 0);
-    }
+    pendingInternalRowsRef.current = nextRows;
   };
   const [columnWidths, setColumnWidths] = useState<Array<number | undefined>>(
     () =>
@@ -1703,6 +1703,11 @@ export function GridNexa<T>({
     useState<PivotAggregation>(() => pivotAggregationProp);
   const [undoStack, setUndoStack] = useState<T[][]>([]);
   const [redoStack, setRedoStack] = useState<T[][]>([]);
+  const gridRowsRef = useRef<T[]>(rows);
+  const undoStackRef = useRef<T[][]>([]);
+  const redoStackRef = useRef<T[][]>([]);
+  const rowObjectIdsRef = useRef<WeakMap<object, string>>(new WeakMap());
+  const rowObjectIdCounterRef = useRef(0);
   const [editingCell, setEditingCell] = useState<EditingCellState | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
     () => new Set(),
@@ -1776,6 +1781,18 @@ export function GridNexa<T>({
   } | null>(null);
   const readyEmittedRef = useRef(false);
   useEffect(() => {
+    gridRowsRef.current = gridRows;
+  }, [gridRows]);
+
+  useEffect(() => {
+    undoStackRef.current = undoStack;
+  }, [undoStack]);
+
+  useEffect(() => {
+    redoStackRef.current = redoStack;
+  }, [redoStack]);
+
+  useEffect(() => {
     if (readyEmittedRef.current) {
       return;
     }
@@ -1785,12 +1802,24 @@ export function GridNexa<T>({
   }, [columns, gridRows, onGridReady]);
 
   useEffect(() => {
-    if (skipNextRowsHistoryResetRef.current) {
+    const isInternalRowsEcho =
+      skipNextRowsHistoryResetRef.current &&
+      (rows === pendingInternalRowsRef.current ||
+        rowsMatchByReference(rows, pendingInternalRowsRef.current));
+
+    if (isInternalRowsEcho) {
       skipNextRowsHistoryResetRef.current = false;
+      pendingInternalRowsRef.current = null;
+      gridRowsRef.current = rows;
       setGridRows(rows);
       return;
     }
 
+    skipNextRowsHistoryResetRef.current = false;
+    pendingInternalRowsRef.current = null;
+    gridRowsRef.current = rows;
+    undoStackRef.current = [];
+    redoStackRef.current = [];
     setGridRows(rows);
     setUndoStack([]);
     setRedoStack([]);
@@ -2223,15 +2252,16 @@ export function GridNexa<T>({
       }
 
       if (enableUndoRedo) {
-        setUndoStack((currentStack) => [
-          ...currentStack.slice(-19),
-          currentRows,
-        ]);
+        const nextUndoStack = [...undoStackRef.current.slice(-19), currentRows];
+        undoStackRef.current = nextUndoStack;
+        redoStackRef.current = [];
+        setUndoStack(nextUndoStack);
         setRedoStack([]);
       }
 
       const changeParams = { rows: nextRows, previousRows: currentRows, reason };
-      markInternalRowsChange();
+      gridRowsRef.current = nextRows;
+      markInternalRowsChange(nextRows);
       onRowsChange?.(changeParams);
       onDataChange?.(changeParams);
 
@@ -2252,45 +2282,53 @@ export function GridNexa<T>({
   };
 
   const undo = () => {
-    setUndoStack((currentStack) => {
-      const previousRows = currentStack.at(-1);
+    const currentRows = gridRowsRef.current;
+    const currentUndoStack = undoStackRef.current;
+    const previousRows = currentUndoStack.at(-1);
 
-      if (!previousRows) {
-        return currentStack;
-      }
+    if (!previousRows) {
+      return;
+    }
 
-      setRedoStack((currentRedo) => [gridRows, ...currentRedo.slice(0, 19)]);
-      setGridRows(previousRows);
-      const changeParams = {
-        rows: previousRows,
-        previousRows: gridRows,
-        reason: "undo",
-      } as const;
-      markInternalRowsChange();
-      onRowsChange?.(changeParams);
-      onDataChange?.(changeParams);
-
-      return currentStack.slice(0, -1);
-    });
+    const nextUndoStack = currentUndoStack.slice(0, -1);
+    const nextRedoStack = [currentRows, ...redoStackRef.current.slice(0, 19)];
+    undoStackRef.current = nextUndoStack;
+    redoStackRef.current = nextRedoStack;
+    gridRowsRef.current = previousRows;
+    setUndoStack(nextUndoStack);
+    setRedoStack(nextRedoStack);
+    setGridRows(previousRows);
+    const changeParams = {
+      rows: previousRows,
+      previousRows: currentRows,
+      reason: "undo",
+    } as const;
+    markInternalRowsChange(previousRows);
+    onRowsChange?.(changeParams);
+    onDataChange?.(changeParams);
   };
 
   const redo = () => {
-    setRedoStack((currentStack) => {
-      const nextRows = currentStack[0];
+    const currentRows = gridRowsRef.current;
+    const currentRedoStack = redoStackRef.current;
+    const nextRows = currentRedoStack[0];
 
-      if (!nextRows) {
-        return currentStack;
-      }
+    if (!nextRows) {
+      return;
+    }
 
-      setUndoStack((currentUndo) => [...currentUndo.slice(-19), gridRows]);
-      setGridRows(nextRows);
-      const changeParams = { rows: nextRows, previousRows: gridRows, reason: "redo" } as const;
-      markInternalRowsChange();
-      onRowsChange?.(changeParams);
-      onDataChange?.(changeParams);
-
-      return currentStack.slice(1);
-    });
+    const nextUndoStack = [...undoStackRef.current.slice(-19), currentRows];
+    const nextRedoStack = currentRedoStack.slice(1);
+    undoStackRef.current = nextUndoStack;
+    redoStackRef.current = nextRedoStack;
+    gridRowsRef.current = nextRows;
+    setUndoStack(nextUndoStack);
+    setRedoStack(nextRedoStack);
+    setGridRows(nextRows);
+    const changeParams = { rows: nextRows, previousRows: currentRows, reason: "redo" } as const;
+    markInternalRowsChange(nextRows);
+    onRowsChange?.(changeParams);
+    onDataChange?.(changeParams);
   };
 
   const resolvedRows = useMemo(
@@ -2478,7 +2516,23 @@ export function GridNexa<T>({
     return invalid;
   }, [pivotResult.active, tableColumns, tableRows, validationEnabled, validationRules]);
   const getRowSelectionId = (row: T, rowIndex: number) =>
-    pivotResult.active || !getRowId ? rowIndex : getRowId(row, rowIndex);
+    pivotResult.active || !getRowId
+      ? rowIndex
+      : (getRowId(row, rowIndex) ??
+        (typeof row === "object" && row !== null
+          ? (() => {
+              const rowObject = row as object;
+              const existingId = rowObjectIdsRef.current.get(rowObject);
+
+              if (existingId) {
+                return existingId;
+              }
+
+              const nextId = `__gridnexa_row_${rowObjectIdCounterRef.current++}`;
+              rowObjectIdsRef.current.set(rowObject, nextId);
+              return nextId;
+            })()
+          : rowIndex));
   const visibleSelectedRowIds = useMemo(
     () => tableRows.map(getRowSelectionId),
     [getRowId, pivotResult.active, tableRows],
@@ -4052,8 +4106,9 @@ export function GridNexa<T>({
   };
 
   const addRow = (row = buildDefaultRow()) => {
-    const rowIndex = gridRows.length;
-    const nextRows = [...gridRows, row];
+    const currentRows = gridRowsRef.current;
+    const rowIndex = currentRows.length;
+    const nextRows = [...currentRows, row];
 
     replaceGridRows(() => nextRows, "rowAdd");
     appendChangeLog({ type: "add", label: `Added row ${rowIndex + 1}` });
@@ -4064,6 +4119,7 @@ export function GridNexa<T>({
     if (pivotResult.active || rowIndexes.length === 0) {
       return;
     }
+    const currentRows = gridRowsRef.current;
 
     const uniqueIndexes = Array.from(new Set(rowIndexes))
       .filter((rowIndex) => rowIndex >= 0 && rowIndex < tableRows.length)
@@ -4076,24 +4132,51 @@ export function GridNexa<T>({
       return;
     }
 
-    const sourceIndexes = new Set(
-      rowsToDelete
-        .map((rowToDelete) =>
-          gridRows.findIndex((row, index) =>
-            getRowId
-              ? getRowId(row, index) ===
-                getRowId(rowToDelete, tableRows.indexOf(rowToDelete))
-              : row === rowToDelete,
-          ),
-        )
-        .filter((rowIndex) => rowIndex >= 0),
-    );
-    const remainingRows = gridRows.filter((_, index) => !sourceIndexes.has(index));
+    const usedSourceIndexes = new Set<number>();
+    const findSourceIndexForVisibleRow = (rowToDelete: T) => {
+      const referenceIndex = currentRows.findIndex(
+        (row, index) => !usedSourceIndexes.has(index) && row === rowToDelete,
+      );
+
+      if (referenceIndex >= 0) {
+        usedSourceIndexes.add(referenceIndex);
+        return referenceIndex;
+      }
+
+      if (getRowId) {
+        const visibleRowId = getRowId(rowToDelete, tableRows.indexOf(rowToDelete));
+
+        if (visibleRowId != null) {
+          const idIndex = currentRows.findIndex(
+            (row, index) =>
+              !usedSourceIndexes.has(index) &&
+              getRowId(row, index) === visibleRowId,
+          );
+
+          if (idIndex >= 0) {
+            usedSourceIndexes.add(idIndex);
+            return idIndex;
+          }
+        }
+      }
+
+      return -1;
+    };
+    const sourceIndexes = Array.from(new Set(
+      rowsToDelete.map(findSourceIndexForVisibleRow).filter((rowIndex) => rowIndex >= 0),
+    )).sort((left, right) => left - right);
+    const sourceIndexSet = new Set(sourceIndexes);
+    const remainingRows = currentRows.filter((_, index) => !sourceIndexSet.has(index));
+    const deletedRowLabel =
+      sourceIndexes.length === 1 ? sourceIndexes[0] + 1 : undefined;
 
     replaceGridRows(() => remainingRows, rowsToDelete.length > 1 ? "rowsDelete" : "rowDelete");
     appendChangeLog({
       type: rowsToDelete.length > 1 ? "bulkDelete" : "delete",
-      label: rowsToDelete.length > 1 ? `Deleted ${rowsToDelete.length} rows` : `Deleted row ${uniqueIndexes[0] + 1}`,
+      label:
+        rowsToDelete.length > 1
+          ? `Deleted ${rowsToDelete.length} rows`
+          : `Deleted row ${deletedRowLabel ?? uniqueIndexes[0] + 1}`,
     });
     setSelectedRowIds(new Set());
     setSelectedRowIndex(null);
@@ -4101,14 +4184,14 @@ export function GridNexa<T>({
     if (rowsToDelete.length === 1) {
       onRowDelete?.({
         row: rowsToDelete[0],
-        rowIndex: uniqueIndexes[0],
+        rowIndex: sourceIndexes[0] ?? uniqueIndexes[0],
         rows: rowsToDelete,
         remainingRows,
       });
     } else {
       onRowsDelete?.({
         rows: rowsToDelete,
-        rowIndexes: uniqueIndexes,
+        rowIndexes: sourceIndexes.length ? sourceIndexes : uniqueIndexes,
         remainingRows,
       });
     }
