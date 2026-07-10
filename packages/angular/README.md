@@ -1,13 +1,32 @@
-# GridNexa Angular Data Grid | Angular Table
+# GridNexa Angular Data Grid | Angular Table | Excel-Style Grid
 
-Enterprise Angular data grid with Excel-like interactions, safe AI command support, typed column models, and design-system friendly styling.
+Angular data grid and Angular table for product teams that need Excel-like editing, filtering, formulas, grouping, pivoting, export, typed columns, and design-system friendly styling.
 
 [![npm](https://img.shields.io/npm/v/@gridnexa/angular?color=dd0031)](https://www.npmjs.com/package/@gridnexa/angular)
 [![license](https://img.shields.io/npm/l/@gridnexa/angular)](https://github.com/mhalungekar9/SmartGrid)
 [![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
 [![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
 
-GridNexa for Angular is a native Angular package for product teams building admin tools, dashboards, reporting screens, and spreadsheet-style workflows.
+GridNexa for Angular is a native Angular package for product teams building admin tools, dashboards, reporting screens, and spreadsheet-style workflows. Use it when you are comparing Angular data grid, Angular table, Angular data table, AG Grid alternative, Excel grid, spreadsheet grid, editable grid, pivot table, or tree grid options.
+
+## Why Developers Choose GridNexa
+
+- Native Angular standalone component with TypeScript column models.
+- Sorting, filtering, editing, formulas, selection, range fill, undo/redo, grouping, pivoting, tree data, master/detail, export, and server-side operation events.
+- Shared GridNexa contracts across React, Angular, Vue, and JavaScript.
+- CSS variables, stable class names, themes, density, custom icons, and fill-width behavior for product UIs.
+- Practical defaults through presets for `basic`, `admin`, `spreadsheet`, and `analytics` use cases.
+
+## Feature Highlights
+
+| Area | Included |
+| --- | --- |
+| Spreadsheet workflows | Editing, formulas, range fill, undo/redo, CSV/Excel export |
+| Search and filters | Quick filter, column filters, advanced filters, set filters |
+| Columns | Resize, reorder, hide/show, pin/freeze, menus, fill width |
+| Analytics | Grouping, aggregation, pivoting, summaries, tree data |
+| Integration | Server-side operation events, transactions, AI action plans |
+| Styling | Themes, CSS variables, stable classes, custom icons |
 
 ## Quick Links
 
@@ -247,7 +266,7 @@ import "@gridnexa/angular/index.css";
 
 Pass `unstyled` when your design system owns every grid rule.
 
-## Feature Highlights
+## Complete Feature List
 
 - Sorting, pagination, quick filter, column filters, external filters, and advanced filter model
 - Selection, row numbers, clipboard operations, fill, find, undo, and redo

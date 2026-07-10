@@ -681,6 +681,21 @@ textarea {
   align-items: start;
 }
 
+.config-section-divider {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 18px 4px 6px;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.config-section-divider h3 {
+  margin: 0;
+  color: var(--app-heading);
+  font-size: 1.05rem;
+}
+
 .config-doc-panel {
   display: grid;
   gap: 16px;

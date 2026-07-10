@@ -1,13 +1,32 @@
-# GridNexa Vue Data Grid | Vue Table
+# GridNexa Vue Data Grid | Vue Table | Excel-Style Grid
 
-Enterprise Vue data grid with Excel-like workflows, safe AI command support, typed columns, and theme-ready styling.
+Vue data grid and Vue table for product teams that need Excel-like editing, filtering, formulas, grouping, pivoting, export, typed columns, and theme-ready styling.
 
 [![npm](https://img.shields.io/npm/v/@gridnexa/vue?color=42b883)](https://www.npmjs.com/package/@gridnexa/vue)
 [![license](https://img.shields.io/npm/l/@gridnexa/vue)](https://github.com/mhalungekar9/SmartGrid)
 [![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
 [![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
 
-GridNexa for Vue is a native Vue package for dashboards, admin products, reporting tools, and spreadsheet-style interfaces.
+GridNexa for Vue is a native Vue package for dashboards, admin products, reporting tools, and spreadsheet-style interfaces. Use it when you are comparing Vue data grid, Vue table, Vue data table, AG Grid alternative, Excel grid, spreadsheet grid, editable grid, pivot table, or tree grid options.
+
+## Why Developers Choose GridNexa
+
+- Native Vue component with TypeScript column definitions.
+- Sorting, filtering, editing, formulas, selection, range fill, undo/redo, grouping, pivoting, tree data, master/detail, export, and server-side operation events.
+- Shared GridNexa contracts across React, Angular, Vue, and JavaScript.
+- CSS variables, stable class names, themes, density, custom icons, and fill-width behavior for product UIs.
+- Practical defaults through presets for `basic`, `admin`, `spreadsheet`, and `analytics` use cases.
+
+## Feature Highlights
+
+| Area | Included |
+| --- | --- |
+| Spreadsheet workflows | Editing, formulas, range fill, undo/redo, CSV/Excel export |
+| Search and filters | Quick filter, column filters, advanced filters, set filters |
+| Columns | Resize, reorder, hide/show, pin/freeze, menus, fill width |
+| Analytics | Grouping, aggregation, pivoting, summaries, tree data |
+| Integration | Server-side operation events, transactions, AI action plans |
+| Styling | Themes, CSS variables, stable classes, custom icons |
 
 ## Quick Links
 
@@ -240,7 +259,7 @@ import "@gridnexa/vue/index.css";
 
 Pass `unstyled` when your design system owns every grid rule.
 
-## Feature Highlights
+## Complete Feature List
 
 - Native Vue component with TypeScript column models
 - Sorting, pagination, quick filter, column filters, external filters, and advanced filter model

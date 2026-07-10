@@ -46,6 +46,9 @@ type GridNexaRowsChangeReason =
   | "edit"
   | "fill"
   | "paste"
+  | "import"
+  | "replace"
+  | "bulkEdit"
   | "clear"
   | "rowReorder"
   | "rowAdd"
@@ -96,6 +99,11 @@ type GridNexaColumn<T> = Column<T> & {
   tools?: GridNexaColumnToolOptions;
   icons?: GridNexaIconSet;
   textDisplay?: GridNexaTextDisplayOptions;
+};
+
+type ImportedTable = {
+  columns: Column<Record<string, unknown>>[];
+  rows: Array<Record<string, unknown>>;
 };
 
 type GridNexaFooterOptions =
@@ -504,6 +512,226 @@ type PersistedGridState = {
 const DEFAULT_VIEW_ID = "__gridnexa_default_view__";
 const DEFAULT_VIEW_NAME = "Default View";
 
+function normalizeLineEndings(value: string) {
+  return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function slugFieldName(value: string, fallback: string) {
+  const slug = value
+    .trim()
+    .replace(/^\uFEFF/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  return slug || fallback;
+}
+
+function parseDelimitedText(text: string, delimiter?: string) {
+  const source = normalizeLineEndings(text).replace(/\n+$/, "");
+  const resolvedDelimiter =
+    delimiter ??
+    (source.includes("\t")
+      ? "\t"
+      : source.split("\n", 1)[0]?.includes(";")
+        ? ";"
+        : ",");
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = "";
+  let inQuotes = false;
+
+  for (let index = 0; index < source.length; index += 1) {
+    const char = source[index];
+    const nextChar = source[index + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        cell += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+
+    if (!inQuotes && char === resolvedDelimiter) {
+      row.push(cell);
+      cell = "";
+      continue;
+    }
+
+    if (!inQuotes && char === "\n") {
+      row.push(cell);
+      rows.push(row);
+      row = [];
+      cell = "";
+      continue;
+    }
+
+    cell += char;
+  }
+
+  row.push(cell);
+  rows.push(row);
+
+  return rows.filter((entry) => entry.some((cellValue) => cellValue.trim() !== ""));
+}
+
+function parseImportedScalar(value: unknown) {
+  if (typeof value !== "string") {
+    return value;
+  }
+
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  if (/^(true|false)$/i.test(trimmed)) {
+    return trimmed.toLowerCase() === "true";
+  }
+
+  if (/^-?\d+(?:\.\d+)?$/.test(trimmed)) {
+    const parsed = Number(trimmed);
+
+    return Number.isFinite(parsed) ? parsed : value;
+  }
+
+  return value;
+}
+
+function detectImportedColumnKind(values: unknown[]): ColumnFilterModel["type"] {
+  const filledValues = values.filter((value) => value != null && value !== "");
+
+  if (!filledValues.length) {
+    return "text";
+  }
+
+  if (
+    filledValues.every(
+      (value) =>
+        typeof value === "number" ||
+        (typeof value === "string" && /^-?\d+(?:\.\d+)?$/.test(value.trim())),
+    )
+  ) {
+    return "number";
+  }
+
+  if (
+    filledValues.every(
+      (value) =>
+        typeof value === "string" &&
+        value.trim() !== "" &&
+        !Number.isNaN(Date.parse(value)),
+    )
+  ) {
+    return "date";
+  }
+
+  const uniqueCount = new Set(filledValues.map((value) => String(value))).size;
+
+  return uniqueCount <= Math.max(8, Math.ceil(filledValues.length * 0.4))
+    ? "set"
+    : "text";
+}
+
+function buildImportedColumns(
+  rows: Array<Record<string, unknown>>,
+  fields: string[],
+  headers: string[],
+): Column<Record<string, unknown>>[] {
+  return fields.map((field, index) => {
+    const values = rows.map((row) => row[field]);
+    const type = detectImportedColumnKind(values);
+
+    return {
+      id: field,
+      field,
+      headerName: headers[index] ?? field,
+      minWidth: type === "number" ? 110 : 150,
+      flex: 1,
+      filter: type,
+      editable: true,
+      editor: type === "number" ? "number" : type === "date" ? "date" : "text",
+    };
+  });
+}
+
+function tableFromMatrix(matrix: unknown[][]): ImportedTable {
+  const parsedRows = matrix
+    .map((row) => row.map((cell) => String(cell ?? "")))
+    .filter((row) => row.some((cell) => cell.trim() !== ""));
+
+  if (!parsedRows.length) {
+    return { columns: [], rows: [] };
+  }
+
+  const headers = parsedRows[0].map((header, index) =>
+    header.trim() || `Column ${index + 1}`,
+  );
+  const usedFields = new Set<string>();
+  const fields = headers.map((header, index) => {
+    const baseField = slugFieldName(header, `column_${index + 1}`);
+    let field = baseField;
+    let suffix = 2;
+
+    while (usedFields.has(field)) {
+      field = `${baseField}_${suffix}`;
+      suffix += 1;
+    }
+
+    usedFields.add(field);
+    return field;
+  });
+  const rows = parsedRows.slice(1).map((row) =>
+    Object.fromEntries(
+      fields.map((field, index) => [field, parseImportedScalar(row[index] ?? "")]),
+    ),
+  );
+
+  return {
+    columns: buildImportedColumns(rows, fields, headers),
+    rows,
+  };
+}
+
+function tableFromDelimitedText(text: string, delimiter?: string): ImportedTable {
+  return tableFromMatrix(parseDelimitedText(text, delimiter));
+}
+
+function tableFromJson(value: unknown): ImportedTable {
+  const sourceRows = Array.isArray(value)
+    ? value
+    : value && typeof value === "object" && Array.isArray((value as { rows?: unknown }).rows)
+      ? (value as { rows: unknown[] }).rows
+      : [];
+  const rows = sourceRows
+    .filter((row): row is Record<string, unknown> => row != null && typeof row === "object" && !Array.isArray(row))
+    .map((row) => ({ ...row }));
+  const fields = Array.from(
+    rows.reduce((fieldSet, row) => {
+      Object.keys(row).forEach((field) => fieldSet.add(field));
+      return fieldSet;
+    }, new Set<string>()),
+  );
+  const headers = fields.map((field) =>
+    field
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (letter) => letter.toUpperCase()),
+  );
+
+  return {
+    columns: buildImportedColumns(rows, fields, headers),
+    rows,
+  };
+}
+
 type SavedGridView = {
   id: string;
   name: string;
@@ -515,7 +743,7 @@ type SavedGridView = {
 
 type ChangeReviewEntry = {
   id: string;
-  type: "edit" | "add" | "delete" | "bulkDelete";
+  type: "edit" | "add" | "delete" | "bulkDelete" | "bulkEdit";
   label: string;
   timestamp: number;
 };
@@ -1788,6 +2016,10 @@ export function GridNexa<T>({
     () => reproState.quickFilterText ?? "",
   );
   const [findText, setFindText] = useState(() => reproState.findText ?? "");
+  const [replaceText, setReplaceText] = useState("");
+  const [findReplaceOpen, setFindReplaceOpen] = useState(false);
+  const [bulkEditValue, setBulkEditValue] = useState("");
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [findMatchIndex, setFindMatchIndex] = useState(0);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiPlan, setAiPlan] = useState<GridNexaCommandPlan | null>(null);
@@ -1922,6 +2154,7 @@ export function GridNexa<T>({
   const defaultViewStateRef = useRef<PersistedGridState | null>(null);
   const defaultViewCreatedAtRef = useRef(Date.now());
   const reproFileInputRef = useRef<HTMLInputElement | null>(null);
+  const importDataInputRef = useRef<HTMLInputElement | null>(null);
   const filterPanelRef = useRef<HTMLDivElement | null>(null);
   const advancedFilterPanelRef = useRef<HTMLDivElement | null>(null);
   const pivotPanelRef = useRef<HTMLDivElement | null>(null);
@@ -2992,6 +3225,145 @@ export function GridNexa<T>({
     setSelectionAnchorState(findMatch);
   }, [findMatch]);
 
+  const replaceAtMatch = (match: CellPosition | null) => {
+    const query = findText.trim();
+
+    if (!query || !match) {
+      return;
+    }
+
+    const row = tableRows[match.rowIndex];
+    const column = tableColumns[match.columnIndex];
+
+    if (!row || !column || column.editable === false) {
+      return;
+    }
+
+    const pattern = new RegExp(escapeRegex(query), "i");
+    const originalIndex = findRowIndex(row);
+
+    if (originalIndex < 0) {
+      return;
+    }
+
+    replaceGridRows((currentRows) => {
+      const currentValue = getColumnValue(row, column);
+      const nextValue = String(currentValue ?? "").replace(pattern, replaceText);
+
+      return currentRows.map((entry, index) =>
+        index === originalIndex
+          ? {
+              ...entry,
+              [column.field]: parsePastedValue(nextValue, entry[column.field]),
+            }
+          : entry,
+      );
+    }, "replace");
+    appendChangeLog({ type: "bulkEdit", label: `Replaced text in ${column.headerName}` });
+    setFindMatchIndex((current) => current + 1);
+  };
+
+  const replaceAllMatches = () => {
+    const query = findText.trim();
+
+    if (!query || !findMatches.length) {
+      return;
+    }
+
+    const pattern = new RegExp(escapeRegex(query), "gi");
+    let replacementCount = 0;
+
+    replaceGridRows((currentRows) => {
+      const nextRows = [...currentRows];
+
+      findMatches.forEach((match) => {
+        const row = tableRows[match.rowIndex];
+        const column = tableColumns[match.columnIndex];
+
+        if (!row || !column || column.editable === false) {
+          return;
+        }
+
+        const originalIndex = findRowIndex(row);
+
+        if (originalIndex < 0) {
+          return;
+        }
+
+        const currentValue = getColumnValue(row, column);
+        const currentText = String(currentValue ?? "");
+        const nextText = currentText.replace(pattern, replaceText);
+
+        if (nextText === currentText) {
+          return;
+        }
+
+        nextRows[originalIndex] = {
+          ...nextRows[originalIndex],
+          [column.field]: parsePastedValue(nextText, nextRows[originalIndex][column.field]),
+        };
+        replacementCount += 1;
+      });
+
+      return nextRows;
+    }, "replace");
+    appendChangeLog({ type: "bulkEdit", label: `Replaced ${replacementCount} cells` });
+  };
+
+  const applyBulkEdit = () => {
+    const targetCells: CellPosition[] = [];
+
+    if (cellRange) {
+      for (let rowIndex = cellRange.startRow; rowIndex <= cellRange.endRow; rowIndex += 1) {
+        for (let columnIndex = cellRange.startColumn; columnIndex <= cellRange.endColumn; columnIndex += 1) {
+          targetCells.push({ rowIndex, columnIndex });
+        }
+      }
+    } else if (selectedRowIds.size && activeCell) {
+      tableRows.forEach((row, rowIndex) => {
+        if (selectedRowIds.has(getRowSelectionId(row, rowIndex))) {
+          targetCells.push({ rowIndex, columnIndex: activeCell.columnIndex });
+        }
+      });
+    } else if (activeCell) {
+      targetCells.push(activeCell);
+    }
+
+    if (!targetCells.length) {
+      return;
+    }
+
+    let updateCount = 0;
+
+    replaceGridRows((currentRows) => {
+      const nextRows = [...currentRows];
+
+      targetCells.forEach(({ rowIndex, columnIndex }) => {
+        const row = tableRows[rowIndex];
+        const column = tableColumns[columnIndex];
+
+        if (!row || !column || column.editable === false) {
+          return;
+        }
+
+        const originalIndex = findRowIndex(row);
+
+        if (originalIndex < 0) {
+          return;
+        }
+
+        nextRows[originalIndex] = {
+          ...nextRows[originalIndex],
+          [column.field]: parsePastedValue(bulkEditValue, nextRows[originalIndex][column.field]),
+        };
+        updateCount += 1;
+      });
+
+      return nextRows;
+    }, "bulkEdit");
+    appendChangeLog({ type: "bulkEdit", label: `Bulk edited ${updateCount} cells` });
+  };
+
   const displayRows = useMemo<DisplayRow<T>[]>(() => {
     const appendDetailRow = (
       rowsToAppend: DisplayRow<T>[],
@@ -3422,8 +3794,13 @@ export function GridNexa<T>({
       return;
     }
 
-    await navigator.clipboard.writeText(text);
-    onCopy?.({ text, range: cellRange });
+    try {
+      await navigator.clipboard.writeText(text);
+      onCopy?.({ text, range: cellRange });
+    } catch (error) {
+      console.warn("GridNexa could not copy to clipboard", error);
+      window.alert("Clipboard copy is not available in this browser context.");
+    }
   };
 
   const exportVisibleRowsToCsv = () => {
@@ -3455,9 +3832,17 @@ export function GridNexa<T>({
     onExport?.({ format: "csv", rows: tableRows });
   };
 
+  const buildBlankGridRow = () =>
+    createRow
+      ? createRow()
+      : (Object.fromEntries(columns.map((column) => [column.field, ""])) as T);
+
   const pasteSelection = (text: string) => {
-    const source = text.replace(/\r\n/g, "\n");
-    const rowsToPaste = source.split("\n").map((line) => line.split("\t"));
+    const source = normalizeLineEndings(text);
+    const rowsToPaste = parseDelimitedText(
+      source,
+      source.includes("\t") ? "\t" : undefined,
+    );
 
     if (
       rowsToPaste.length === 0 ||
@@ -3504,19 +3889,28 @@ export function GridNexa<T>({
     replaceGridRows((currentRows) => {
       const nextRows = [...currentRows];
       const updates = new Map<number, Record<string, unknown>>();
+      const appendedRows = new Map<number, number>();
 
       for (const [viewRowIndex, viewColumnIndex, rawValue] of targetRows) {
         const row = tableRows[viewRowIndex];
         const column = tableColumns[viewColumnIndex];
 
-        if (!row || !column || column.editable === false) {
+        if (!column || column.editable === false) {
           continue;
         }
 
-        const originalIndex = findRowIndex(row);
+        let originalIndex = row ? findRowIndex(row) : -1;
 
         if (originalIndex < 0) {
-          continue;
+          const existingIndex = appendedRows.get(viewRowIndex);
+
+          if (existingIndex != null) {
+            originalIndex = existingIndex;
+          } else {
+            originalIndex = nextRows.length;
+            nextRows.push(buildBlankGridRow());
+            appendedRows.set(viewRowIndex, originalIndex);
+          }
         }
 
         const currentValue = nextRows[originalIndex][column.field];
@@ -3535,6 +3929,7 @@ export function GridNexa<T>({
 
       return nextRows;
     }, "paste");
+    appendChangeLog({ type: "bulkEdit", label: `Pasted ${targetRows.length} cells` });
     onPaste?.({ text });
   };
 
@@ -3598,10 +3993,15 @@ export function GridNexa<T>({
   };
 
   const pasteFromClipboard = async () => {
-    const text = await navigator.clipboard.readText();
+    try {
+      const text = await navigator.clipboard.readText();
 
-    if (text) {
-      pasteSelection(text);
+      if (text) {
+        pasteSelection(text);
+      }
+    } catch (error) {
+      console.warn("GridNexa could not read from clipboard", error);
+      window.alert("Clipboard paste is not available in this browser context.");
     }
 
     closeCellContextMenu();
@@ -4055,6 +4455,10 @@ export function GridNexa<T>({
           columnSelector: false,
           exportCsv: false,
           exportExcel: false,
+          importData: false,
+          copyPaste: false,
+          bulkEdit: false,
+          findReplace: false,
           prevNextPage: false,
           saveAll: false,
           addRow: false,
@@ -4076,6 +4480,10 @@ export function GridNexa<T>({
           columnSelector: true,
           exportCsv: true,
           exportExcel: true,
+          importData: false,
+          copyPaste: true,
+          bulkEdit: true,
+          findReplace: true,
           prevNextPage: true,
           saveAll: Boolean(onSaveAll),
           addRow: false,
@@ -4433,6 +4841,101 @@ export default function GridNexaRepro() {
   const openReproFilePicker = () => {
     reproFileInputRef.current?.click();
   };
+  const applyImportedTable = (table: ImportedTable, fileName: string) => {
+    if (!table.columns.length) {
+      window.alert("No columns were found in the imported data.");
+      return;
+    }
+
+    const importedRows = table.rows as T[];
+    const importedColumns = table.columns as Column<T>[];
+    const previousRows = gridRowsRef.current;
+    const now = new Date().toISOString();
+
+    setRuntimeRepro({
+      generatedAt: now,
+      columns: importedColumns,
+      rows: importedRows,
+      state: {
+        ...createCurrentViewState(),
+        columnOrder: importedColumns.map((column) => column.id),
+        columnWidths: {},
+        hiddenColumnIds: [],
+        pinnedColumnIds: {},
+        filterModel: {},
+        sortModel: null,
+        pageIndex: 0,
+      },
+    });
+    setGridRows(importedRows);
+    gridRowsRef.current = importedRows;
+    setUndoStack([]);
+    setRedoStack([]);
+    undoStackRef.current = [];
+    redoStackRef.current = [];
+    setSelectedRowIndex(importedRows.length ? 0 : null);
+    setSelectedRowIds(new Set());
+    setActiveCellState(importedRows.length && importedColumns.length ? { rowIndex: 0, columnIndex: 0 } : null);
+    setSelectionAnchorState(importedRows.length && importedColumns.length ? { rowIndex: 0, columnIndex: 0 } : null);
+    setPageIndex(0);
+    setFilterModel({});
+    setAdvancedFilterModel(null);
+    setSortModel(null);
+    appendChangeLog({ type: "bulkEdit", label: `Imported ${importedRows.length} rows` });
+    recordDiagnosticEvent("import", `Imported data from ${fileName}`, {
+      fileName,
+      rows: importedRows.length,
+      columns: importedColumns.length,
+    });
+    onRowsChange?.({ rows: importedRows, previousRows, reason: "import" });
+    onDataChange?.({ rows: importedRows, previousRows, reason: "import" });
+  };
+  const importDataFile = async (file: File | null) => {
+    if (!file) {
+      return;
+    }
+
+    const fileName = file.name;
+    const extension = fileName.split(".").pop()?.toLowerCase() ?? "";
+
+    try {
+      let table: ImportedTable;
+
+      if (extension === "xlsx" || extension === "xls") {
+        const XLSX = await import("xlsx");
+        const workbook = XLSX.read(await file.arrayBuffer(), { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = firstSheetName ? workbook.Sheets[firstSheetName] : null;
+
+        if (!worksheet) {
+          throw new Error("Excel workbook does not contain a worksheet");
+        }
+
+        table = tableFromMatrix(
+          XLSX.utils.sheet_to_json<unknown[]>(worksheet, {
+            header: 1,
+            defval: "",
+            raw: false,
+          }) as unknown[][],
+        );
+      } else {
+        const text = await file.text();
+
+        table =
+          extension === "json"
+            ? tableFromJson(JSON.parse(text))
+            : tableFromDelimitedText(text, extension === "tsv" ? "\t" : undefined);
+      }
+
+      applyImportedTable(table, fileName);
+    } catch (error) {
+      console.warn("GridNexa could not import data", error);
+      window.alert("Could not import data. Use JSON array/object rows, CSV, TSV, TXT, XLS, or XLSX.");
+    }
+  };
+  const openImportDataPicker = () => {
+    importDataInputRef.current?.click();
+  };
   const applySavedView = (view: SavedGridView) => {
     setActiveViewId(view.id);
     recordDiagnosticEvent("view", `Applied view: ${view.name}`, {
@@ -4523,6 +5026,11 @@ export default function GridNexaRepro() {
     { id: "open-filters", label: "Open filters panel", run: () => { setFilterPanelOpen(true); setCommandPaletteOpen(false); } },
     { id: "export-csv", label: "Export CSV", run: () => { exportVisibleRowsToCsv(); setCommandPaletteOpen(false); } },
     { id: "export-excel", label: "Export Excel", run: () => { exportVisibleRowsToExcel(); setCommandPaletteOpen(false); } },
+    { id: "import-data", label: "Import data", run: () => { openImportDataPicker(); setCommandPaletteOpen(false); } },
+    { id: "copy-selection", label: "Copy selection", run: () => { void copySelection(); setCommandPaletteOpen(false); } },
+    { id: "paste-selection", label: "Paste from clipboard", run: () => { void pasteFromClipboard(); setCommandPaletteOpen(false); } },
+    { id: "bulk-edit", label: "Open bulk edit", run: () => { setBulkEditOpen(true); setCommandPaletteOpen(false); } },
+    { id: "find-replace", label: "Open find and replace", run: () => { setFindReplaceOpen(true); setCommandPaletteOpen(false); } },
     { id: "review-changes", label: "Review changes", run: () => { setChangeReviewOpen(true); setCommandPaletteOpen(false); } },
     ...(diagnosticsEnabled
       ? [
@@ -5539,6 +6047,16 @@ export default function GridNexaRepro() {
             }}
           />
         ) : null}
+        <input
+          ref={importDataInputRef}
+          type="file"
+          accept=".csv,.tsv,.txt,.json,.xls,.xlsx,text/csv,text/tab-separated-values,application/json,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+          style={{ display: "none" }}
+          onChange={(event) => {
+            void importDataFile(event.currentTarget.files?.[0] ?? null);
+            event.currentTarget.value = "";
+          }}
+        />
 
         {toolbarVisible ? (
         <div className={cx("sg-toolbar", mergedClassNames.toolbar)}>
@@ -5723,6 +6241,56 @@ export default function GridNexaRepro() {
                   Next
                 </button>
             </>
+            ) : null}
+
+            {toolbarOptions.findReplace ? (
+              <button
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                type="button"
+                onClick={() => setFindReplaceOpen((current) => !current)}
+              >
+                Replace
+              </button>
+            ) : null}
+
+            {toolbarOptions.copyPaste ? (
+              <>
+                <button
+                  className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                  type="button"
+                  onClick={() => void copySelection()}
+                  disabled={!activeCell && !cellRange}
+                >
+                  Copy
+                </button>
+                <button
+                  className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                  type="button"
+                  onClick={() => void pasteFromClipboard()}
+                >
+                  Paste
+                </button>
+              </>
+            ) : null}
+
+            {toolbarOptions.bulkEdit ? (
+              <button
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                type="button"
+                onClick={() => setBulkEditOpen((current) => !current)}
+              >
+                Bulk edit
+              </button>
+            ) : null}
+
+            {toolbarOptions.importData ? (
+              <button
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                type="button"
+                onClick={openImportDataPicker}
+              >
+                Import data
+              </button>
             ) : null}
 
             {toolbarOptions.undoRedo && enableUndoRedo ? (
@@ -6130,6 +6698,109 @@ export default function GridNexaRepro() {
                 </button>
               ))}
               {!commandItems.length ? <span className="sg-panel-muted">No commands found</span> : null}
+            </div>
+          </div>
+        ) : null}
+
+        {findReplaceOpen ? (
+          <div className="sg-product-panel" role="dialog" aria-label="Find and replace">
+            <div className="sg-product-panel-header">
+              <strong>Find and replace</strong>
+              <button
+                type="button"
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                onClick={() => setFindReplaceOpen(false)}
+              >
+                Done
+              </button>
+            </div>
+            <div className="sg-diagnostics-grid">
+              <label className="sg-filter">
+                <span className="sg-filter-label">Find</span>
+                <input
+                  className={cx("sg-filter-input", mergedClassNames.input)}
+                  value={findText}
+                  onChange={(event) => setFindText(event.target.value)}
+                  placeholder="Text to find"
+                />
+              </label>
+              <label className="sg-filter">
+                <span className="sg-filter-label">Replace</span>
+                <input
+                  className={cx("sg-filter-input", mergedClassNames.input)}
+                  value={replaceText}
+                  onChange={(event) => setReplaceText(event.target.value)}
+                  placeholder="Replacement"
+                />
+              </label>
+              <span>{findMatches.length} matches</span>
+              <button
+                type="button"
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                onClick={() => setFindMatchIndex((current) => findMatches.length ? current + 1 : current)}
+                disabled={!findMatches.length}
+              >
+                Next
+              </button>
+              <button
+                type="button"
+                className={cx("sg-toolbar-button", mergedClassNames.button)}
+                onClick={() => replaceAtMatch(findMatch)}
+                disabled={!findMatch}
+              >
+                Replace
+              </button>
+              <button
+                type="button"
+                className={cx("sg-toolbar-button", mergedClassNames.button)}
+                onClick={replaceAllMatches}
+                disabled={!findMatches.length}
+              >
+                Replace all
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        {bulkEditOpen ? (
+          <div className="sg-product-panel" role="dialog" aria-label="Bulk edit">
+            <div className="sg-product-panel-header">
+              <strong>Bulk edit</strong>
+              <button
+                type="button"
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                onClick={() => setBulkEditOpen(false)}
+              >
+                Done
+              </button>
+            </div>
+            <div className="sg-diagnostics-grid">
+              <label className="sg-filter">
+                <span className="sg-filter-label">Value</span>
+                <input
+                  className={cx("sg-filter-input", mergedClassNames.input)}
+                  value={bulkEditValue}
+                  onChange={(event) => setBulkEditValue(event.target.value)}
+                  placeholder="Value for selected cells"
+                />
+              </label>
+              <span>
+                {cellRange
+                  ? `${(cellRange.endRow - cellRange.startRow + 1) * (cellRange.endColumn - cellRange.startColumn + 1)} cells`
+                  : selectedRowIds.size && activeCell
+                    ? `${selectedRowIds.size} rows in active column`
+                    : activeCell
+                      ? "Active cell"
+                      : "No target selected"}
+              </span>
+              <button
+                type="button"
+                className={cx("sg-toolbar-button", mergedClassNames.button)}
+                onClick={applyBulkEdit}
+                disabled={!cellRange && !activeCell}
+              >
+                Apply
+              </button>
             </div>
           </div>
         ) : null}

@@ -15,6 +15,7 @@ import { ColumnMerge } from "../pages/ColumnMerge";
 import { FrozenColumns } from "../pages/FrozenColumns";
 import { Templates } from "../pages/Templates";
 import { Editing } from "../pages/Editing";
+import { DataImportClipboard } from "../pages/DataImportClipboard";
 import { AICommand } from "../pages/AICommand";
 import { AIProviders } from "../pages/AIProviders";
 import { Formulas } from "../pages/Formulas";
@@ -95,6 +96,14 @@ export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
     title: "Advanced",
     items: [
       { path: "/docs/editing", label: "Editing", icon: "bi-pencil-square", component: Editing },
+      {
+        path: "/docs/data-import-clipboard",
+        label: "Import & Clipboard",
+        icon: "bi-file-earmark-spreadsheet",
+        component: DataImportClipboard,
+        description: "Import Excel, CSV, TSV, text, and JSON; copy/paste spreadsheet ranges; bulk edit; and find/replace values.",
+        tags: ["import", "excel", "xlsx", "csv", "json", "clipboard", "copy paste", "bulk edit", "find replace"],
+      },
       { path: "/docs/ai-command", label: "AI Command", icon: "bi-stars", component: AICommand },
       { path: "/docs/ai-providers", label: "AI Providers", icon: "bi-cpu", component: AIProviders },
       { path: "/docs/formulas", label: "Formulas", icon: "bi-calculator", component: Formulas },

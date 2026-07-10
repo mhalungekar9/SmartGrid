@@ -1,13 +1,32 @@
-# GridNexa JavaScript Data Grid | TypeScript Table
+# GridNexa JavaScript Data Grid | TypeScript Table | Excel-Style Grid
 
-Framework-free JavaScript and TypeScript data grid with Excel-like features, safe AI command support, and built-in styling.
+Framework-free JavaScript and TypeScript data grid for dashboards, admin tools, reporting screens, and Excel-style workflows.
 
 [![npm](https://img.shields.io/npm/v/@gridnexa/javascript?color=f7df1e)](https://www.npmjs.com/package/@gridnexa/javascript)
 [![license](https://img.shields.io/npm/l/@gridnexa/javascript)](https://github.com/mhalungekar9/SmartGrid)
 [![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
 [![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
 
-Use GridNexa without a framework in dashboards, admin tools, reporting screens, embedded widgets, and spreadsheet-style workflows.
+Use GridNexa without a framework when you want a typed data grid, data table, spreadsheet grid, or AG Grid alternative without committing to React, Angular, or Vue.
+
+## Why Developers Choose GridNexa
+
+- Framework-free setup with TypeScript column definitions.
+- Sorting, filtering, editing, formulas, selection, range fill, undo/redo, grouping, pivoting, tree data, master/detail, export, and server-side operation callbacks.
+- Shared contracts with `@gridnexa/react`, `@gridnexa/angular`, and `@gridnexa/vue`.
+- CSS variables, stable class names, icons, themes, density, and layout options for product UIs.
+- Useful search fit: JavaScript data grid, TypeScript table, data table, editable grid, Excel grid, spreadsheet grid, pivot table, tree grid, and enterprise grid.
+
+## Feature Highlights
+
+| Area | Included |
+| --- | --- |
+| Data operations | Editing, formulas, range fill, undo/redo, CSV/Excel export |
+| Grid controls | Sorting, quick filter, column filters, advanced filters, pagination |
+| Columns | Resize, reorder, hide/show, pin/freeze, menus, fill width |
+| Analytics | Grouping, aggregation, pivoting, summaries, tree data |
+| Integration | Server-side operation callbacks, transactions, AI action plans |
+| Styling | Themes, CSS variables, stable classes, custom icons |
 
 ## Quick Links
 
@@ -236,7 +255,7 @@ import "@gridnexa/javascript/index.css";
 
 Pass `unstyled: true` when your design system owns every grid rule.
 
-## Feature Highlights
+## Complete Feature List
 
 - Framework-free DOM mounting with typed options
 - Sorting, pagination, quick filter, column filters, external filters, and advanced filters

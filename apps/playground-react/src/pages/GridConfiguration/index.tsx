@@ -674,6 +674,16 @@ export function GridConfiguration() {
         <div className="detail-card"><i className="bi bi-palette" /><span>CSS variables and class names keep styling override-friendly.</span></div>
       </div>
 
+      <section className="config-doc-panel">
+        <div className="config-doc-panel-header">
+          <div>
+            <span className="eyebrow">Documentation split</span>
+            <h3>Grid Config now stays focused on grid setup</h3>
+            <p>Data import, Excel clipboard, bulk edit, and find/replace examples live on the dedicated Import & Clipboard page in Advanced.</p>
+          </div>
+        </div>
+      </section>
+
       <section className="config-doc-panel" aria-labelledby="config-index-title">
         <div className="config-doc-panel-header">
           <div>
@@ -764,6 +774,11 @@ export function GridConfiguration() {
       </section>
 
       <div className="example-grid">
+        <div className="config-section-divider">
+          <span className="eyebrow">Setup</span>
+          <h3>Presets, state, overlays, and installed app setup</h3>
+        </div>
+
         <DemoCard {...sectionProps("grid-presets")} title="Grid presets" description="Presets turn on sensible defaults for common app types while preserving every explicit prop you pass.">
           <GridNexa columns={columns} rows={rows} theme={theme} preset="admin" />
           <CodeViewer code={presetCode} />
@@ -797,6 +812,11 @@ export function GridConfiguration() {
           <CodeViewer code={externalAppCode} />
         </DemoCard>
 
+        <div className="config-section-divider">
+          <span className="eyebrow">Toolbar And Header</span>
+          <h3>Toolbar buttons, column tools, filters, and menus</h3>
+        </div>
+
         <DemoCard {...sectionProps("toolbar-tools")} title="Toolbar tools" description="Enable save, undo/redo, filters, exports, find, fill, add row, and delete row with one object.">
           <GridNexa columns={columns} rows={rows} theme={theme} checkboxSelection toolbar={{ saveAll: true, undoRedo: true, filters: true, advancedFilter: true, columnSelector: true, quickFilter: true, exportCsv: true, exportExcel: true, prevNextPage: true, find: true, columns: true, fill: true, addRow: true, deleteRow: true, deleteSelectedRows: true }} createRow={rowFactory} />
           <CodeViewer code={toolbarCode} />
@@ -806,6 +826,11 @@ export function GridConfiguration() {
           <GridNexa columns={customToolColumns as Column<ConfigRow>[]} rows={rows} theme={theme} columnTools={{ sort: true, filter: true, filterPanel: true, menu: true, resize: true, pin: true, hide: true, autosize: true }} />
           <CodeViewer code={columnToolsCode} />
         </DemoCard>
+
+        <div className="config-section-divider">
+          <span className="eyebrow">Side Panels</span>
+          <h3>Columns, pivot, filters, and compact layouts</h3>
+        </div>
 
         <DemoCard {...sectionProps("right-side-tools")} title="Right-side tools" description="Configure the Columns/Pivot and Filters side tools globally and choose a default open panel.">
           <GridNexa columns={columns} rows={rows} theme={theme} sidePanel={{ columns: true, pivot: true, filters: true, defaultActivePanel: "columns" }} />
@@ -833,6 +858,11 @@ export function GridConfiguration() {
           </div>
           <CodeViewer code={sidePanelResponsiveCode} />
         </DemoCard>
+
+        <div className="config-section-divider">
+          <span className="eyebrow">Rows And Footer</span>
+          <h3>Scrolling, row actions, icons, footer facts, and summaries</h3>
+        </div>
 
         <DemoCard {...sectionProps("hide-and-show-header-buttons")} title="Hide and show header buttons" description="Disable sort, filter, filter-panel, menu, resize, pin, hide, or auto-size globally or per column.">
           <GridNexa
@@ -907,6 +937,11 @@ export function GridConfiguration() {
           </div>
         </DemoCard>
 
+        <div className="config-section-divider">
+          <span className="eyebrow">Productivity</span>
+          <h3>Views, command palette, review, validation, and diagnostics</h3>
+        </div>
+
         <DemoCard {...sectionProps("productivity-layer")} title="Productivity layer" description="Enable the premium workflow layer when users need repeatable views, keyboard actions, validation, review, and integration diagnostics.">
           <GridNexa
             columns={columns}
@@ -978,6 +1013,11 @@ export function GridConfiguration() {
           <CodeViewer code={diagnosticsCode} />
         </DemoCard>
 
+        <div className="config-section-divider">
+          <span className="eyebrow">Styling</span>
+          <h3>Custom footer, edge popovers, and CSS variables</h3>
+        </div>
+
         <DemoCard {...sectionProps("custom-footer")} title="Custom footer" description="Replace the built-in footer content with your own renderer.">
           <GridNexa
             columns={columns}
@@ -1009,6 +1049,11 @@ export function GridConfiguration() {
           </div>
           <CodeViewer code={cssCode} />
         </DemoCard>
+
+        <div className="config-section-divider">
+          <span className="eyebrow">Layout</span>
+          <h3>Column width, fill modes, and long text display</h3>
+        </div>
 
         <DemoCard {...sectionProps("auto-column-width")} title="Auto column width" description="Omit width to estimate from header and cell content; width, minWidth, and maxWidth remain respected.">
           <GridNexa columns={columns.map(({ width, ...column }) => column)} rows={rows} theme={theme} />

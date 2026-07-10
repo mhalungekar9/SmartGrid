@@ -1,13 +1,37 @@
-# GridNexa React Data Grid | React Table
+# GridNexa React Data Grid | React Table | Excel Grid
 
-Enterprise React data grid with Excel-like features, AI command support, theme-ready styling, and copy-ready TypeScript APIs.
+Feature-rich React data grid for teams that need more than a table: Excel import, copy/paste, inline editing, filters, pivoting, diagnostics, saved views, and TypeScript-first APIs.
 
 [![npm](https://img.shields.io/npm/v/@gridnexa/react?color=0ea5e9)](https://www.npmjs.com/package/@gridnexa/react)
 [![license](https://img.shields.io/npm/l/@gridnexa/react)](https://github.com/mhalungekar9/SmartGrid)
 [![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
 [![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
 
-GridNexa gives React teams a polished grid foundation for data-heavy products: sorting, filtering, editing, formulas, grouping, pivoting, tree data, selection, export, styling hooks, and safe AI-generated grid actions.
+GridNexa gives React teams a polished grid foundation for data-heavy products: sorting, filtering, editing, formulas, grouping, pivoting, tree data, selection, import/export, styling hooks, diagnostics, and safe AI-generated grid actions.
+
+## Why Developers Choose GridNexa
+
+Most grid libraries make teams choose between a lightweight table and a heavyweight enterprise grid. GridNexa aims for the middle path developers keep asking for: a modern React data grid with serious product features, sensible styling, and copy-ready examples.
+
+- **Excel-style workflows built in**: import `.xlsx`, `.xls`, `.csv`, `.tsv`, `.txt`, and `.json`; copy/paste ranges from Excel; bulk edit; find and replace; export CSV and Excel.
+- **Debuggable by design**: diagnostics and repro snapshots let users export the grid state, sampled rows, recent actions, and a React repro JSON instead of sending vague bug reports.
+- **Productivity tools without glue code**: saved views, command palette, change review, validation, undo/redo, fill handle, row add/delete, and toolbar panels are first-class.
+- **Real data-grid depth**: column resize/reorder/pin/hide, filters, advanced filters, grouping, pivoting, tree data, master/detail, formulas, summaries, server-side callbacks, and transactions.
+- **Design-system friendly**: CSS variables, stable class names, custom icons, class callbacks, themes, density, and `unstyled` mode.
+- **Practical alternative searches**: use GridNexa when you are comparing React data grid, React table, AG Grid alternative, MUI Data Grid alternative, TanStack Table alternative, Excel grid, spreadsheet grid, or editable data table options.
+
+## Feature Highlights
+
+| Area | What GridNexa Includes |
+| --- | --- |
+| Data import | Excel `.xlsx/.xls`, CSV, TSV, TXT, JSON, auto-detected column types |
+| Clipboard | Copy, paste from Excel, paste ranges, append overflow rows, Clipboard API fallback |
+| Editing | Inline editors, bulk edit, fill handle, formulas, undo/redo, change review |
+| Search/filter | Quick filter, find, find & replace, column filters, set filters, advanced filters |
+| Layout | Resize, reorder, pin/freeze, hide/show, fill width, flex columns, merged headers |
+| Analytics | Grouping, aggregation, pivoting, summaries, tree data, master/detail |
+| Developer tools | Diagnostics panel, repro JSON export/import, command palette, typed API |
+| Styling | Themes, CSS variables, stable classes, custom icons, Bootstrap/Tailwind-friendly |
 
 ## Quick Links
 
@@ -87,6 +111,31 @@ import "@gridnexa/react/index.css";
 - Keep the CSS import once in your app entry file, such as `main.tsx`, `App.tsx`, or your design-system wrapper.
 - Column drag/reorder works from the header label area. The preview uses the real header width, and the drop indicator tracks whether the column will move before or after the target.
 - Pinned-left, center, and pinned-right columns reorder within their current lane.
+
+## Import Data, Clipboard, Bulk Edit, Find And Replace
+
+```tsx
+<GridNexa
+  columns={columns}
+  rows={rows}
+  enableRangeSelection
+  toolbar={{
+    importData: true,
+    copyPaste: true,
+    bulkEdit: true,
+    findReplace: true,
+    quickFilter: true,
+    find: true,
+    undoRedo: true,
+    exportCsv: true,
+    exportExcel: true,
+  }}
+/>
+```
+
+`importData` adds a toolbar file picker for `.xlsx`, `.xls`, `.csv`, `.tsv`, `.txt`, and `.json`. Excel workbooks import the first worksheet. CSV/TSV/text imports use the first row as headers. JSON import accepts either an array of row objects or `{ rows: [...] }`.
+
+GridNexa auto-detects imported column types and configures practical defaults for text, number, date, and set filters. Clipboard paste accepts Excel ranges, TSV, CSV, and plain text; pasted ranges update selected cells and can append overflow rows. `bulkEdit` updates the selected range or selected rows in the active column. `findReplace` replaces the current match or all matching editable cells.
 
 ## Toolbar, Header Tools, Footer, And Icons
 
@@ -230,7 +279,7 @@ What this solves:
 - `commandPalette` adds a keyboard-first action launcher with Ctrl+K / Cmd+K.
 - `changeReview` tracks edits, row additions, and row deletions before Save All.
 - `validation` highlights invalid cells and can block Save All.
-- `diagnostics` exposes runtime counts, records recent grid actions, and can export a repro snapshot with sanitized columns, sampled rows, current grid state, change review entries, and a React example.
+- `diagnostics` exposes runtime counts, records recent grid actions, and can export/import a repro snapshot with sanitized columns, sampled rows, current grid state, change review entries, and a React example.
 
 When to use:
 
@@ -386,7 +435,7 @@ Supported AI actions include quick filter, column filter, advanced filter, sort,
 
 Use Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS through `className`, `classNames`, `getRowClassName`, `getCellClassName`, `getHeaderClassName`, `column.className`, `column.cellClassName`, and `column.headerClassName`.
 
-## Feature Highlights
+## Complete Feature List
 
 - Presets, saved views, loading/error/empty overlays, sorting, pagination, quick filter, column filters, external filters, and visual advanced filters
 - Row selection, checkbox selection, row numbers, range selection, fill handle, find, undo, and redo

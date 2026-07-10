@@ -78,6 +78,10 @@ export type GridNexaToolbarOptions =
       columnSelector: boolean;
       exportCsv: boolean;
       exportExcel: boolean;
+      importData: boolean;
+      copyPaste: boolean;
+      bulkEdit: boolean;
+      findReplace: boolean;
       prevNextPage: boolean;
       saveAll: boolean;
       addRow: boolean;
@@ -282,6 +286,9 @@ export type GridNexaRowsChangeReason =
   | "edit"
   | "fill"
   | "paste"
+  | "import"
+  | "replace"
+  | "bulkEdit"
   | "clear"
   | "rowReorder"
   | "rowAdd"

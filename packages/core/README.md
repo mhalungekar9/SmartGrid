@@ -1,13 +1,25 @@
-# GridNexa Core | Data Grid Contracts
+# GridNexa Core | Data Grid Contracts | Data Table Types
 
-Framework-neutral TypeScript contracts for GridNexa data grid packages.
+Framework-neutral TypeScript contracts for GridNexa data grid, data table, Excel grid, and framework wrapper packages.
 
 [![npm](https://img.shields.io/npm/v/@gridnexa/core?color=2563eb)](https://www.npmjs.com/package/@gridnexa/core)
 [![license](https://img.shields.io/npm/l/@gridnexa/core)](https://github.com/mhalungekar9/SmartGrid)
 [![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
 [![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
 
-`@gridnexa/core` contains the shared models used by the React, Angular, Vue, and JavaScript packages. Most applications should install a framework package directly; install core when you need shared types for library wrappers, backend contracts, or cross-framework tooling.
+`@gridnexa/core` contains the shared models used by the React, Angular, Vue, and JavaScript packages. Most applications should install a framework package directly; install core when you need shared types for library wrappers, backend contracts, server-side grid operations, AI action plans, or cross-framework tooling.
+
+## Why This Package Exists
+
+GridNexa is designed as a shared data-grid system, not a one-off component. The core package keeps column definitions, filter models, toolbar options, state persistence, diagnostics, AI command plans, and row-change contracts consistent across frameworks.
+
+Use it when you want:
+
+- Typed `Column` and `GridOptions` contracts shared between frontend packages.
+- Server-side operation models for filtering, sorting, pagination, grouping, pivoting, tree data, and transactions.
+- Toolbar contracts for import data, copy/paste, bulk edit, find/replace, filters, exports, and row actions.
+- Diagnostics and repro snapshot contracts for developer support flows.
+- A stable base for React, Angular, Vue, and framework-free JavaScript wrappers.
 
 ## Quick Links
 
@@ -54,6 +66,7 @@ npm install @gridnexa/javascript
 - `GridNexaCommandPlan`
 - `GridNexaCommandAction`
 - `GridNexaAiOptions`
+- `GridNexaReproSnapshot`
 
 ## AI Action Plan Contract
 
@@ -94,9 +107,9 @@ Core includes the typed contracts used by all framework packages:
 - `commandPalette` enables a command launcher contract for discoverable grid actions.
 - `changeReview` describes pre-save review of edits, row additions, and deletions.
 - `validation` describes fast cell validation rules and save blocking.
-- `diagnostics` describes developer-facing runtime diagnostics, action recording, and one-click repro snapshot export.
+- `diagnostics` describes developer-facing runtime diagnostics, action recording, and one-click repro snapshot export/import.
 - `icons` provides global icon replacement, while `column.icons` can override icons for a specific column.
-- `toolbar` enables or hides quick filter, find, filters, advanced filter, columns, exports, add/delete rows, undo/redo, fill, and save-all tools.
+- `toolbar` enables or hides quick filter, find, find/replace, filters, advanced filter, columns, import data, copy/paste, bulk edit, exports, add/delete rows, undo/redo, fill, and save-all tools.
 
 React consumers should import `@gridnexa/react/index.css` once in the app entry. That exported CSS carries the shared header layout, drag/reorder indicators, pinned-column rules, popovers, scrollbars, and theme variables needed for installed apps to match the playground.
 
