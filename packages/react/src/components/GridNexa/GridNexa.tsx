@@ -22,6 +22,7 @@ import type {
   GridNexaChangeReviewOptions,
   GridNexaValidationOptions,
   GridNexaDiagnosticsOptions,
+  GridNexaReproSnapshot,
   GridNexaAiRequest,
   GridNexaCommandAction,
   GridNexaCommandPlan,
@@ -269,8 +270,10 @@ interface GridNexaEventProps<T> {
 }
 
 export interface GridNexaExtendedProps<T>
-  extends Omit<GridOptions<T>, "toolbar" | "footer" | keyof GridNexaEventProps<T>>,
+  extends Omit<GridOptions<T>, "columns" | "rows" | "toolbar" | "footer" | keyof GridNexaEventProps<T>>,
     GridNexaEventProps<T> {
+  columns?: Column<T>[];
+  rows?: T[];
   groupBy?: keyof T & string;
   pageSize?: number;
   preset?: GridNexaPreset;
@@ -295,6 +298,7 @@ export interface GridNexaExtendedProps<T>
   textDisplay?: GridNexaTextDisplayOptions;
   createRow?: () => T;
   apiRef?: { current: GridNexaApi<T> | null };
+  repro?: GridNexaReproSnapshot<T>;
 }
 
 const defaultColumnTools = {
@@ -1486,8 +1490,9 @@ function buildTreeRows<T>(
 }
 
 export function GridNexa<T>({
-  rows,
-  columns,
+  rows: rowsProp,
+  columns: columnsProp,
+  repro,
   className,
   theme = "dark",
   density: densityProp,
@@ -1591,6 +1596,43 @@ export function GridNexa<T>({
     }
   }, [unstyled]);
 
+  const [runtimeRepro, setRuntimeRepro] =
+    useState<GridNexaReproSnapshot<T> | null>(null);
+  const effectiveRepro = runtimeRepro ?? repro;
+  const isRuntimeReproActive = runtimeRepro !== null;
+  const reproColumns = (effectiveRepro?.columns ?? []) as Column<T>[];
+  const reproRows = (effectiveRepro?.rows ?? effectiveRepro?.visibleRows ?? []) as T[];
+  const reproState = (effectiveRepro?.state ?? {}) as PersistedGridState & {
+    groupBy?: keyof T & string;
+    pivotBy?: keyof T & string;
+    pivotValueColumns?: Array<keyof T & string>;
+    pivotAggregation?: PivotAggregation;
+    selectedRowIndex?: number | null;
+    selectedRowIds?: Array<string | number>;
+    activeCell?: CellPosition | null;
+    cellRange?: {
+      startRow: number;
+      endRow: number;
+      startColumn: number;
+      endColumn: number;
+    } | null;
+    quickFilterText?: string;
+    findText?: string;
+  };
+  const columns = isRuntimeReproActive ? reproColumns : columnsProp ?? reproColumns;
+  const rows = isRuntimeReproActive ? reproRows : rowsProp ?? reproRows;
+  const reproSignature = useMemo(
+    () =>
+      effectiveRepro
+        ? JSON.stringify({
+            generatedAt: effectiveRepro.generatedAt,
+            columnIds: columns.map((column) => column.id),
+            rowCount: rows.length,
+            state: effectiveRepro.state,
+          })
+        : "",
+    [columns, effectiveRepro, rows.length],
+  );
   const presetDefaults = resolvePresetDefaults<T>(preset);
   const density = densityProp ?? "standard";
   const rowNumbers = rowNumbersProp ?? presetDefaults.rowNumbers ?? false;
@@ -1626,17 +1668,23 @@ export function GridNexa<T>({
         : null,
     [stateStorageOptions.enabled, stateStorageOptions.key],
   );
+  const initialState = effectiveRepro ? reproState : persistedState;
+  const shouldRestoreColumns = Boolean(effectiveRepro) || stateStorageOptions.persist.includes("columns");
+  const shouldRestoreFilters = Boolean(effectiveRepro) || stateStorageOptions.persist.includes("filters");
+  const shouldRestoreSort = Boolean(effectiveRepro) || stateStorageOptions.persist.includes("sort");
+  const shouldRestorePagination = Boolean(effectiveRepro) || stateStorageOptions.persist.includes("pagination");
+  const shouldRestoreSidePanel = Boolean(effectiveRepro) || stateStorageOptions.persist.includes("sidePanel");
 
   const sidePanelOptions = resolveSidePanelOptions(sidePanel);
   const fillWidthOptions = resolveFillWidthOptions(fillWidth);
   const initialSidePanel =
-    stateStorageOptions.persist.includes("sidePanel") &&
-    persistedState?.sidePanel?.filtersOpen &&
+    shouldRestoreSidePanel &&
+    initialState?.sidePanel?.filtersOpen &&
     sidePanelOptions.enabled &&
     sidePanelOptions.filters
       ? "filters"
-      : stateStorageOptions.persist.includes("sidePanel") &&
-          persistedState?.sidePanel?.columnsOpen &&
+      : shouldRestoreSidePanel &&
+          initialState?.sidePanel?.columnsOpen &&
           sidePanelOptions.enabled &&
           (sidePanelOptions.columns || sidePanelOptions.pivot)
         ? (sidePanelOptions.defaultActivePanel ?? "columns")
@@ -1701,25 +1749,45 @@ export function GridNexa<T>({
   const [columnWidths, setColumnWidths] = useState<Array<number | undefined>>(
     () =>
       columns.map((column) =>
-        stateStorageOptions.persist.includes("columns")
-          ? persistedState?.columnWidths?.[column.id] ?? column.width
+        shouldRestoreColumns
+          ? initialState?.columnWidths?.[column.id] ?? column.width
           : column.width,
       ),
   );
   const [sortModel, setSortModel] = useState<SortModel | null>(() =>
-    stateStorageOptions.persist.includes("sort")
-      ? persistedState?.sortModel ?? null
+    shouldRestoreSort
+      ? initialState?.sortModel ?? null
       : null,
   );
-  const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
-  const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(
-    () => new Set(),
+  const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(
+    () => reproState.selectedRowIndex ?? null,
   );
-  const [activeCell, setActiveCellState] = useState<CellPosition | null>(null);
+  const [selectedRowIds, setSelectedRowIds] = useState<Set<string | number>>(
+    () => new Set(reproState.selectedRowIds ?? []),
+  );
+  const [activeCell, setActiveCellState] = useState<CellPosition | null>(
+    () =>
+      reproState.activeCell ??
+      (reproState.cellRange
+        ? {
+            rowIndex: reproState.cellRange.endRow,
+            columnIndex: reproState.cellRange.endColumn,
+          }
+        : null),
+  );
   const [selectionAnchor, setSelectionAnchorState] =
-    useState<CellPosition | null>(null);
-  const [quickFilterText, setQuickFilterText] = useState("");
-  const [findText, setFindText] = useState("");
+    useState<CellPosition | null>(() =>
+      reproState.cellRange
+        ? {
+            rowIndex: reproState.cellRange.startRow,
+            columnIndex: reproState.cellRange.startColumn,
+          }
+        : null,
+    );
+  const [quickFilterText, setQuickFilterText] = useState(
+    () => reproState.quickFilterText ?? "",
+  );
+  const [findText, setFindText] = useState(() => reproState.findText ?? "");
   const [findMatchIndex, setFindMatchIndex] = useState(0);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiPlan, setAiPlan] = useState<GridNexaCommandPlan | null>(null);
@@ -1767,23 +1835,23 @@ export function GridNexa<T>({
     Record<string, ColumnFilterModel>
   >(() =>
     columnFilters ??
-    (stateStorageOptions.persist.includes("filters")
-      ? persistedState?.filterModel ?? {}
+    (shouldRestoreFilters
+      ? initialState?.filterModel ?? {}
       : {}),
   );
   const [advancedFilterModel, setAdvancedFilterModelState] =
     useState<AdvancedFilterModel | null>(() => advancedFilterModelProp ?? null);
   const [runtimeGroupBy, setRuntimeGroupBy] = useState<
     (keyof T & string) | undefined
-  >(() => groupByProp);
+  >(() => groupByProp ?? reproState.groupBy);
   const [runtimePivotBy, setRuntimePivotBy] = useState<
     (keyof T & string) | undefined
-  >(() => pivotByProp);
+  >(() => pivotByProp ?? reproState.pivotBy);
   const [runtimePivotValueColumns, setRuntimePivotValueColumns] = useState<
     Array<keyof T & string>
-  >(() => pivotValueColumnsProp ?? []);
+  >(() => pivotValueColumnsProp ?? reproState.pivotValueColumns ?? []);
   const [runtimePivotAggregation, setRuntimePivotAggregation] =
-    useState<PivotAggregation>(() => pivotAggregationProp);
+    useState<PivotAggregation>(() => reproState.pivotAggregation ?? pivotAggregationProp);
   const [undoStack, setUndoStack] = useState<T[][]>([]);
   const [redoStack, setRedoStack] = useState<T[][]>([]);
   const gridRowsRef = useRef<T[]>(rows);
@@ -1802,8 +1870,8 @@ export function GridNexa<T>({
     () => new Set(),
   );
   const [pageIndex, setPageIndex] = useState(() =>
-    stateStorageOptions.persist.includes("pagination")
-      ? persistedState?.pageIndex ?? 0
+    shouldRestorePagination
+      ? initialState?.pageIndex ?? 0
       : 0,
   );
   const [draggedRowIndex, setDraggedRowIndex] = useState<number | null>(null);
@@ -1815,18 +1883,18 @@ export function GridNexa<T>({
   const [hiddenColumnIds, setHiddenColumnIds] = useState<Set<string>>(
     () =>
       new Set(
-        stateStorageOptions.persist.includes("columns") &&
-          persistedState?.hiddenColumnIds
-          ? persistedState.hiddenColumnIds
+        shouldRestoreColumns &&
+          initialState?.hiddenColumnIds
+          ? initialState.hiddenColumnIds
           : columns.filter((column) => column.hidden).map((column) => column.id),
       ),
   );
   const [pinnedColumnIds, setPinnedColumnIds] = useState<
     Record<string, "left" | "right" | null | undefined>
   >(() =>
-    stateStorageOptions.persist.includes("columns") &&
-      persistedState?.pinnedColumnIds
-      ? persistedState.pinnedColumnIds
+    shouldRestoreColumns &&
+      initialState?.pinnedColumnIds
+      ? initialState.pinnedColumnIds
       : Object.fromEntries(
           columns
             .filter((column) => column.pinned)
@@ -1834,9 +1902,9 @@ export function GridNexa<T>({
         ),
   );
   const [columnOrder, setColumnOrder] = useState<string[]>(() =>
-    stateStorageOptions.persist.includes("columns") &&
-      persistedState?.columnOrder?.length
-      ? persistedState.columnOrder
+    shouldRestoreColumns &&
+      initialState?.columnOrder?.length
+      ? initialState.columnOrder
       : columns.map((column) => column.id),
   );
   const [draggedColumnId, setDraggedColumnId] = useState<string | null>(null);
@@ -1853,6 +1921,7 @@ export function GridNexa<T>({
   const commandButtonRef = useRef<HTMLButtonElement | null>(null);
   const defaultViewStateRef = useRef<PersistedGridState | null>(null);
   const defaultViewCreatedAtRef = useRef(Date.now());
+  const reproFileInputRef = useRef<HTMLInputElement | null>(null);
   const filterPanelRef = useRef<HTMLDivElement | null>(null);
   const advancedFilterPanelRef = useRef<HTMLDivElement | null>(null);
   const pivotPanelRef = useRef<HTMLDivElement | null>(null);
@@ -2132,31 +2201,54 @@ export function GridNexa<T>({
 
   useEffect(() => {
     const storedState =
-      stateStorageOptions.enabled && stateStorageOptions.type === "localStorage"
+      effectiveRepro
+        ? reproState
+        : stateStorageOptions.enabled && stateStorageOptions.type === "localStorage"
         ? readPersistedGridState(stateStorageOptions.key)
         : null;
 
     setColumnWidths(
       columns.map((column) =>
-        stateStorageOptions.persist.includes("columns")
+        shouldRestoreColumns
           ? storedState?.columnWidths?.[column.id] ?? column.width
           : column.width,
       ),
     );
     setSortModel(
-      stateStorageOptions.persist.includes("sort")
+      shouldRestoreSort
         ? storedState?.sortModel ?? null
         : null,
     );
-    setSelectedRowIndex(null);
-    setSelectedRowIds(new Set());
-    setActiveCellState(null);
-    setSelectionAnchorState(null);
+    setSelectedRowIndex(reproState.selectedRowIndex ?? null);
+    setSelectedRowIds(new Set(reproState.selectedRowIds ?? []));
+    setActiveCellState(
+      reproState.activeCell ??
+        (reproState.cellRange
+          ? {
+              rowIndex: reproState.cellRange.endRow,
+              columnIndex: reproState.cellRange.endColumn,
+            }
+          : null),
+    );
+    setSelectionAnchorState(
+      reproState.cellRange
+        ? {
+            rowIndex: reproState.cellRange.startRow,
+            columnIndex: reproState.cellRange.startColumn,
+          }
+        : null,
+    );
+    setQuickFilterText(reproState.quickFilterText ?? "");
+    setFindText(reproState.findText ?? "");
+    setRuntimeGroupBy(groupByProp ?? reproState.groupBy);
+    setRuntimePivotBy(pivotByProp ?? reproState.pivotBy);
+    setRuntimePivotValueColumns(pivotValueColumnsProp ?? reproState.pivotValueColumns ?? []);
+    setRuntimePivotAggregation(reproState.pivotAggregation ?? pivotAggregationProp);
     setCollapsedGroups(new Set());
     setCollapsedTreeKeys(new Set());
     setExpandedDetailKeys(new Set());
     setPageIndex(
-      stateStorageOptions.persist.includes("pagination")
+      shouldRestorePagination
         ? storedState?.pageIndex ?? 0
         : 0,
     );
@@ -2164,14 +2256,14 @@ export function GridNexa<T>({
     setDropTargetRowIndex(null);
     setHiddenColumnIds(
       new Set(
-        stateStorageOptions.persist.includes("columns") &&
+        shouldRestoreColumns &&
           storedState?.hiddenColumnIds
           ? storedState.hiddenColumnIds
           : columns.filter((column) => column.hidden).map((column) => column.id),
       ),
     );
     setPinnedColumnIds(
-      stateStorageOptions.persist.includes("columns") &&
+      shouldRestoreColumns &&
         storedState?.pinnedColumnIds
         ? storedState.pinnedColumnIds
         : Object.fromEntries(
@@ -2181,7 +2273,7 @@ export function GridNexa<T>({
           ),
     );
     setColumnOrder(
-      stateStorageOptions.persist.includes("columns") &&
+      shouldRestoreColumns &&
         storedState?.columnOrder?.length
         ? storedState.columnOrder
         : columns.map((column) => column.id),
@@ -2194,6 +2286,11 @@ export function GridNexa<T>({
     setDynamicColumnWidths({});
   }, [
     columnSignature,
+    reproSignature,
+    groupByProp,
+    pivotAggregationProp,
+    pivotByProp,
+    pivotValueColumnsProp,
     stateStorageOptions.enabled,
     stateStorageOptions.key,
     stateStoragePersistSignature,
@@ -3288,7 +3385,7 @@ export function GridNexa<T>({
 
       const value = getColumnValue(row, column);
 
-      return column.valueFormatter
+      return typeof column.valueFormatter === "function"
         ? column.valueFormatter(value)
         : String(value ?? "");
     };
@@ -3688,7 +3785,9 @@ export function GridNexa<T>({
       const value = getColumnValue(row, column);
       const cellWidth =
         String(
-          column.valueFormatter ? column.valueFormatter(value) : (value ?? ""),
+          typeof column.valueFormatter === "function"
+            ? column.valueFormatter(value)
+            : (value ?? ""),
         ).length *
           9 +
         32;
@@ -4293,6 +4392,47 @@ export default function GridNexaRepro() {
       columns: columns.length,
     });
   };
+  const importDiagnosticsSnapshot = async (file: File | null) => {
+    if (!diagnosticsEnabled || !diagnosticsOptions.exportRepro || !file) {
+      return;
+    }
+
+    try {
+      const snapshot = JSON.parse(
+        await file.text(),
+      ) as GridNexaReproSnapshot<T>;
+      const importedRows = snapshot.rows ?? snapshot.visibleRows;
+
+      if (!Array.isArray(snapshot.columns) || !Array.isArray(importedRows)) {
+        throw new Error("Invalid GridNexa repro snapshot");
+      }
+
+      const normalizedSnapshot: GridNexaReproSnapshot<T> = {
+        ...snapshot,
+        rows: importedRows,
+      };
+
+      setRuntimeRepro(normalizedSnapshot);
+      setUndoStack([]);
+      setRedoStack([]);
+      undoStackRef.current = [];
+      redoStackRef.current = [];
+      setChangeLog([]);
+      diagnosticEventsRef.current = [];
+      setDiagnosticEvents([]);
+      recordDiagnosticEvent("diagnostics", "Imported repro snapshot", {
+        fileName: file.name,
+        rows: importedRows.length,
+        columns: snapshot.columns.length,
+      });
+    } catch (error) {
+      console.warn("GridNexa could not import repro JSON", error);
+      window.alert("Could not import GridNexa repro JSON.");
+    }
+  };
+  const openReproFilePicker = () => {
+    reproFileInputRef.current?.click();
+  };
   const applySavedView = (view: SavedGridView) => {
     setActiveViewId(view.id);
     recordDiagnosticEvent("view", `Applied view: ${view.name}`, {
@@ -4388,7 +4528,10 @@ export default function GridNexaRepro() {
       ? [
           { id: "diagnostics", label: "Open diagnostics", run: () => { setDiagnosticsOpen(true); setCommandPaletteOpen(false); } },
           ...(diagnosticsOptions.exportRepro
-            ? [{ id: "export-repro", label: "Export repro snapshot", run: () => { exportDiagnosticsSnapshot(); setCommandPaletteOpen(false); } }]
+            ? [
+                { id: "export-repro", label: "Export repro snapshot", run: () => { exportDiagnosticsSnapshot(); setCommandPaletteOpen(false); } },
+                { id: "import-repro", label: "Import repro snapshot", run: () => { openReproFilePicker(); setCommandPaletteOpen(false); } },
+              ]
             : []),
         ]
       : []),
@@ -5384,6 +5527,19 @@ export default function GridNexaRepro() {
         data-gnx-density={density}
         onClick={closeCellContextMenu}
       >
+        {diagnosticsEnabled && diagnosticsOptions.exportRepro ? (
+          <input
+            ref={reproFileInputRef}
+            type="file"
+            accept="application/json,.json"
+            style={{ display: "none" }}
+            onChange={(event) => {
+              void importDiagnosticsSnapshot(event.currentTarget.files?.[0] ?? null);
+              event.currentTarget.value = "";
+            }}
+          />
+        ) : null}
+
         {toolbarVisible ? (
         <div className={cx("sg-toolbar", mergedClassNames.toolbar)}>
           {toolbarOptions.summary ? (
@@ -5944,6 +6100,16 @@ export default function GridNexaRepro() {
               Export Excel
             </button>
             ) : null}
+
+            {diagnosticsEnabled && diagnosticsOptions.exportRepro ? (
+            <button
+              className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+              type="button"
+              onClick={openReproFilePicker}
+            >
+              Import repro
+            </button>
+            ) : null}
           </div>
         </div>
         ) : null}
@@ -6002,13 +6168,22 @@ export default function GridNexaRepro() {
               <strong>Diagnostics</strong>
               <div className="sg-diagnostics-actions">
                 {diagnosticsOptions.exportRepro ? (
-                  <button
-                    type="button"
-                    className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
-                    onClick={exportDiagnosticsSnapshot}
-                  >
-                    Export repro
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                      onClick={exportDiagnosticsSnapshot}
+                    >
+                      Export repro
+                    </button>
+                    <button
+                      type="button"
+                      className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                      onClick={openReproFilePicker}
+                    >
+                      Import repro
+                    </button>
+                  </>
                 ) : null}
                 {diagnosticsOptions.recorder ? (
                   <button

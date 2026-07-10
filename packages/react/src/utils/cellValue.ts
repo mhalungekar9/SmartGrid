@@ -34,7 +34,9 @@ function evaluateFormula<T>(formula: string, row: T): unknown {
 }
 
 export function getRawColumnValue<T>(row: T, column: Column<T>): unknown {
-  return column.valueGetter?.(row) ?? row[column.field];
+  return typeof column.valueGetter === "function"
+    ? column.valueGetter(row)
+    : row[column.field];
 }
 
 export function getColumnValue<T>(row: T, column: Column<T>): unknown {

@@ -94,9 +94,9 @@ export function GridCell<T>({
     rowIndex <= rangeEndRow &&
     columnIndex >= rangeStartColumn &&
     columnIndex <= rangeEndColumn;
-  const renderedValue: ReactNode = column.cellRenderer
+  const renderedValue: ReactNode = typeof column.cellRenderer === "function"
     ? (column.cellRenderer(value, row) as ReactNode)
-    : column.valueFormatter
+    : typeof column.valueFormatter === "function"
       ? column.valueFormatter(value)
       : String(value ?? "");
   const editor =

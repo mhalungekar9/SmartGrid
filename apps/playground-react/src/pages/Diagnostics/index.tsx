@@ -1,5 +1,5 @@
-import { useRef } from "react";
-import { GridNexa, type Column, type GridNexaApi } from "@gridnexa/react";
+import { useRef, useState } from "react";
+import { GridNexa, type Column, type GridNexaApi, type GridNexaReproSnapshot } from "@gridnexa/react";
 import { CodeViewer } from "../../components/CodeViewer";
 import { DemoCard } from "../../components/DemoCard";
 import { useAppTheme } from "../../hooks/useTheme";
@@ -64,6 +64,24 @@ const apiCode = `const apiRef = useRef<GridNexaApi<Row> | null>(null);
 
 apiRef.current?.exportDiagnostics();`;
 
+const importReproCode = `const [repro, setRepro] = useState<GridNexaReproSnapshot<Row> | null>(null);
+
+<input
+  type="file"
+  accept=".json,application/json"
+  onChange={async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setRepro(JSON.parse(await file.text()));
+  }}
+/>
+
+{repro ? (
+  <GridNexa repro={repro} />
+) : (
+  <p>Select a repro JSON file</p>
+)}`;
+
 const snapshotItems = [
   ["Grid state", "Column order, widths, hidden columns, pinned columns, filters, sort, page, side panels, selected cell, and selected range."],
   ["Safe repro data", "Columns and sampled rows are sanitized so functions become readable placeholders instead of breaking JSON export."],
@@ -74,6 +92,7 @@ const snapshotItems = [
 export function Diagnostics() {
   const theme = useAppTheme();
   const apiRef = useRef<GridNexaApi<IncidentRow> | null>(null);
+  const [repro, setRepro] = useState<GridNexaReproSnapshot<IncidentRow> | null>(null);
 
   return (
     <div className="showcase-page">
@@ -150,6 +169,30 @@ export function Diagnostics() {
 
         <DemoCard title="Export from your own UI" description="Use the GridNexa API when you want a custom report button outside the grid toolbar.">
           <CodeViewer code={apiCode} />
+        </DemoCard>
+
+        <DemoCard title="Import repro JSON from your own UI" description="Use a normal file input when you want to load an exported GridNexa repro outside the built-in toolbar import.">
+          <input
+            className="form-control mb-3"
+            type="file"
+            accept=".json,application/json"
+            onChange={async (event) => {
+              const file = event.target.files?.[0];
+
+              if (!file) return;
+
+              setRepro(JSON.parse(await file.text()));
+              event.currentTarget.value = "";
+            }}
+          />
+
+          {repro ? (
+            <GridNexa repro={repro} theme={theme} />
+          ) : (
+            <p>Select a repro JSON file</p>
+          )}
+
+          <CodeViewer code={importReproCode} />
         </DemoCard>
       </div>
     </div>

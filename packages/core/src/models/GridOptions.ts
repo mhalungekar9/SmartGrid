@@ -313,9 +313,45 @@ export interface GridNexaCellRange {
   endColumn: number;
 }
 
+export interface GridNexaReproSnapshot<T = unknown> {
+  schemaVersion?: number;
+  packageName?: string;
+  generatedAt?: string;
+  columns?: Column<T>[];
+  rows?: T[];
+  visibleRows?: T[];
+  state?: Partial<{
+    columnOrder: string[];
+    columnWidths: Record<string, number>;
+    hiddenColumnIds: string[];
+    pinnedColumnIds: Record<string, "left" | "right" | null>;
+    filterModel: Record<string, ColumnFilterModel>;
+    sortModel: { columnId: string; direction: "asc" | "desc" } | null;
+    pageIndex: number;
+    sidePanel: {
+      columnsOpen?: boolean;
+      filtersOpen?: boolean;
+    };
+    groupBy: keyof T & string;
+    pivotBy: keyof T & string;
+    pivotValueColumns: Array<keyof T & string>;
+    pivotAggregation: PivotAggregation;
+    selectedRowIndex: number | null;
+    selectedRowIds: Array<string | number>;
+    activeCell: GridNexaCellPosition | null;
+    cellRange: GridNexaCellRange | null;
+    quickFilterText: string;
+    findText: string;
+  }>;
+  changeReview?: unknown[];
+  events?: unknown[];
+  reactExample?: string;
+}
+
 export interface GridOptions<T = unknown> {
   columns: Column<T>[];
   rows: T[];
+  repro?: GridNexaReproSnapshot<T>;
   className?: string;
   theme?: GridNexaTheme;
   density?: GridNexaDensity;
