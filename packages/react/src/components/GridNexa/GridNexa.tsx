@@ -1610,10 +1610,43 @@ export function GridNexa<T>({
   const [gridRows, setGridRows] = useState(rows);
   const skipNextRowsHistoryResetRef = useRef(false);
   const pendingInternalRowsRef = useRef<T[] | null>(null);
+  const rowsHaveSameValues = (leftRow: T, rightRow: T) => {
+    if (Object.is(leftRow, rightRow)) {
+      return true;
+    }
+
+    if (
+      typeof leftRow !== "object" ||
+      leftRow == null ||
+      typeof rightRow !== "object" ||
+      rightRow == null
+    ) {
+      return false;
+    }
+
+    const leftRecord = leftRow as Record<string, unknown>;
+    const rightRecord = rightRow as Record<string, unknown>;
+    const leftKeys = Object.keys(leftRecord);
+    const rightKeys = Object.keys(rightRecord);
+
+    if (leftKeys.length !== rightKeys.length) {
+      return false;
+    }
+
+    return leftKeys.every(
+      (key) =>
+        Object.prototype.hasOwnProperty.call(rightRecord, key) &&
+        Object.is(leftRecord[key], rightRecord[key]),
+    );
+  };
   const rowsMatchByReference = (left: T[], right: T[] | null) =>
     right != null &&
     left.length === right.length &&
     left.every((row, index) => row === right[index]);
+  const rowsMatchInternalEcho = (left: T[], right: T[] | null) =>
+    right != null &&
+    left.length === right.length &&
+    left.every((row, index) => rowsHaveSameValues(row, right[index]));
   const markInternalRowsChange = (nextRows: T[]) => {
     skipNextRowsHistoryResetRef.current = true;
     pendingInternalRowsRef.current = nextRows;
@@ -1805,7 +1838,8 @@ export function GridNexa<T>({
     const isInternalRowsEcho =
       skipNextRowsHistoryResetRef.current &&
       (rows === pendingInternalRowsRef.current ||
-        rowsMatchByReference(rows, pendingInternalRowsRef.current));
+        rowsMatchByReference(rows, pendingInternalRowsRef.current) ||
+        rowsMatchInternalEcho(rows, pendingInternalRowsRef.current));
 
     if (isInternalRowsEcho) {
       skipNextRowsHistoryResetRef.current = false;
