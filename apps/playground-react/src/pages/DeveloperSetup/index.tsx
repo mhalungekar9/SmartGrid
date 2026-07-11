@@ -25,12 +25,62 @@ export default function EmployeesGrid() {
   return <GridNexa columns={columns} rows={rows} preset="spreadsheet" />;
 }`;
 
+const productivitySetup = `import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+
+<GridNexa
+  columns={columns}
+  rows={rows}
+  getRowId={(row) => row.id}
+  preset="admin"
+  views={{ key: "employees-grid-views" }}
+  commandPalette
+  changeReview
+  validation={{
+    blockSave: true,
+    rules: {
+      name: { required: true },
+      score: { type: "number", min: 70, max: 100 }
+    }
+  }}
+  diagnostics
+/>;`;
+
+const productivityNextSetup = `"use client";
+
+import { GridNexa } from "@gridnexa/react";
+import "@gridnexa/react/index.css";
+
+export default function EmployeesGrid() {
+  return (
+    <GridNexa
+      columns={columns}
+      rows={rows}
+      getRowId={(row) => row.id}
+      preset="admin"
+      views={{ key: "employees-grid-views" }}
+      commandPalette
+      changeReview
+      validation={{ rules: { name: { required: true } } }}
+      diagnostics
+    />
+  );
+}`;
+
 const externalChecklist = [
   "Import @gridnexa/react/index.css once in the app entry or route layout.",
   "Keep column ids stable; views, resizing, sorting, filters, and reorder use ids.",
   "Use getRowId for selection, editing, saved views, and server-backed rows.",
   "Prefer presets first, then override toolbar, sidePanel, columnTools, footer, or fillWidth.",
   "Use views.key per screen, not one key shared across unrelated grids.",
+];
+
+const productivityChecklist = [
+  "Use preset=\"admin\" as the base for internal productivity tools.",
+  "Enable views, commandPalette, changeReview, validation, and diagnostics together for app-grade workflows.",
+  "Keep validation rules synchronous and lightweight; run expensive checks in your save flow.",
+  "Turn on toolbar save and row actions when changeReview is part of the workflow.",
+  "Use diagnostics while integrating, then keep recorder/export options for support-heavy screens.",
 ];
 
 export function DeveloperSetup() {
@@ -56,10 +106,29 @@ export function DeveloperSetup() {
           <span className="eyebrow">Next.js App Router</span>
           <CodeViewer code={nextSetup} />
         </article>
+        <article className="setup-card setup-card--wide">
+          <span className="eyebrow">Productivity suite</span>
+          <CodeViewer code={productivitySetup} />
+        </article>
+        <article className="setup-card setup-card--wide">
+          <span className="eyebrow">Productivity suite for Next.js</span>
+          <CodeViewer code={productivityNextSetup} />
+        </article>
         <article className="setup-card">
           <span className="eyebrow">External app checklist</span>
           <ul className="setup-checklist">
             {externalChecklist.map((item) => (
+              <li key={item}>
+                <i className="bi bi-check2-circle" />
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </article>
+        <article className="setup-card">
+          <span className="eyebrow">Productivity checklist</span>
+          <ul className="setup-checklist">
+            {productivityChecklist.map((item) => (
               <li key={item}>
                 <i className="bi bi-check2-circle" />
                 <span>{item}</span>

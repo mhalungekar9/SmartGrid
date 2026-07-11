@@ -37,6 +37,10 @@ export interface FeatureConfig {
   cellEvents?: boolean;
 }
 
+const columnMergeColumns = employeeColumns
+  .filter((column) => ["name", "department", "city", "active", "score"].includes(column.id))
+  .map((column) => ({ ...column, pinned: undefined }));
+
 export const featureConfigs = {
   basicGrid: {
     title: "Basic Grid",
@@ -378,6 +382,7 @@ import "@gridnexa/react/index.css";
         columnIds: ["active", "score"],
       },
     ],
+    columns: columnMergeColumns,
     code: `import { GridNexa, type Column, type MergedHeader } from "@gridnexa/react";
 
 interface Employee {

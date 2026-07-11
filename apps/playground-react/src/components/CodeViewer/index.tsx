@@ -1,5 +1,9 @@
+import { useState } from "react";
+
 interface CodeViewerProps {
   code: string;
+  defaultOpen?: boolean;
+  label?: string;
 }
 
 const tokenPattern =
@@ -37,10 +41,25 @@ function highlightCode(code: string) {
   });
 }
 
-export function CodeViewer({ code }: CodeViewerProps) {
+export function CodeViewer({ code, defaultOpen = false, label = "Code" }: CodeViewerProps) {
+  const [open, setOpen] = useState(defaultOpen);
+
   return (
-    <pre className="code-viewer">
-      <code>{highlightCode(code)}</code>
-    </pre>
+    <div className="code-viewer-shell">
+      <button
+        className={`code-toggle${open ? " active" : ""}`}
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
+      >
+        <i className="bi bi-code-slash" aria-hidden="true" />
+        <span>{open ? "Hide code" : label}</span>
+      </button>
+      {open ? (
+        <pre className="code-viewer">
+          <code>{highlightCode(code)}</code>
+        </pre>
+      ) : null}
+    </div>
   );
 }

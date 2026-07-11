@@ -45,11 +45,11 @@ const code = `<GridNexa
 />`;
 
 const capabilities = [
-  ["Saved views", "Users can save and switch layouts without your app wiring custom state."],
-  ["Command palette", "Ctrl+K / Cmd+K makes actions discoverable for power users."],
-  ["Change review", "Edits, row additions, and deletes are visible before Save All."],
-  ["Validation", "Invalid cells are highlighted and Save All can be blocked."],
-  ["Diagnostics", "Developers can inspect runtime counts while integrating."],
+  ["bi-lightning-charge", "Saved views", "Users can save and switch layouts without your app wiring custom state."],
+  ["bi-lightning-charge", "Command palette", "Ctrl+K / Cmd+K makes actions discoverable for power users."],
+  ["bi-lightning-charge", "Change review", "Edits, row additions, and deletes are visible before Save All."],
+  ["bi-lightning-charge", "Validation", "Invalid cells are highlighted and Save All can be blocked."],
+  ["bi-lightning-charge", "Diagnostics", "Developers can inspect runtime counts while integrating."],
 ];
 
 export function ProductivitySuite() {
@@ -68,10 +68,12 @@ export function ProductivitySuite() {
         </div>
       </section>
 
-      <section className="spotlight-grid">
-        {capabilities.map(([title, text]) => (
-          <article className="spotlight-card" key={title}>
-            <i className="bi bi-lightning-charge" />
+      <section className="productivity-card-grid" aria-label="Productivity suite features">
+        {capabilities.map(([icon, title, text]) => (
+          <article className="productivity-card" key={title}>
+            <span className="productivity-card-icon">
+              <i className={`bi ${icon}`} />
+            </span>
             <strong>{title}</strong>
             <span>{text}</span>
           </article>
