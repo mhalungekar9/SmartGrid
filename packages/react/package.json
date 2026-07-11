@@ -1,6 +1,6 @@
 {
     "name":  "@gridnexa/react",
-    "version":  "0.1.14",
+    "version":  "0.1.15",
     "description":  "Feature-rich React data grid and React table with Excel import, clipboard paste, editing, filtering, pivoting, diagnostics, and TypeScript APIs.",
     "type":  "module",
     "main":  "./dist/index.js",

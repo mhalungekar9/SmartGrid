@@ -42,6 +42,7 @@ const code = `<GridNexa
     }
   }}
   diagnostics
+  dataHealth
 />`;
 
 const capabilities = [
@@ -50,6 +51,7 @@ const capabilities = [
   ["bi-lightning-charge", "Change review", "Edits, row additions, and deletes are visible before Save All."],
   ["bi-lightning-charge", "Validation", "Invalid cells are highlighted and Save All can be blocked."],
   ["bi-lightning-charge", "Diagnostics", "Developers can inspect runtime counts while integrating."],
+  ["bi-lightning-charge", "Data health", "Users can profile missing values, duplicates, invalid cells, and outliers."],
 ];
 
 export function ProductivitySuite() {
@@ -93,6 +95,7 @@ export function ProductivitySuite() {
             changeReview
             validation={{ blockSave: true, rules: { name: { required: true }, score: { type: "number", min: 70, max: 100 } } }}
             diagnostics
+            dataHealth
             createRow={() => ({ id: Date.now(), name: "New workflow", owner: "Operations", status: "Review", score: 0 })}
           />
         </DemoCard>

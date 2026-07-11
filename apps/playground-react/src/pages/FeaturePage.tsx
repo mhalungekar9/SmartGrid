@@ -48,6 +48,8 @@ export function FeaturePage({ config }: FeaturePageProps) {
         createRow={config.createRow}
         toolbar={toolbar}
         sidePanel={config.sidePanel}
+        dataHealth={config.dataHealth}
+        validation={config.validation}
         fillWidth={config.fillWidth}
         pageSize={config.pageSize}
         quickFilterText={config.quickFilterText}

@@ -198,9 +198,9 @@ Built-in loading, error, and empty overlays appear inside the grid viewport with
 
 ## Feature Parity Note
 
-React is the reference package and currently has the fullest productivity layer: saved views UI, command palette, change review, validation UI, and diagnostics panel.
+React is the reference package and currently has the fullest productivity layer: saved views UI, command palette, change review, validation UI, diagnostics panel, and Data Health panel.
 
-The Angular package supports the shared core grid surface used in the playground: presets, overlays, sorting, filtering, editing, formulas, selection, range fill, undo/redo, column tools, grouping, pivoting, tree data, master/detail, export, AI actions, and server-side operation events. The React-only productivity layer is planned for parity work before those docs are promoted for Angular.
+The Angular package supports the shared core grid surface used in the playground: presets, overlays, sorting, filtering, editing, formulas, selection, range fill, undo/redo, column tools, grouping, pivoting, tree data, master/detail, export, AI actions, and server-side operation events. React-only productivity panels such as Data Health are planned for parity work before those docs are promoted for Angular.
 
 ## Column And Range Summaries
 

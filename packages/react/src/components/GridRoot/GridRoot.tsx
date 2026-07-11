@@ -1,8 +1,12 @@
-import type { PropsWithChildren } from "react";
+import type { PropsWithChildren, Ref } from "react";
 import { cx, useGridContext } from "../../context/GridContext";
 import "./GridRoot.css";
 
-export function GridRoot({ children }: PropsWithChildren) {
+interface GridRootProps extends PropsWithChildren {
+  rootRef?: Ref<HTMLDivElement>;
+}
+
+export function GridRoot({ children, rootRef }: GridRootProps) {
   const {
     rows,
     columns,
@@ -125,6 +129,7 @@ export function GridRoot({ children }: PropsWithChildren) {
 
   return (
     <div
+      ref={rootRef}
       className={cx("sg-grid-root", classNames.gridRoot)}
       style={
         {

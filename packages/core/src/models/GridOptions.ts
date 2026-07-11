@@ -109,6 +109,7 @@ export type GridNexaToolbarOptions =
       bulkEdit: boolean;
       findReplace: boolean;
       charts: boolean;
+      dataHealth: boolean;
       prevNextPage: boolean;
       saveAll: boolean;
       addRow: boolean;
@@ -221,6 +222,15 @@ export type GridNexaDiagnosticsOptions =
       maxEvents: number;
       rowSampleSize: number;
       fileName: string;
+    }>;
+export type GridNexaDataHealthOptions =
+  | boolean
+  | Partial<{
+      enabled: boolean;
+      showPanel: boolean;
+      toolbarButton: boolean;
+      duplicateThreshold: number;
+      outlierIqrMultiplier: number;
     }>;
 export interface GridNexaIconSet {
   sortAsc?: unknown;
@@ -434,6 +444,7 @@ export interface GridOptions<T = unknown> {
   changeReview?: GridNexaChangeReviewOptions;
   validation?: GridNexaValidationOptions;
   diagnostics?: GridNexaDiagnosticsOptions;
+  dataHealth?: GridNexaDataHealthOptions;
   charts?: GridNexaChartsOptions;
   sidePanel?: GridNexaSidePanelOptions;
   fillWidth?: GridNexaFillWidthOptions;

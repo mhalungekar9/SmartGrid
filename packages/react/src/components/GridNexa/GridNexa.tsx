@@ -53,6 +53,7 @@ import type {
   GridNexaChangeReviewOptions,
   GridNexaValidationOptions,
   GridNexaDiagnosticsOptions,
+  GridNexaDataHealthOptions,
   GridNexaReproSnapshot,
   GridNexaChartType,
   GridNexaChartsOptions,
@@ -329,6 +330,7 @@ export interface GridNexaExtendedProps<T>
   changeReview?: GridNexaChangeReviewOptions;
   validation?: GridNexaValidationOptions;
   diagnostics?: GridNexaDiagnosticsOptions;
+  dataHealth?: GridNexaDataHealthOptions;
   charts?: GridNexaChartsOptions;
   loading?: boolean;
   error?: ReactNode;
@@ -790,6 +792,24 @@ type DiagnosticEvent = {
   details?: Record<string, unknown>;
 };
 
+type DataHealthIssueKind = "missing" | "duplicate" | "invalid" | "outlier";
+
+type DataHealthColumnProfile = {
+  column: Column<unknown>;
+  completeness: number;
+  missingCount: number;
+  duplicateCount: number;
+  invalidCount: number;
+  outlierCount: number;
+  uniqueCount: number;
+  score: number;
+  min?: number;
+  max?: number;
+  average?: number;
+  topValues: Array<{ value: string; count: number }>;
+  issueRowIndexes: Record<DataHealthIssueKind, Set<number>>;
+};
+
 function readPersistedGridState(key: string): PersistedGridState | null {
   if (!key || typeof window === "undefined") {
     return null;
@@ -869,6 +889,36 @@ function resolveDiagnosticsOptions(value?: GridNexaDiagnosticsOptions) {
   };
 }
 
+function resolveDataHealthOptions(value?: GridNexaDataHealthOptions) {
+  const defaults = {
+    enabled: false,
+    showPanel: false,
+    toolbarButton: true,
+    duplicateThreshold: 2,
+    outlierIqrMultiplier: 1.5,
+  };
+
+  if (!value) {
+    return defaults;
+  }
+
+  if (value === true) {
+    return {
+      ...defaults,
+      enabled: true,
+    };
+  }
+
+  return {
+    ...defaults,
+    enabled: value.enabled ?? true,
+    showPanel: value.showPanel ?? defaults.showPanel,
+    toolbarButton: value.toolbarButton ?? defaults.toolbarButton,
+    duplicateThreshold: value.duplicateThreshold ?? defaults.duplicateThreshold,
+    outlierIqrMultiplier: value.outlierIqrMultiplier ?? defaults.outlierIqrMultiplier,
+  };
+}
+
 function resolveChartsOptions(value?: GridNexaChartsOptions) {
   const defaults = {
     enabled: false,
@@ -937,6 +987,39 @@ const chartTypeLabels: Record<GridNexaChartType, string> = {
 
 const getChartTypeLabel = (type: GridNexaChartType) =>
   chartTypeLabels[type] ?? type;
+
+function isBlankDataHealthValue(value: unknown) {
+  return value == null || (typeof value === "string" && value.trim() === "");
+}
+
+function formatDataHealthValue(value: unknown) {
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+
+  if (typeof value === "object" && value != null) {
+    try {
+      return JSON.stringify(value);
+    } catch {
+      return String(value);
+    }
+  }
+
+  return String(value ?? "");
+}
+
+function dataHealthPercentile(values: number[], ratio: number) {
+  if (!values.length) {
+    return 0;
+  }
+
+  const position = (values.length - 1) * ratio;
+  const lower = Math.floor(position);
+  const upper = Math.ceil(position);
+  const weight = position - lower;
+
+  return values[lower] + (values[upper] - values[lower]) * weight;
+}
 
 function readSavedGridViews(key: string): SavedGridView[] {
   if (!key || typeof window === "undefined") return [];
@@ -1864,6 +1947,7 @@ export function GridNexa<T>({
   changeReview,
   validation,
   diagnostics,
+  dataHealth,
   charts,
   loading = false,
   error,
@@ -2134,6 +2218,8 @@ export function GridNexa<T>({
   const changeReviewEnabled = resolveEnabledOption(changeReview);
   const diagnosticsOptions = resolveDiagnosticsOptions(diagnostics);
   const diagnosticsEnabled = diagnosticsOptions.enabled;
+  const dataHealthOptions = resolveDataHealthOptions(dataHealth);
+  const dataHealthEnabled = dataHealthOptions.enabled;
   const chartsOptions = resolveChartsOptions(charts);
   const chartsEnabled =
     chartsOptions.enabled ||
@@ -2152,6 +2238,17 @@ export function GridNexa<T>({
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(
     diagnosticsEnabled ? diagnosticsOptions.showPanel === true : false,
   );
+  const [dataHealthOpen, setDataHealthOpen] = useState(
+    dataHealthEnabled ? dataHealthOptions.showPanel === true : false,
+  );
+  const [activeDataHealthFilter, setActiveDataHealthFilter] = useState<{
+    columnId: string;
+    issueKind: DataHealthIssueKind;
+  } | null>(null);
+  const dataHealthFilterRestoreRef = useRef<{
+    columnId: string;
+    filter: ColumnFilterModel | null;
+  } | null>(null);
   const [chartsOpen, setChartsOpen] = useState(false);
   const [chartType, setChartType] = useState<GridNexaChartType>(
     chartsOptions.defaultType,
@@ -2265,6 +2362,7 @@ export function GridNexa<T>({
     Record<string, number>
   >({});
   const commandButtonRef = useRef<HTMLButtonElement | null>(null);
+  const gridRootRef = useRef<HTMLDivElement | null>(null);
   const defaultViewStateRef = useRef<PersistedGridState | null>(null);
   const defaultViewCreatedAtRef = useRef(Date.now());
   const reproFileInputRef = useRef<HTMLInputElement | null>(null);
@@ -4786,6 +4884,7 @@ export function GridNexa<T>({
           bulkEdit: false,
           findReplace: false,
           charts: false,
+          dataHealth: false,
           prevNextPage: false,
           saveAll: false,
           addRow: false,
@@ -4812,6 +4911,7 @@ export function GridNexa<T>({
           bulkEdit: true,
           findReplace: true,
           charts: false,
+          dataHealth: false,
           prevNextPage: true,
           saveAll: Boolean(onSaveAll),
           addRow: false,
@@ -4832,6 +4932,9 @@ export function GridNexa<T>({
     charts:
       toolbarOptionsBase.charts ||
       (chartsEnabled && chartsOptions.toolbarButton),
+    dataHealth:
+      toolbarOptionsBase.dataHealth ||
+      (dataHealthEnabled && dataHealthOptions.toolbarButton),
   };
   const toolbarVisible =
     toolbar !== false && Object.values(toolbarOptions).some(Boolean);
@@ -4859,6 +4962,142 @@ export function GridNexa<T>({
     (typeof footer === "object" && footer.renderer
       ? true
       : Object.values(footerOptions).some(Boolean));
+  const invalidCellCount = validationResult.size;
+  const dataHealthProfiles = useMemo(() => {
+    if (!dataHealthEnabled || pivotResult.active) {
+      return [] as DataHealthColumnProfile[];
+    }
+
+    return tableColumns.map((column, columnIndex) => {
+      const counts = new Map<string, { raw: unknown; count: number; rowIndexes: number[] }>();
+      const numericValues: Array<{ value: number; rowIndex: number }> = [];
+      const issueRowIndexes: Record<DataHealthIssueKind, Set<number>> = {
+        missing: new Set<number>(),
+        duplicate: new Set<number>(),
+        invalid: new Set<number>(),
+        outlier: new Set<number>(),
+      };
+
+      tableRows.forEach((row, rowIndex) => {
+        const value = getColumnValue(row, column);
+
+        if (isBlankDataHealthValue(value)) {
+          issueRowIndexes.missing.add(rowIndex);
+        }
+
+        if (validationResult.has(`${rowIndex}:${columnIndex}`)) {
+          issueRowIndexes.invalid.add(rowIndex);
+        }
+
+        const filterType = getColumnFilterType(column);
+        const text = String(value ?? "").trim();
+
+        if (text) {
+          if (filterType === "number" && !Number.isFinite(Number(value))) {
+            issueRowIndexes.invalid.add(rowIndex);
+          }
+
+          if (filterType === "date" && Number.isNaN(Date.parse(text))) {
+            issueRowIndexes.invalid.add(rowIndex);
+          }
+        }
+
+        if (!isBlankDataHealthValue(value)) {
+          const key = formatDataHealthValue(value);
+          const entry = counts.get(key) ?? { raw: value, count: 0, rowIndexes: [] };
+
+          entry.count += 1;
+          entry.rowIndexes.push(rowIndex);
+          counts.set(key, entry);
+        }
+
+        const numberValue = Number(value);
+
+        if (Number.isFinite(numberValue)) {
+          numericValues.push({ value: numberValue, rowIndex });
+        }
+      });
+
+      counts.forEach((entry) => {
+        if (entry.count >= dataHealthOptions.duplicateThreshold) {
+          entry.rowIndexes.forEach((rowIndex) => issueRowIndexes.duplicate.add(rowIndex));
+        }
+      });
+
+      if (numericValues.length >= 4) {
+        const sortedValues = numericValues.map((entry) => entry.value).sort((left, right) => left - right);
+        const q1 = dataHealthPercentile(sortedValues, 0.25);
+        const q3 = dataHealthPercentile(sortedValues, 0.75);
+        const iqr = q3 - q1;
+
+        if (iqr > 0) {
+          const lowerFence = q1 - iqr * dataHealthOptions.outlierIqrMultiplier;
+          const upperFence = q3 + iqr * dataHealthOptions.outlierIqrMultiplier;
+
+          numericValues.forEach((entry) => {
+            if (entry.value < lowerFence || entry.value > upperFence) {
+              issueRowIndexes.outlier.add(entry.rowIndex);
+            }
+          });
+        }
+      }
+
+      const missingCount = issueRowIndexes.missing.size;
+      const duplicateCount = issueRowIndexes.duplicate.size;
+      const invalidCount = issueRowIndexes.invalid.size;
+      const outlierCount = issueRowIndexes.outlier.size;
+      const issueWeight = invalidCount * 1.2 + missingCount + duplicateCount * 0.55 + outlierCount * 0.65;
+      const score = tableRows.length
+        ? Math.max(0, Math.round(100 - (issueWeight / tableRows.length) * 100))
+        : 100;
+      const sortedNumericValues = numericValues.map((entry) => entry.value).sort((left, right) => left - right);
+      const average = sortedNumericValues.length
+        ? sortedNumericValues.reduce((sum, value) => sum + value, 0) / sortedNumericValues.length
+        : undefined;
+      const topValues = Array.from(counts.values())
+        .sort((left, right) => right.count - left.count)
+        .slice(0, 3)
+        .map((entry) => ({
+          value: formatDataHealthValue(entry.raw) || "(blank)",
+          count: entry.count,
+        }));
+
+      return {
+        column: column as Column<unknown>,
+        completeness: tableRows.length
+          ? Math.round(((tableRows.length - missingCount) / tableRows.length) * 100)
+          : 100,
+        missingCount,
+        duplicateCount,
+        invalidCount,
+        outlierCount,
+        uniqueCount: counts.size,
+        score,
+        min: sortedNumericValues[0],
+        max: sortedNumericValues[sortedNumericValues.length - 1],
+        average,
+        topValues,
+        issueRowIndexes,
+      };
+    });
+  }, [
+    dataHealthEnabled,
+    dataHealthOptions.duplicateThreshold,
+    dataHealthOptions.outlierIqrMultiplier,
+    pivotResult.active,
+    tableColumns,
+    tableRows,
+    validationResult,
+  ]);
+  const dataHealthIssueCount = dataHealthProfiles.reduce(
+    (sum, profile) =>
+      sum +
+      profile.missingCount +
+      profile.duplicateCount +
+      profile.invalidCount +
+      profile.outlierCount,
+    0,
+  );
   const activeColumn = activeCell ? tableColumns[activeCell.columnIndex] : null;
   const activeCellLabel =
     activeCell && activeColumn
@@ -4932,7 +5171,6 @@ export function GridNexa<T>({
   const contextColumn = cellContextMenu
     ? tableColumns[cellContextMenu.columnIndex]
     : null;
-  const invalidCellCount = validationResult.size;
   const createCurrentViewState = (): PersistedGridState => ({
     version: 1,
     columnOrder,
@@ -5365,6 +5603,9 @@ export default function GridNexaRepro() {
     ...(chartsEnabled
       ? [{ id: "charts", label: "Open insight charts", run: () => { setChartsOpen(true); setCommandPaletteOpen(false); } }]
       : []),
+    ...(dataHealthEnabled
+      ? [{ id: "data-health", label: "Open data health", run: () => { setDataHealthOpen(true); setCommandPaletteOpen(false); } }]
+      : []),
     { id: "review-changes", label: "Review changes", run: () => { setChangeReviewOpen(true); setCommandPaletteOpen(false); } },
     ...(diagnosticsEnabled
       ? [
@@ -5605,6 +5846,90 @@ export default function GridNexaRepro() {
     );
     setPageIndex(0);
   };
+
+  const applyDataHealthFilter = (
+    profile: DataHealthColumnProfile,
+    issueKind: DataHealthIssueKind,
+  ) => {
+    const column = tableColumns.find((entry) => entry.id === profile.column.id);
+
+    if (!column) {
+      return;
+    }
+
+    const columnIndex = Math.max(
+      0,
+      tableColumns.findIndex((entry) => entry.id === column.id),
+    );
+    const focusFirstIssueCell = () => {
+      window.requestAnimationFrame(() => {
+        setActiveCellState({ rowIndex: 0, columnIndex });
+        setSelectedRowIndex(0);
+        gridRootRef.current?.focus({ preventScroll: false });
+      });
+    };
+
+    if (!dataHealthFilterRestoreRef.current) {
+      dataHealthFilterRestoreRef.current = {
+        columnId: column.id,
+        filter: filterModel[column.id] ?? null,
+      };
+    }
+
+    if (issueKind === "missing") {
+      setColumnFilter(column.id, {
+        type: getColumnFilterType(column),
+        operator: "blank",
+      });
+      setActiveDataHealthFilter({ columnId: column.id, issueKind });
+      focusFirstIssueCell();
+      return;
+    }
+
+    const values = Array.from(profile.issueRowIndexes[issueKind])
+      .map((rowIndex) => tableRows[rowIndex])
+      .filter(Boolean)
+      .map((row) => getColumnValue(row, column));
+    const uniqueValues = Array.from(new Set(values.map((value) => String(value ?? ""))));
+
+    if (!uniqueValues.length) {
+      return;
+    }
+
+    setColumnFilter(column.id, {
+      type: "set",
+      operator: "in",
+      values: uniqueValues,
+    });
+    setActiveDataHealthFilter({ columnId: column.id, issueKind });
+    focusFirstIssueCell();
+  };
+
+  const clearDataHealthFilter = () => {
+    const restore = dataHealthFilterRestoreRef.current;
+
+    if (!restore) {
+      return;
+    }
+
+    setColumnFilter(restore.columnId, restore.filter);
+    dataHealthFilterRestoreRef.current = null;
+    setActiveDataHealthFilter(null);
+  };
+
+  useEffect(() => {
+    if (!activeDataHealthFilter) {
+      return;
+    }
+
+    const profile = dataHealthProfiles.find(
+      (entry) => entry.column.id === activeDataHealthFilter.columnId,
+    );
+
+    if (!profile || profile.issueRowIndexes[activeDataHealthFilter.issueKind].size === 0) {
+      clearDataHealthFilter();
+    }
+  }, [activeDataHealthFilter, dataHealthProfiles]);
 
   const openColumnFilters = (columnId: string) => {
     setFilterPanelOpen(true);
@@ -7148,6 +7473,22 @@ export default function GridNexaRepro() {
               </button>
             ) : null}
 
+            {toolbarOptions.dataHealth ? (
+              <button
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                type="button"
+                onClick={() => {
+                  if (dataHealthOpen) {
+                    clearDataHealthFilter();
+                  }
+
+                  setDataHealthOpen((current) => !current);
+                }}
+              >
+                Data health {dataHealthIssueCount ? `(${dataHealthIssueCount})` : ""}
+              </button>
+            ) : null}
+
             {false ? (
               <div className="sg-pager">
                 <button
@@ -7918,6 +8259,131 @@ export default function GridNexaRepro() {
           </div>
         ) : null}
 
+        {dataHealthOpen ? (
+          <div className="sg-product-panel sg-data-health-panel" role="dialog" aria-label="Data health">
+            <div className="sg-product-panel-header">
+              <div>
+                <strong>Data health</strong>
+                <span>
+                  {dataHealthProfiles.length
+                    ? `${dataHealthIssueCount} issues across ${dataHealthProfiles.length} columns`
+                    : "No visible columns to profile"}
+                </span>
+              </div>
+              <button
+                type="button"
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                onClick={() => {
+                  clearDataHealthFilter();
+                  setDataHealthOpen(false);
+                }}
+              >
+                Done
+              </button>
+            </div>
+            {activeDataHealthFilter ? (
+              <div className="sg-data-health-filter-banner">
+                <span>Showing rows from a Data Health issue filter.</span>
+                <button
+                  type="button"
+                  className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                  onClick={clearDataHealthFilter}
+                >
+                  Clear issue filter
+                </button>
+              </div>
+            ) : null}
+            {dataHealthProfiles.length ? (
+              <>
+                <div className="sg-data-health-summary">
+                  <span>
+                    <strong>
+                      {Math.round(
+                        dataHealthProfiles.reduce((sum, profile) => sum + profile.score, 0) /
+                          dataHealthProfiles.length,
+                      )}
+                    </strong>
+                    Quality score
+                  </span>
+                  <span>
+                    <strong>{tableRows.length}</strong>
+                    Profiled rows
+                  </span>
+                  <span>
+                    <strong>{dataHealthProfiles.filter((profile) => profile.score < 85).length}</strong>
+                    Columns to review
+                  </span>
+                </div>
+                <div className="sg-data-health-grid">
+                  {dataHealthProfiles.map((profile) => (
+                    <article className="sg-data-health-card" key={profile.column.id}>
+                      <div className="sg-data-health-card-header">
+                        <div>
+                          <strong>{profile.column.headerName}</strong>
+                          <span>{profile.uniqueCount} unique values</span>
+                        </div>
+                        <span
+                          className={cx(
+                            "sg-data-health-score",
+                            profile.score >= 90
+                              ? "sg-data-health-score--good"
+                              : profile.score >= 70
+                                ? "sg-data-health-score--warn"
+                                : "sg-data-health-score--bad",
+                          )}
+                        >
+                          {profile.score}
+                        </span>
+                      </div>
+                      <div className="sg-data-health-meter" aria-hidden="true">
+                        <span style={{ width: `${profile.score}%` }} />
+                      </div>
+                      <div className="sg-data-health-facts">
+                        <span>Complete {profile.completeness}%</span>
+                        {profile.average != null ? (
+                          <span>
+                            Avg {profile.average.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                          </span>
+                        ) : null}
+                        {profile.min != null && profile.max != null ? (
+                          <span>
+                            Range {profile.min.toLocaleString()} - {profile.max.toLocaleString()}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="sg-data-health-issues">
+                        <button type="button" onClick={() => applyDataHealthFilter(profile, "missing")} disabled={!profile.missingCount}>
+                          Missing {profile.missingCount}
+                        </button>
+                        <button type="button" onClick={() => applyDataHealthFilter(profile, "duplicate")} disabled={!profile.duplicateCount}>
+                          Duplicates {profile.duplicateCount}
+                        </button>
+                        <button type="button" onClick={() => applyDataHealthFilter(profile, "invalid")} disabled={!profile.invalidCount}>
+                          Invalid {profile.invalidCount}
+                        </button>
+                        <button type="button" onClick={() => applyDataHealthFilter(profile, "outlier")} disabled={!profile.outlierCount}>
+                          Outliers {profile.outlierCount}
+                        </button>
+                      </div>
+                      {profile.topValues.length ? (
+                        <div className="sg-data-health-top-values">
+                          {profile.topValues.map((entry) => (
+                            <span key={`${profile.column.id}-${entry.value}`}>
+                              {entry.value}: {entry.count}
+                            </span>
+                          ))}
+                        </div>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <span className="sg-panel-muted">No data to profile yet.</span>
+            )}
+          </div>
+        ) : null}
+
         {diagnosticsOpen ? (
           <div className="sg-product-panel sg-diagnostics-panel">
             <div className="sg-product-panel-header">
@@ -7981,7 +8447,7 @@ export default function GridNexaRepro() {
         ) : null}
 
         <div className={cx("sg-grid-workspace", mergedClassNames.gridWorkspace)}>
-          <GridRoot>
+          <GridRoot rootRef={gridRootRef}>
             <GridHeader
               columns={tableColumns}
               widths={tableWidths}

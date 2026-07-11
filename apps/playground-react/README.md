@@ -8,11 +8,12 @@ A polished showcase for GridNexa React. Each page pairs a live grid with copyabl
 - Presets for `basic`, `admin`, `spreadsheet`, and `analytics` workflows
 - State persistence and saved views with `localStorage`
 - Built-in loading, error, and empty overlays
+- Data Health profiling for missing values, duplicates, invalid cells, outliers, and quality scores
 - Sorting and filtering
 - Pagination and selection
 - Column resizing, pinning, aligned header drag/reorder, and templates
 - Configurable right-side Columns/Pivot and Filters tools with mobile/tablet examples
-- Editing, formulas, tree grid, grouping, pivoting, export, events, and performance examples
+- Editing, formulas, tree grid, grouping, pivoting, export, events, diagnostics, and performance examples
 - Light and dark themes
 
 ## Why It Matters

@@ -1,4 +1,4 @@
-import type { AdvancedFilterModel, ColumnFilterModel, Column, GridNexaFillWidthOptions, GridNexaSidePanelOptions, GridNexaToolbarOptions, MergedHeader, PivotAggregation } from "@gridnexa/react";
+import type { AdvancedFilterModel, ColumnFilterModel, Column, GridNexaDataHealthOptions, GridNexaFillWidthOptions, GridNexaSidePanelOptions, GridNexaToolbarOptions, GridNexaValidationOptions, MergedHeader, PivotAggregation } from "@gridnexa/react";
 import { compactEmployeeColumns, employeeColumns, employees, formulaEmployeeColumns, readonlyEmployeeColumns, type Employee } from "../data/employees";
 import { treeColumns, treeRows } from "../data/treeData";
 
@@ -21,6 +21,8 @@ export interface FeatureConfig {
   advancedFilterModel?: AdvancedFilterModel;
   toolbar?: GridNexaToolbarOptions;
   sidePanel?: GridNexaSidePanelOptions;
+  dataHealth?: GridNexaDataHealthOptions;
+  validation?: GridNexaValidationOptions;
   fillWidth?: GridNexaFillWidthOptions;
   height?: number | string;
   columnTools?: boolean | Record<string, boolean>;
@@ -40,6 +42,17 @@ export interface FeatureConfig {
 const columnMergeColumns = employeeColumns
   .filter((column) => ["name", "department", "city", "active", "score"].includes(column.id))
   .map((column) => ({ ...column, pinned: undefined }));
+
+const dataHealthRows: Employee[] = [
+  { ...employees[0], id: 1, name: "John Carter", department: "Operations", city: "London", score: 92 },
+  { ...employees[1], id: 2, name: "Alice Moreau", department: "Product", city: "Paris", score: 87 },
+  { ...employees[2], id: 3, name: "", department: "Support", city: "New York", score: 79 },
+  { ...employees[3], id: 4, name: "Maya Shah", department: "Engineering", city: "", score: 96 },
+  { ...employees[4], id: 5, name: "Nina Patel", department: "Finance", city: "Toronto", score: 190 },
+  { ...employees[5], id: 6, name: "John Carter", department: "Engineering", city: "London", score: Number.NaN },
+  { ...employees[6], id: 7, name: "Priya Rao", department: "Product", city: "Paris", score: 82 },
+  { ...employees[7], id: 8, name: "Kenji Sato", department: "Operations", city: "Tokyo", score: 94 },
+];
 
 export const featureConfigs = {
   basicGrid: {
@@ -644,6 +657,50 @@ const rows = [
     fetchRows(state);
   }}
 />`,
+  },
+  dataHealth: {
+    title: "Data Health",
+    subtitle: "Quality profiling",
+    overview: "Profile visible data for missing values, duplicates, invalid cells, outliers, completeness, and column-level quality scores.",
+    notes: ["missing values", "duplicates", "invalid cells", "outliers", "quick filters"],
+    details: [
+      "Enable dataHealth to add a Data health toolbar action and command palette entry.",
+      "Each column receives a quality score, completeness percentage, top values, and quick filters for common data issues.",
+      "Validation rules are included in the invalid count, so profiling works with your existing save checks.",
+    ],
+    rows: dataHealthRows,
+    columns: employeeColumns.filter((column) => ["name", "department", "city", "score", "active"].includes(column.id)),
+    toolbar: {
+      quickFilter: true,
+      filters: true,
+      dataHealth: true,
+    },
+    dataHealth: {
+      showPanel: true,
+    },
+    validation: {
+      rules: {
+        name: { required: true },
+        city: { required: true },
+        score: { type: "number", min: 70, max: 100 },
+      },
+    },
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+  toolbar={{ dataHealth: true, filters: true }}
+  dataHealth={{ showPanel: true }}
+  validation={{
+    rules: {
+      name: { required: true },
+      city: { required: true },
+      score: { type: "number", min: 70, max: 100 }
+    }
+  }}
+/>
+
+// The panel reports missing values, duplicate values, invalid cells,
+// numeric outliers, top values, and a per-column quality score.`,
   },
   export: {
     title: "Export",

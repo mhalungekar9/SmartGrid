@@ -1,13 +1,13 @@
 # GridNexa React Data Grid | React Table | Excel Grid
 
-Feature-rich React data grid for teams that need more than a table: Excel import, copy/paste, inline editing, filters, pivoting, diagnostics, saved views, and TypeScript-first APIs.
+Feature-rich React data grid for teams that need more than a table: Excel import, copy/paste, inline editing, filters, pivoting, diagnostics, Data Health profiling, saved views, and TypeScript-first APIs.
 
 [![npm](https://img.shields.io/npm/v/@gridnexa/react?color=0ea5e9)](https://www.npmjs.com/package/@gridnexa/react)
 [![license](https://img.shields.io/npm/l/@gridnexa/react)](https://github.com/mhalungekar9/SmartGrid)
 [![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
 [![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
 
-GridNexa gives React teams a polished grid foundation for data-heavy products: sorting, filtering, editing, formulas, grouping, pivoting, tree data, selection, import/export, styling hooks, diagnostics, and safe AI-generated grid actions.
+GridNexa gives React teams a polished grid foundation for data-heavy products: sorting, filtering, editing, formulas, grouping, pivoting, tree data, selection, import/export, styling hooks, diagnostics, Data Health, and safe AI-generated grid actions.
 
 ## Why Developers Choose GridNexa
 
@@ -16,6 +16,7 @@ Most grid libraries make teams choose between a lightweight table and a heavywei
 - **Excel-style workflows built in**: import `.xlsx`, `.xls`, `.csv`, `.tsv`, `.txt`, and `.json`; copy/paste ranges from Excel; bulk edit; find and replace; export CSV and Excel.
 - **Insight charts from the grid**: turn selected ranges or visible rows into bar, line, area, pie, donut, scatter, bubble, radar, radial, histogram, box plot, treemap, gauge, funnel, and combo charts, then download charts as PNG.
 - **Debuggable by design**: diagnostics and repro snapshots let users export the grid state, sampled rows, recent actions, and a React repro JSON instead of sending vague bug reports.
+- **Data Health built in**: profile visible columns for missing values, duplicates, invalid cells, numeric outliers, completeness, top values, and quality scores.
 - **Productivity tools without glue code**: saved views, command palette, change review, validation, undo/redo, fill handle, row add/delete, and toolbar panels are first-class.
 - **Real data-grid depth**: column resize/reorder/pin/hide, filters, advanced filters, grouping, pivoting, tree data, master/detail, formulas, summaries, server-side callbacks, and transactions.
 - **Design-system friendly**: CSS variables, stable class names, custom icons, class callbacks, themes, density, and `unstyled` mode.
@@ -32,6 +33,7 @@ Most grid libraries make teams choose between a lightweight table and a heavywei
 | Search/filter | Quick filter, find, find & replace, column filters, set filters, advanced filters |
 | Layout | Resize, reorder, pin/freeze, hide/show, fill width, flex columns, merged headers |
 | Analytics | Grouping, aggregation, pivoting, summaries, tree data, master/detail |
+| Data quality | Data Health panel, missing values, duplicates, invalid cells, outliers, top values, quality scores |
 | Developer tools | Diagnostics panel, repro JSON export/import, command palette, typed API |
 | Styling | Themes, CSS variables, stable classes, custom icons, Bootstrap/Tailwind-friendly |
 
@@ -297,6 +299,7 @@ Copy this:
     exportRepro: true,
     rowSampleSize: 50,
   }}
+  dataHealth
 />
 ```
 
@@ -307,6 +310,7 @@ What this solves:
 - `changeReview` tracks edits, row additions, and row deletions before Save All.
 - `validation` highlights invalid cells and can block Save All.
 - `diagnostics` exposes runtime counts, records recent grid actions, and can export/import a repro snapshot with sanitized columns, sampled rows, current grid state, change review entries, and a React example.
+- `dataHealth` profiles visible data for missing values, duplicates, invalid cells, outliers, top values, completeness, and per-column quality scores.
 
 When to use:
 
@@ -343,10 +347,33 @@ export default function EmployeesGrid() {
       changeReview
       validation={{ rules: { name: { required: true } } }}
       diagnostics
+      dataHealth
     />
   );
 }
 ```
+
+## Data Health Panel
+
+```tsx
+<GridNexa
+  columns={columns}
+  rows={rows}
+  toolbar={{ dataHealth: true, filters: true }}
+  dataHealth={{ showPanel: true }}
+  validation={{
+    rules: {
+      name: { required: true },
+      city: { required: true },
+      score: { type: "number", min: 70, max: 100 },
+    },
+  }}
+/>
+```
+
+Data Health helps users trust and clean data without leaving the grid. It reports missing values, duplicate values, validation failures, numeric outliers, top values, completeness, and a quality score for each visible column.
+
+Clicking an issue filters the grid to affected rows, focuses the first matching cell, and keeps the panel open. Once the issue is fixed, GridNexa automatically clears the temporary issue filter and restores the previous view. Users can also clear the issue filter or click Done to return to the original data.
 
 ## Column And Range Summaries
 
@@ -470,6 +497,7 @@ Use Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS through `classNam
 - Formulas, clipboard operations, CSV export, and Excel export
 - Column resize, aligned drag reorder, hide/show, pin/freeze, flex/fill-width columns, column menu, configurable side tools, and merged headers
 - Row grouping, aggregation, pivoting, tree data, master/detail, and transactions
+- Data Health profiling for missing values, duplicates, invalid cells, outliers, top values, and quality scores
 - Server-side operation callbacks for sorting, filtering, selection, pagination, grouping, pivoting, tree data, and transactions
 
 ## Related Packages
