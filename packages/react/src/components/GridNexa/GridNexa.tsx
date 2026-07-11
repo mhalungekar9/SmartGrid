@@ -6,6 +6,37 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  ComposedChart,
+  Funnel,
+  FunnelChart,
+  Legend,
+  Line,
+  LineChart,
+  Pie,
+  PieChart,
+  PolarAngleAxis,
+  PolarGrid,
+  PolarRadiusAxis,
+  Radar,
+  RadarChart,
+  RadialBar,
+  RadialBarChart,
+  ResponsiveContainer,
+  Scatter,
+  ScatterChart,
+  Tooltip,
+  Treemap,
+  XAxis,
+  YAxis,
+  ZAxis,
+} from "recharts";
 import type { ComponentType, CSSProperties, ReactElement, ReactNode } from "react";
 import type {
   AdvancedFilterModel,
@@ -23,6 +54,8 @@ import type {
   GridNexaValidationOptions,
   GridNexaDiagnosticsOptions,
   GridNexaReproSnapshot,
+  GridNexaChartType,
+  GridNexaChartsOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
   GridNexaCommandPlan,
@@ -296,6 +329,7 @@ export interface GridNexaExtendedProps<T>
   changeReview?: GridNexaChangeReviewOptions;
   validation?: GridNexaValidationOptions;
   diagnostics?: GridNexaDiagnosticsOptions;
+  charts?: GridNexaChartsOptions;
   loading?: boolean;
   error?: ReactNode;
   emptyState?: ReactNode;
@@ -834,6 +868,75 @@ function resolveDiagnosticsOptions(value?: GridNexaDiagnosticsOptions) {
     fileName: value.fileName ?? "gridnexa-repro.json",
   };
 }
+
+function resolveChartsOptions(value?: GridNexaChartsOptions) {
+  const defaults = {
+    enabled: false,
+    toolbarButton: true,
+    types: [
+      "bar",
+      "line",
+      "area",
+      "pie",
+      "donut",
+      "scatter",
+      "bubble",
+      "radar",
+      "radialBar",
+      "histogram",
+      "boxPlot",
+      "treemap",
+      "gauge",
+      "funnel",
+      "combo",
+    ] as GridNexaChartType[],
+    source: "selection" as const,
+    defaultType: "bar" as GridNexaChartType,
+    maxRows: 200,
+  };
+
+  if (!value) {
+    return defaults;
+  }
+
+  if (value === true) {
+    return {
+      ...defaults,
+      enabled: true,
+    };
+  }
+
+  return {
+    ...defaults,
+    enabled: value.enabled ?? true,
+    toolbarButton: value.toolbarButton ?? true,
+    types: value.types?.length ? value.types : defaults.types,
+    source: value.source ?? defaults.source,
+    defaultType: value.defaultType ?? defaults.defaultType,
+    maxRows: value.maxRows ?? defaults.maxRows,
+  };
+}
+
+const chartTypeLabels: Record<GridNexaChartType, string> = {
+  bar: "Bar",
+  line: "Line",
+  area: "Area",
+  pie: "Pie",
+  donut: "Donut",
+  scatter: "Scatter",
+  bubble: "Bubble",
+  radar: "Radar",
+  radialBar: "Radial",
+  histogram: "Histogram",
+  boxPlot: "Box plot",
+  treemap: "Treemap",
+  gauge: "Gauge",
+  funnel: "Funnel",
+  combo: "Combo",
+};
+
+const getChartTypeLabel = (type: GridNexaChartType) =>
+  chartTypeLabels[type] ?? type;
 
 function readSavedGridViews(key: string): SavedGridView[] {
   if (!key || typeof window === "undefined") return [];
@@ -1761,6 +1864,7 @@ export function GridNexa<T>({
   changeReview,
   validation,
   diagnostics,
+  charts,
   loading = false,
   error,
   emptyState,
@@ -2030,6 +2134,10 @@ export function GridNexa<T>({
   const changeReviewEnabled = resolveEnabledOption(changeReview);
   const diagnosticsOptions = resolveDiagnosticsOptions(diagnostics);
   const diagnosticsEnabled = diagnosticsOptions.enabled;
+  const chartsOptions = resolveChartsOptions(charts);
+  const chartsEnabled =
+    chartsOptions.enabled ||
+    (typeof toolbarProp === "object" && toolbarProp.charts === true);
   const changeReviewToolbarVisible =
     typeof changeReview === "object" ? changeReview.showToolbarButton !== false : true;
   const [savedViews, setSavedViews] = useState<SavedGridView[]>(() =>
@@ -2044,6 +2152,12 @@ export function GridNexa<T>({
   const [diagnosticsOpen, setDiagnosticsOpen] = useState(
     diagnosticsEnabled ? diagnosticsOptions.showPanel === true : false,
   );
+  const [chartsOpen, setChartsOpen] = useState(false);
+  const [chartType, setChartType] = useState<GridNexaChartType>(
+    chartsOptions.defaultType,
+  );
+  const [chartCategoryColumnId, setChartCategoryColumnId] = useState("");
+  const [chartValueColumnId, setChartValueColumnId] = useState("");
   const [changeLog, setChangeLog] = useState<ChangeReviewEntry[]>([]);
   const [diagnosticEvents, setDiagnosticEvents] = useState<DiagnosticEvent[]>([]);
   const diagnosticEventsRef = useRef<DiagnosticEvent[]>([]);
@@ -2155,6 +2269,7 @@ export function GridNexa<T>({
   const defaultViewCreatedAtRef = useRef(Date.now());
   const reproFileInputRef = useRef<HTMLInputElement | null>(null);
   const importDataInputRef = useRef<HTMLInputElement | null>(null);
+  const chartCanvasRef = useRef<HTMLDivElement | null>(null);
   const filterPanelRef = useRef<HTMLDivElement | null>(null);
   const advancedFilterPanelRef = useRef<HTMLDivElement | null>(null);
   const pivotPanelRef = useRef<HTMLDivElement | null>(null);
@@ -2217,14 +2332,17 @@ export function GridNexa<T>({
   }, [columns, gridRows, onGridReady]);
 
   useEffect(() => {
+    const rowsAlreadyCurrent =
+      rows === gridRowsRef.current ||
+      rowsMatchByReference(rows, gridRowsRef.current) ||
+      rowsMatchInternalEcho(rows, gridRowsRef.current);
     const isInternalRowsEcho =
       skipNextRowsHistoryResetRef.current &&
       (rows === pendingInternalRowsRef.current ||
         rowsMatchByReference(rows, pendingInternalRowsRef.current) ||
-        rowsMatchInternalEcho(rows, pendingInternalRowsRef.current) ||
-        Date.now() <= pendingInternalRowsEchoDeadlineRef.current);
+        rowsMatchInternalEcho(rows, pendingInternalRowsRef.current));
 
-    if (isInternalRowsEcho) {
+    if (isInternalRowsEcho || rowsAlreadyCurrent) {
       skipNextRowsHistoryResetRef.current = false;
       pendingInternalRowsRef.current = null;
       pendingInternalRowsEchoDeadlineRef.current = 0;
@@ -3736,6 +3854,214 @@ export function GridNexa<T>({
     onRangeSelectionChange?.(cellRange);
   }, [cellRange, onRangeSelectionChange]);
 
+  const chartSourceRows = useMemo(() => {
+    if (
+      chartsOptions.source === "selection" &&
+      cellRange &&
+      tableRows.length
+    ) {
+      return tableRows.slice(cellRange.startRow, cellRange.endRow + 1);
+    }
+
+    return tableRows.slice(0, Math.max(1, chartsOptions.maxRows));
+  }, [cellRange, chartsOptions.maxRows, chartsOptions.source, tableRows]);
+  const chartSourceColumns = useMemo(() => {
+    if (
+      chartsOptions.source === "selection" &&
+      cellRange &&
+      tableColumns.length
+    ) {
+      return tableColumns.slice(cellRange.startColumn, cellRange.endColumn + 1);
+    }
+
+    return tableColumns;
+  }, [cellRange, chartsOptions.source, tableColumns]);
+  const chartValueColumns = useMemo(
+    () =>
+      chartSourceColumns.filter((column) =>
+        chartSourceRows.some((row) => {
+          const value = getColumnValue(row, column);
+
+          return Number.isFinite(Number(value));
+        }),
+      ),
+    [chartSourceColumns, chartSourceRows],
+  );
+  const chartCategoryColumns = useMemo(
+    () =>
+      chartSourceColumns.filter(
+        (column) => !chartValueColumns.some((entry) => entry.id === column.id),
+      ),
+    [chartSourceColumns, chartValueColumns],
+  );
+  const resolvedChartValueColumn =
+    chartValueColumns.find((column) => column.id === chartValueColumnId) ??
+    chartValueColumns[0] ??
+    chartSourceColumns[0];
+  const resolvedChartCategoryColumn =
+    chartCategoryColumns.find((column) => column.id === chartCategoryColumnId) ??
+    chartSourceColumns.find((column) => column.id !== resolvedChartValueColumn?.id) ??
+    chartSourceColumns[0];
+  const chartRows = useMemo(() => {
+    if (!resolvedChartValueColumn || !chartSourceRows.length) {
+      return [];
+    }
+
+    const buckets = new Map<string, { category: string; value: number; count: number; x: number; y: number }>();
+
+    chartSourceRows.forEach((row, index) => {
+      const categoryValue = resolvedChartCategoryColumn
+        ? getColumnValue(row, resolvedChartCategoryColumn)
+        : index + 1;
+      const rawValue = getColumnValue(row, resolvedChartValueColumn);
+      const numericValue = Number(rawValue);
+
+      if (!Number.isFinite(numericValue)) {
+        return;
+      }
+
+      const category = String(categoryValue ?? `Row ${index + 1}`);
+      const existing = buckets.get(category) ?? {
+        category,
+        value: 0,
+        count: 0,
+        x: index + 1,
+        y: 0,
+      };
+
+      existing.value += numericValue;
+      existing.y += numericValue;
+      existing.count += 1;
+      buckets.set(category, existing);
+    });
+
+    return Array.from(buckets.values()).map((entry, index) => ({
+      ...entry,
+      average: entry.count ? entry.value / entry.count : 0,
+      size: Math.max(24, Math.sqrt(Math.abs(entry.value)) * 2),
+      x: index + 1,
+    }));
+  }, [chartSourceRows, resolvedChartCategoryColumn, resolvedChartValueColumn]);
+  const histogramRows = useMemo(() => {
+    if (!resolvedChartValueColumn || !chartSourceRows.length) {
+      return [];
+    }
+
+    const values = chartSourceRows
+      .map((row) => Number(getColumnValue(row, resolvedChartValueColumn)))
+      .filter(Number.isFinite);
+
+    if (!values.length) {
+      return [];
+    }
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const bucketCount = Math.min(10, Math.max(4, Math.ceil(Math.sqrt(values.length))));
+    const step = Math.max(1, (max - min) / bucketCount);
+    const buckets = Array.from({ length: bucketCount }, (_, index) => {
+      const start = min + index * step;
+      const end = index === bucketCount - 1 ? max : start + step;
+
+      return {
+        category: `${formatNumber(start)}-${formatNumber(end)}`,
+        value: 0,
+      };
+    });
+
+    values.forEach((value) => {
+      const bucketIndex =
+        value === max
+          ? bucketCount - 1
+          : Math.min(bucketCount - 1, Math.max(0, Math.floor((value - min) / step)));
+
+      buckets[bucketIndex].value += 1;
+    });
+
+    return buckets;
+  }, [chartSourceRows, resolvedChartValueColumn]);
+  const boxPlotRows = useMemo(() => {
+    if (!resolvedChartValueColumn || !chartSourceRows.length) {
+      return [];
+    }
+
+    const groupedValues = new Map<string, number[]>();
+
+    chartSourceRows.forEach((row, index) => {
+      const categoryValue = resolvedChartCategoryColumn
+        ? getColumnValue(row, resolvedChartCategoryColumn)
+        : `Series ${index + 1}`;
+      const value = Number(getColumnValue(row, resolvedChartValueColumn));
+
+      if (!Number.isFinite(value)) {
+        return;
+      }
+
+      const category = String(categoryValue ?? `Series ${index + 1}`);
+      const values = groupedValues.get(category) ?? [];
+
+      values.push(value);
+      groupedValues.set(category, values);
+    });
+
+    const percentile = (values: number[], ratio: number) => {
+      if (!values.length) {
+        return 0;
+      }
+
+      const position = (values.length - 1) * ratio;
+      const lower = Math.floor(position);
+      const upper = Math.ceil(position);
+      const weight = position - lower;
+
+      return values[lower] + (values[upper] - values[lower]) * weight;
+    };
+
+    return Array.from(groupedValues.entries()).map(([category, values], index) => {
+      const sorted = [...values].sort((left, right) => left - right);
+
+      return {
+        category,
+        min: sorted[0],
+        q1: percentile(sorted, 0.25),
+        median: percentile(sorted, 0.5),
+        q3: percentile(sorted, 0.75),
+        max: sorted[sorted.length - 1],
+        value: percentile(sorted, 0.5),
+        count: sorted.length,
+        x: index + 1,
+      };
+    });
+  }, [chartSourceRows, resolvedChartCategoryColumn, resolvedChartValueColumn]);
+  const chartColors = [
+    "#60a5fa",
+    "#34d399",
+    "#f59e0b",
+    "#f472b6",
+    "#a78bfa",
+    "#22d3ee",
+    "#fb7185",
+    "#84cc16",
+  ];
+
+  useEffect(() => {
+    if (!chartsOptions.types.includes(chartType)) {
+      setChartType(chartsOptions.defaultType);
+    }
+  }, [chartType, chartsOptions.defaultType, chartsOptions.types]);
+
+  useEffect(() => {
+    if (!chartValueColumnId && chartValueColumns[0]) {
+      setChartValueColumnId(chartValueColumns[0].id);
+    }
+  }, [chartValueColumnId, chartValueColumns]);
+
+  useEffect(() => {
+    if (!chartCategoryColumnId && chartCategoryColumns[0]) {
+      setChartCategoryColumnId(chartCategoryColumns[0].id);
+    }
+  }, [chartCategoryColumnId, chartCategoryColumns]);
+
   const parsePastedValue = (rawValue: string, currentValue: unknown) => {
     if (typeof currentValue === "number") {
       const parsed = Number(rawValue);
@@ -4459,6 +4785,7 @@ export function GridNexa<T>({
           copyPaste: false,
           bulkEdit: false,
           findReplace: false,
+          charts: false,
           prevNextPage: false,
           saveAll: false,
           addRow: false,
@@ -4484,6 +4811,7 @@ export function GridNexa<T>({
           copyPaste: true,
           bulkEdit: true,
           findReplace: true,
+          charts: false,
           prevNextPage: true,
           saveAll: Boolean(onSaveAll),
           addRow: false,
@@ -4501,6 +4829,9 @@ export function GridNexa<T>({
       toolbarOptionsBase.pagination || toolbarOptionsBase.prevNextPage,
     fillHandle: toolbarOptionsBase.fillHandle || toolbarOptionsBase.fill,
     columns: toolbarOptionsBase.columns || toolbarOptionsBase.columnSelector,
+    charts:
+      toolbarOptionsBase.charts ||
+      (chartsEnabled && chartsOptions.toolbarButton),
   };
   const toolbarVisible =
     toolbar !== false && Object.values(toolbarOptions).some(Boolean);
@@ -5031,6 +5362,9 @@ export default function GridNexaRepro() {
     { id: "paste-selection", label: "Paste from clipboard", run: () => { void pasteFromClipboard(); setCommandPaletteOpen(false); } },
     { id: "bulk-edit", label: "Open bulk edit", run: () => { setBulkEditOpen(true); setCommandPaletteOpen(false); } },
     { id: "find-replace", label: "Open find and replace", run: () => { setFindReplaceOpen(true); setCommandPaletteOpen(false); } },
+    ...(chartsEnabled
+      ? [{ id: "charts", label: "Open insight charts", run: () => { setChartsOpen(true); setCommandPaletteOpen(false); } }]
+      : []),
     { id: "review-changes", label: "Review changes", run: () => { setChangeReviewOpen(true); setCommandPaletteOpen(false); } },
     ...(diagnosticsEnabled
       ? [
@@ -5956,6 +6290,648 @@ export default function GridNexaRepro() {
   const aiEnabled = ai?.enabled ?? Boolean(ai?.provider || ai?.endpoint);
   const mergedClassNames: GridNexaSlotClassNames = classNames;
   const registeredSavedViews = getRegisteredSavedViews();
+  const downloadChartPng = async () => {
+    const sourceExportRows =
+      chartType === "histogram"
+        ? histogramRows
+        : chartType === "boxPlot"
+          ? boxPlotRows
+          : chartRows;
+    const exportRows = sourceExportRows.map((row) => {
+      const average = "average" in row && typeof row.average === "number" ? row.average : row.value;
+      const size = "size" in row && typeof row.size === "number"
+        ? row.size
+        : Math.max(24, Math.sqrt(Math.abs(row.value)) * 2);
+
+      return { ...row, average, size };
+    });
+
+    if (!exportRows.length || !resolvedChartValueColumn) {
+      window.alert("No chart is available to download yet.");
+      return;
+    }
+
+    const chartNode = chartCanvasRef.current;
+    const ratio = window.devicePixelRatio || 1;
+    const width = 1200;
+    const height = 720;
+    const padding = { top: 72, right: 56, bottom: 104, left: 82 };
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    const background =
+      (chartNode ? getComputedStyle(chartNode).backgroundColor : "") || "#111827";
+    const foreground =
+      (chartNode ? getComputedStyle(chartNode).color : "") || "#e5edf7";
+    const muted = "#94a3b8";
+    const border = "rgba(148, 163, 184, 0.28)";
+    const title = `${getChartTypeLabel(chartType)} chart`;
+    const valueLabel = resolvedChartValueColumn.headerName;
+    const plot = {
+      x: padding.left,
+      y: padding.top,
+      width: width - padding.left - padding.right,
+      height: height - padding.top - padding.bottom,
+    };
+
+    if (!context) {
+      window.alert("Canvas is not available in this browser.");
+      return;
+    }
+
+    canvas.width = width * ratio;
+    canvas.height = height * ratio;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    context.scale(ratio, ratio);
+    context.fillStyle = background;
+    context.fillRect(0, 0, width, height);
+    context.fillStyle = foreground;
+    context.font = "700 26px Inter, Segoe UI, sans-serif";
+    context.fillText(title, padding.left, 38);
+    context.font = "600 15px Inter, Segoe UI, sans-serif";
+    context.fillStyle = muted;
+    context.fillText(`${valueLabel} from ${chartSourceRows.length} rows`, padding.left, 60);
+
+    const maxValue = Math.max(
+      ...exportRows.map((row) =>
+        "max" in row && typeof row.max === "number" ? row.max : Math.max(0, row.value),
+      ),
+      1,
+    );
+    const minValue = Math.min(
+      0,
+      ...exportRows.map((row) =>
+        "min" in row && typeof row.min === "number" ? row.min : row.value,
+      ),
+    );
+    const valueRange = Math.max(1, maxValue - minValue);
+    const yFor = (value: number) =>
+      plot.y + plot.height - ((value - minValue) / valueRange) * plot.height;
+    const xFor = (index: number) =>
+      plot.x + (exportRows.length <= 1 ? plot.width / 2 : (index / (exportRows.length - 1)) * plot.width);
+    const drawAxes = () => {
+      context.strokeStyle = border;
+      context.lineWidth = 1;
+      context.beginPath();
+      context.moveTo(plot.x, plot.y);
+      context.lineTo(plot.x, plot.y + plot.height);
+      context.lineTo(plot.x + plot.width, plot.y + plot.height);
+      context.stroke();
+
+      for (let index = 0; index <= 4; index += 1) {
+        const y = plot.y + (plot.height / 4) * index;
+        const value = maxValue - (valueRange / 4) * index;
+
+        context.strokeStyle = border;
+        context.beginPath();
+        context.moveTo(plot.x, y);
+        context.lineTo(plot.x + plot.width, y);
+        context.stroke();
+        context.fillStyle = muted;
+        context.font = "12px Inter, Segoe UI, sans-serif";
+        context.textAlign = "right";
+        context.fillText(formatNumber(value), plot.x - 10, y + 4);
+      }
+
+      context.textAlign = "center";
+      exportRows.slice(0, 12).forEach((row, index) => {
+        const x = plot.x + ((index + 0.5) / Math.min(exportRows.length, 12)) * plot.width;
+
+        context.fillStyle = muted;
+        context.font = "12px Inter, Segoe UI, sans-serif";
+        context.fillText(String(row.category).slice(0, 18), x, plot.y + plot.height + 28);
+      });
+      context.textAlign = "start";
+    };
+    const drawLegend = () => {
+      context.fillStyle = foreground;
+      context.font = "600 14px Inter, Segoe UI, sans-serif";
+      context.fillText(valueLabel, padding.left + 22, height - 34);
+      context.fillStyle = chartColors[0];
+      context.fillRect(padding.left, height - 46, 14, 14);
+    };
+    const drawLine = (rows: typeof exportRows, color: string, key: "value" | "average" = "value") => {
+      context.strokeStyle = color;
+      context.lineWidth = 4;
+      context.beginPath();
+      rows.forEach((row, index) => {
+        const x = xFor(index);
+        const y = yFor(Number(row[key]));
+
+        if (index === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      });
+      context.stroke();
+    };
+
+    if (chartType === "pie" || chartType === "donut" || chartType === "gauge") {
+      const centerX = width / 2;
+      const centerY = height / 2 + 18;
+      const radius = Math.min(plot.width, plot.height) * 0.34;
+      const total = Math.max(1, exportRows.reduce((sum, row) => sum + Math.max(0, row.value), 0));
+      let startAngle = chartType === "gauge" ? Math.PI : -Math.PI / 2;
+      const angleSpan = chartType === "gauge" ? Math.PI : Math.PI * 2;
+
+      exportRows.forEach((row, index) => {
+        const sliceAngle = (Math.max(0, row.value) / total) * angleSpan;
+        const endAngle = startAngle + sliceAngle;
+
+        context.beginPath();
+        context.moveTo(centerX, centerY);
+        context.arc(centerX, centerY, radius, startAngle, endAngle);
+        context.closePath();
+        context.fillStyle = chartColors[index % chartColors.length];
+        context.fill();
+        startAngle = endAngle;
+      });
+
+      if (chartType === "donut" || chartType === "gauge") {
+        context.beginPath();
+        context.arc(centerX, centerY, radius * 0.58, 0, Math.PI * 2);
+        context.fillStyle = background;
+        context.fill();
+      }
+      drawLegend();
+    } else if (chartType === "scatter" || chartType === "bubble") {
+      drawAxes();
+      exportRows.forEach((row, index) => {
+        context.beginPath();
+        context.arc(xFor(index), yFor(row.value), chartType === "bubble" ? Math.max(8, Math.min(34, row.size / 8)) : 6, 0, Math.PI * 2);
+        context.fillStyle = chartColors[index % chartColors.length];
+        context.globalAlpha = chartType === "bubble" ? 0.7 : 1;
+        context.fill();
+      });
+      context.globalAlpha = 1;
+      drawLegend();
+    } else if (chartType === "line" || chartType === "area") {
+      drawAxes();
+      if (chartType === "area") {
+        context.beginPath();
+        exportRows.forEach((row, index) => {
+          const x = xFor(index);
+          const y = yFor(row.value);
+          if (index === 0) context.moveTo(x, plot.y + plot.height);
+          context.lineTo(x, y);
+        });
+        context.lineTo(xFor(exportRows.length - 1), plot.y + plot.height);
+        context.closePath();
+        context.fillStyle = "rgba(96, 165, 250, 0.26)";
+        context.fill();
+      }
+      drawLine(exportRows, chartColors[0]);
+      drawLegend();
+    } else if (chartType === "boxPlot") {
+      drawAxes();
+      const slot = plot.width / Math.max(1, exportRows.length);
+
+      exportRows.forEach((row, index) => {
+        const min = "min" in row && typeof row.min === "number" ? row.min : row.value;
+        const q1 = "q1" in row && typeof row.q1 === "number" ? row.q1 : row.value;
+        const median = "median" in row && typeof row.median === "number" ? row.median : row.value;
+        const q3 = "q3" in row && typeof row.q3 === "number" ? row.q3 : row.value;
+        const max = "max" in row && typeof row.max === "number" ? row.max : row.value;
+        const centerX = plot.x + index * slot + slot / 2;
+        const boxWidth = Math.max(24, Math.min(58, slot * 0.42));
+
+        context.strokeStyle = chartColors[index % chartColors.length];
+        context.fillStyle = `${chartColors[index % chartColors.length]}88`;
+        context.lineWidth = 3;
+        context.beginPath();
+        context.moveTo(centerX, yFor(min));
+        context.lineTo(centerX, yFor(max));
+        context.stroke();
+        context.beginPath();
+        context.moveTo(centerX - boxWidth / 2, yFor(min));
+        context.lineTo(centerX + boxWidth / 2, yFor(min));
+        context.moveTo(centerX - boxWidth / 2, yFor(max));
+        context.lineTo(centerX + boxWidth / 2, yFor(max));
+        context.stroke();
+        context.fillRect(centerX - boxWidth / 2, yFor(q3), boxWidth, Math.max(2, yFor(q1) - yFor(q3)));
+        context.strokeRect(centerX - boxWidth / 2, yFor(q3), boxWidth, Math.max(2, yFor(q1) - yFor(q3)));
+        context.strokeStyle = foreground;
+        context.beginPath();
+        context.moveTo(centerX - boxWidth / 2, yFor(median));
+        context.lineTo(centerX + boxWidth / 2, yFor(median));
+        context.stroke();
+      });
+      drawLegend();
+    } else if (chartType === "funnel") {
+      const stepHeight = plot.height / exportRows.length;
+      exportRows.forEach((row, index) => {
+        const topWidth = plot.width * (1 - index / (exportRows.length * 1.35));
+        const bottomWidth = plot.width * (1 - (index + 1) / (exportRows.length * 1.35));
+        const y = plot.y + index * stepHeight;
+
+        context.beginPath();
+        context.moveTo(plot.x + (plot.width - topWidth) / 2, y);
+        context.lineTo(plot.x + (plot.width + topWidth) / 2, y);
+        context.lineTo(plot.x + (plot.width + bottomWidth) / 2, y + stepHeight - 6);
+        context.lineTo(plot.x + (plot.width - bottomWidth) / 2, y + stepHeight - 6);
+        context.closePath();
+        context.fillStyle = chartColors[index % chartColors.length];
+        context.fill();
+        context.fillStyle = foreground;
+        context.font = "600 13px Inter, Segoe UI, sans-serif";
+        context.fillText(String(row.category), plot.x + plot.width / 2 - 54, y + stepHeight / 2);
+      });
+    } else if (chartType === "treemap") {
+      const total = Math.max(1, exportRows.reduce((sum, row) => sum + Math.max(0, row.value), 0));
+      let cursorX = plot.x;
+      exportRows.forEach((row, index) => {
+        const tileWidth = Math.max(28, (Math.max(0, row.value) / total) * plot.width);
+
+        context.fillStyle = chartColors[index % chartColors.length];
+        context.fillRect(cursorX, plot.y, Math.min(tileWidth, plot.x + plot.width - cursorX), plot.height);
+        context.fillStyle = "#ffffff";
+        context.font = "700 14px Inter, Segoe UI, sans-serif";
+        context.save();
+        context.beginPath();
+        context.rect(cursorX, plot.y, tileWidth, plot.height);
+        context.clip();
+        context.fillText(String(row.category), cursorX + 12, plot.y + 28);
+        context.restore();
+        cursorX += tileWidth;
+      });
+    } else if (chartType === "radar" || chartType === "radialBar") {
+      const centerX = width / 2;
+      const centerY = height / 2 + 18;
+      const radius = Math.min(plot.width, plot.height) * 0.34;
+
+      context.strokeStyle = border;
+      for (let ring = 1; ring <= 4; ring += 1) {
+        context.beginPath();
+        context.arc(centerX, centerY, (radius / 4) * ring, 0, Math.PI * 2);
+        context.stroke();
+      }
+      context.beginPath();
+      exportRows.forEach((row, index) => {
+        const angle = -Math.PI / 2 + (index / exportRows.length) * Math.PI * 2;
+        const pointRadius = (Math.max(0, row.value) / maxValue) * radius;
+        const x = centerX + Math.cos(angle) * pointRadius;
+        const y = centerY + Math.sin(angle) * pointRadius;
+        if (index === 0) context.moveTo(x, y);
+        else context.lineTo(x, y);
+      });
+      context.closePath();
+      context.fillStyle = "rgba(96, 165, 250, 0.28)";
+      context.strokeStyle = chartColors[0];
+      context.lineWidth = 3;
+      context.fill();
+      context.stroke();
+      drawLegend();
+    } else {
+      drawAxes();
+      const barCount = Math.max(1, exportRows.length);
+      const barSlot = plot.width / barCount;
+
+      exportRows.forEach((row, index) => {
+        const x = plot.x + index * barSlot + barSlot * 0.18;
+        const y = yFor(row.value);
+        const barHeight = plot.y + plot.height - y;
+
+        context.fillStyle = chartColors[0];
+        context.fillRect(x, y, Math.max(8, barSlot * 0.64), barHeight);
+      });
+
+      if (chartType === "combo") {
+        drawLine(exportRows, chartColors[2], "average");
+      }
+      drawLegend();
+    }
+
+    canvas.toBlob((pngBlob) => {
+      if (!pngBlob) {
+        window.alert("Could not download this chart as PNG.");
+        return;
+      }
+
+      const pngUrl = URL.createObjectURL(pngBlob);
+      const link = document.createElement("a");
+
+      link.href = pngUrl;
+      link.download = `gridnexa-${chartType}-chart.png`;
+      link.click();
+      URL.revokeObjectURL(pngUrl);
+    }, "image/png");
+  };
+  const renderInsightChart = () => {
+    if (!chartRows.length || !resolvedChartValueColumn) {
+      return (
+        <div className="sg-empty-state">
+          Select a range with at least one numeric column, or keep numeric values in visible rows.
+        </div>
+      );
+    }
+
+    const commonAxisProps = {
+      stroke: "var(--gnx-muted, #94a3b8)",
+      tick: { fill: "var(--gnx-muted, #94a3b8)", fontSize: 12 },
+    };
+    const gridStroke = "var(--gnx-border, rgba(148, 163, 184, 0.24))";
+
+    if (chartType === "pie" || chartType === "donut") {
+      return (
+        <ResponsiveContainer width="100%" height={320}>
+          <PieChart>
+            <Tooltip />
+            <Legend />
+            <Pie
+              data={chartRows}
+              dataKey="value"
+              nameKey="category"
+              innerRadius={chartType === "donut" ? 72 : 0}
+              outerRadius={118}
+              paddingAngle={2}
+            >
+              {chartRows.map((entry, index) => (
+                <Cell
+                  key={entry.category}
+                  fill={chartColors[index % chartColors.length]}
+                />
+              ))}
+            </Pie>
+          </PieChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (chartType === "funnel") {
+      return (
+        <ResponsiveContainer width="100%" height={320}>
+          <FunnelChart>
+            <Tooltip />
+            <Legend />
+            <Funnel
+              data={chartRows}
+              dataKey="value"
+              nameKey="category"
+              name={resolvedChartValueColumn.headerName}
+              isAnimationActive
+            >
+              {chartRows.map((entry, index) => (
+                <Cell
+                  key={entry.category}
+                  fill={chartColors[index % chartColors.length]}
+                />
+              ))}
+            </Funnel>
+          </FunnelChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (chartType === "treemap") {
+      return (
+        <ResponsiveContainer width="100%" height={320}>
+          <Treemap
+            data={chartRows}
+            dataKey="value"
+            nameKey="category"
+            stroke="var(--gnx-panel, #0f172a)"
+            fill={chartColors[0]}
+            content={({ x, y, width, height, name, index }) => (
+              <g>
+                <rect
+                  x={x}
+                  y={y}
+                  width={width}
+                  height={height}
+                  fill={chartColors[(index ?? 0) % chartColors.length]}
+                  stroke="var(--gnx-panel, #0f172a)"
+                />
+                {width > 72 && height > 28 ? (
+                  <text x={(x ?? 0) + 8} y={(y ?? 0) + 20} fill="#fff" fontSize={12} fontWeight={700}>
+                    {String(name ?? "")}
+                  </text>
+                ) : null}
+              </g>
+            )}
+          />
+        </ResponsiveContainer>
+      );
+    }
+
+    if (chartType === "radar") {
+      return (
+        <ResponsiveContainer width="100%" height={320}>
+          <RadarChart data={chartRows}>
+            <PolarGrid stroke={gridStroke} />
+            <PolarAngleAxis dataKey="category" tick={{ fill: "var(--gnx-muted, #94a3b8)", fontSize: 12 }} />
+            <PolarRadiusAxis tick={{ fill: "var(--gnx-muted, #94a3b8)", fontSize: 11 }} />
+            <Tooltip />
+            <Legend />
+            <Radar
+              name={resolvedChartValueColumn.headerName}
+              dataKey="value"
+              stroke={chartColors[0]}
+              fill={chartColors[0]}
+              fillOpacity={0.32}
+            />
+          </RadarChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (chartType === "radialBar" || chartType === "gauge") {
+      const radialRows =
+        chartType === "gauge"
+          ? [
+              {
+                category: resolvedChartValueColumn.headerName,
+                value: chartRows.reduce((sum, row) => sum + row.value, 0) / Math.max(1, chartRows.length),
+                fill: chartColors[0],
+              },
+            ]
+          : chartRows.map((row, index) => ({
+              ...row,
+              fill: chartColors[index % chartColors.length],
+            }));
+
+      return (
+        <ResponsiveContainer width="100%" height={320}>
+          <RadialBarChart
+            data={radialRows}
+            innerRadius={chartType === "gauge" ? "68%" : "18%"}
+            outerRadius="92%"
+            startAngle={chartType === "gauge" ? 180 : 90}
+            endAngle={chartType === "gauge" ? 0 : -270}
+          >
+            <PolarAngleAxis type="number" domain={[0, "dataMax"]} tick={false} />
+            <RadialBar dataKey="value" name={resolvedChartValueColumn.headerName} background />
+            <Tooltip />
+            <Legend />
+          </RadialBarChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (chartType === "scatter" || chartType === "bubble") {
+      return (
+        <ResponsiveContainer width="100%" height={320}>
+          <ScatterChart>
+            <CartesianGrid stroke={gridStroke} />
+            <XAxis dataKey="x" name="Index" {...commonAxisProps} />
+            <YAxis
+              dataKey="value"
+              name={resolvedChartValueColumn.headerName}
+              {...commonAxisProps}
+            />
+            {chartType === "bubble" ? <ZAxis dataKey="size" range={[80, 520]} /> : null}
+            <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+            <Legend />
+            <Scatter
+              name={resolvedChartValueColumn.headerName}
+              data={chartRows}
+              fill={chartColors[0]}
+            />
+          </ScatterChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (chartType === "histogram") {
+      return (
+        <ResponsiveContainer width="100%" height={320}>
+          <BarChart data={histogramRows}>
+            <CartesianGrid stroke={gridStroke} />
+            <XAxis dataKey="category" {...commonAxisProps} />
+            <YAxis allowDecimals={false} {...commonAxisProps} />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="value" name="Frequency" fill={chartColors[0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (chartType === "boxPlot") {
+      const min = Math.min(...boxPlotRows.map((row) => row.min), 0);
+      const max = Math.max(...boxPlotRows.map((row) => row.max), 1);
+
+      return (
+        <ResponsiveContainer width="100%" height={320}>
+          <ComposedChart data={boxPlotRows} margin={{ top: 20, right: 24, bottom: 12, left: 8 }}>
+            <CartesianGrid stroke={gridStroke} />
+            <XAxis dataKey="category" {...commonAxisProps} />
+            <YAxis domain={[min, max]} {...commonAxisProps} />
+            <Tooltip
+              content={({ active, payload }) => {
+                const row = payload?.[0]?.payload;
+
+                if (!active || !row) {
+                  return null;
+                }
+
+                return (
+                  <div className="recharts-default-tooltip">
+                    <strong>{row.category}</strong>
+                    <div>Min: {formatNumber(row.min)}</div>
+                    <div>Q1: {formatNumber(row.q1)}</div>
+                    <div>Median: {formatNumber(row.median)}</div>
+                    <div>Q3: {formatNumber(row.q3)}</div>
+                    <div>Max: {formatNumber(row.max)}</div>
+                  </div>
+                );
+              }}
+            />
+            <Legend />
+            <Bar dataKey="value" name={resolvedChartValueColumn.headerName} fill="transparent" shape={(props: any) => {
+              const row = props.payload;
+              const yScale = props.yAxis?.scale;
+
+              if (!row || typeof yScale !== "function") {
+                return <g />;
+              }
+
+              const centerX = props.x + props.width / 2;
+              const boxWidth = Math.max(22, Math.min(48, props.width * 0.44));
+              const color = chartColors[(props.index ?? 0) % chartColors.length];
+              const minY = yScale(row.min);
+              const maxY = yScale(row.max);
+              const q1Y = yScale(row.q1);
+              const q3Y = yScale(row.q3);
+              const medianY = yScale(row.median);
+
+              return (
+                <g>
+                  <line x1={centerX} x2={centerX} y1={maxY} y2={minY} stroke={color} strokeWidth={2} />
+                  <line x1={centerX - boxWidth / 2} x2={centerX + boxWidth / 2} y1={maxY} y2={maxY} stroke={color} strokeWidth={2} />
+                  <line x1={centerX - boxWidth / 2} x2={centerX + boxWidth / 2} y1={minY} y2={minY} stroke={color} strokeWidth={2} />
+                  <rect
+                    x={centerX - boxWidth / 2}
+                    y={q3Y}
+                    width={boxWidth}
+                    height={Math.max(2, q1Y - q3Y)}
+                    fill={color}
+                    fillOpacity={0.45}
+                    stroke={color}
+                    strokeWidth={2}
+                    rx={2}
+                  />
+                  <line x1={centerX - boxWidth / 2} x2={centerX + boxWidth / 2} y1={medianY} y2={medianY} stroke="var(--gnx-heading, #f8fafc)" strokeWidth={2} />
+                </g>
+              );
+            }} />
+          </ComposedChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    if (chartType === "combo") {
+      return (
+        <ResponsiveContainer width="100%" height={320}>
+          <ComposedChart data={chartRows}>
+            <CartesianGrid stroke={gridStroke} />
+            <XAxis dataKey="category" {...commonAxisProps} />
+            <YAxis {...commonAxisProps} />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="value" name={resolvedChartValueColumn.headerName} fill={chartColors[0]} />
+            <Line
+              dataKey="average"
+              name={`${resolvedChartValueColumn.headerName} average`}
+              type="monotone"
+              stroke={chartColors[2]}
+              strokeWidth={2}
+              dot={false}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      );
+    }
+
+    const ChartComponent =
+      chartType === "line"
+        ? LineChart
+        : chartType === "area"
+          ? AreaChart
+          : BarChart;
+    const SeriesComponent =
+      chartType === "line" ? Line : chartType === "area" ? Area : Bar;
+    const seriesProps =
+      chartType === "line"
+        ? { type: "monotone" as const, stroke: chartColors[0], strokeWidth: 2, dot: false }
+        : chartType === "area"
+          ? { type: "monotone" as const, stroke: chartColors[0], fill: chartColors[0], fillOpacity: 0.25 }
+          : { fill: chartColors[0] };
+
+    return (
+      <ResponsiveContainer width="100%" height={320}>
+        <ChartComponent data={chartRows}>
+          <CartesianGrid stroke={gridStroke} />
+          <XAxis dataKey="category" {...commonAxisProps} />
+          <YAxis {...commonAxisProps} />
+          <Tooltip />
+          <Legend />
+          <SeriesComponent
+            dataKey="value"
+            name={resolvedChartValueColumn.headerName}
+            {...seriesProps}
+          />
+        </ChartComponent>
+      </ResponsiveContainer>
+    );
+  };
 
   return (
     <GridContext.Provider
@@ -6290,6 +7266,16 @@ export default function GridNexaRepro() {
                 onClick={openImportDataPicker}
               >
                 Import data
+              </button>
+            ) : null}
+
+            {toolbarOptions.charts ? (
+              <button
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                type="button"
+                onClick={() => setChartsOpen((current) => !current)}
+              >
+                Charts
               </button>
             ) : null}
 
@@ -6801,6 +7787,105 @@ export default function GridNexaRepro() {
               >
                 Apply
               </button>
+            </div>
+          </div>
+        ) : null}
+
+        {chartsOpen ? (
+          <div className="sg-product-panel sg-chart-panel" role="dialog" aria-label="Insight charts">
+            <div className="sg-product-panel-header">
+              <div>
+                <strong>Insight charts</strong>
+                <span>
+                  {cellRange
+                    ? "Charting selected range"
+                    : "Charting visible rows"}
+                </span>
+              </div>
+              <div className="sg-diagnostics-actions">
+                <button
+                  type="button"
+                  className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                  onClick={() => void downloadChartPng()}
+                >
+                  Download PNG
+                </button>
+                <button
+                  type="button"
+                  className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                  onClick={() => setChartsOpen(false)}
+                >
+                  Done
+                </button>
+              </div>
+            </div>
+            <div className="sg-chart-type-grid" aria-label="Chart type">
+              {chartsOptions.types.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  className={cx(
+                    "sg-chart-type-button",
+                    chartType === type && "sg-chart-type-button--active",
+                  )}
+                  onClick={() => setChartType(type)}
+                  title={getChartTypeLabel(type)}
+                  aria-pressed={chartType === type}
+                >
+                  <span className={`sg-chart-icon sg-chart-icon--${type}`} aria-hidden="true" />
+                  <span>{getChartTypeLabel(type)}</span>
+                </button>
+              ))}
+            </div>
+            <div className="sg-diagnostics-grid">
+              <label className="sg-filter">
+                <span className="sg-filter-label">Type</span>
+                <select
+                  className={cx("sg-filter-input", mergedClassNames.input)}
+                  value={chartType}
+                  onChange={(event) => setChartType(event.target.value as GridNexaChartType)}
+                >
+                  {chartsOptions.types.map((type) => (
+                    <option key={type} value={type}>
+                      {getChartTypeLabel(type)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="sg-filter">
+                <span className="sg-filter-label">Category</span>
+                <select
+                  className={cx("sg-filter-input", mergedClassNames.input)}
+                  value={resolvedChartCategoryColumn?.id ?? ""}
+                  onChange={(event) => setChartCategoryColumnId(event.target.value)}
+                >
+                  {chartSourceColumns.map((column) => (
+                    <option key={column.id} value={column.id}>
+                      {column.headerName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="sg-filter">
+                <span className="sg-filter-label">Value</span>
+                <select
+                  className={cx("sg-filter-input", mergedClassNames.input)}
+                  value={resolvedChartValueColumn?.id ?? ""}
+                  onChange={(event) => setChartValueColumnId(event.target.value)}
+                >
+                  {chartValueColumns.map((column) => (
+                    <option key={column.id} value={column.id}>
+                      {column.headerName}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span>
+                {chartRows.length} points from {chartSourceRows.length} rows
+              </span>
+            </div>
+            <div className="sg-chart-canvas" ref={chartCanvasRef}>
+              {renderInsightChart()}
             </div>
           </div>
         ) : null}

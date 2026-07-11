@@ -18,6 +18,7 @@ Use it when you want:
 - Typed `Column` and `GridOptions` contracts shared between frontend packages.
 - Server-side operation models for filtering, sorting, pagination, grouping, pivoting, tree data, and transactions.
 - Toolbar contracts for import data, copy/paste, bulk edit, find/replace, filters, exports, and row actions.
+- Chart contracts for selected-range or visible-row insight charts.
 - Diagnostics and repro snapshot contracts for developer support flows.
 - A stable base for React, Angular, Vue, and framework-free JavaScript wrappers.
 
@@ -67,6 +68,8 @@ npm install @gridnexa/javascript
 - `GridNexaCommandAction`
 - `GridNexaAiOptions`
 - `GridNexaReproSnapshot`
+- `GridNexaChartsOptions`
+- `GridNexaChartType`
 
 ## AI Action Plan Contract
 
@@ -108,8 +111,9 @@ Core includes the typed contracts used by all framework packages:
 - `changeReview` describes pre-save review of edits, row additions, and deletions.
 - `validation` describes fast cell validation rules and save blocking.
 - `diagnostics` describes developer-facing runtime diagnostics, action recording, and one-click repro snapshot export/import.
+- `charts` describes built-in insight chart behavior for bar, line, area, pie, donut, scatter, bubble, radar, radial, histogram, box plot, treemap, gauge, funnel, and combo charts.
 - `icons` provides global icon replacement, while `column.icons` can override icons for a specific column.
-- `toolbar` enables or hides quick filter, find, find/replace, filters, advanced filter, columns, import data, copy/paste, bulk edit, exports, add/delete rows, undo/redo, fill, and save-all tools.
+- `toolbar` enables or hides quick filter, find, find/replace, filters, advanced filter, columns, import data, copy/paste, bulk edit, charts, exports, add/delete rows, undo/redo, fill, and save-all tools.
 
 React consumers should import `@gridnexa/react/index.css` once in the app entry. That exported CSS carries the shared header layout, drag/reorder indicators, pinned-column rules, popovers, scrollbars, and theme variables needed for installed apps to match the playground.
 

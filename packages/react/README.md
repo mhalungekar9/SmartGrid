@@ -14,6 +14,7 @@ GridNexa gives React teams a polished grid foundation for data-heavy products: s
 Most grid libraries make teams choose between a lightweight table and a heavyweight enterprise grid. GridNexa aims for the middle path developers keep asking for: a modern React data grid with serious product features, sensible styling, and copy-ready examples.
 
 - **Excel-style workflows built in**: import `.xlsx`, `.xls`, `.csv`, `.tsv`, `.txt`, and `.json`; copy/paste ranges from Excel; bulk edit; find and replace; export CSV and Excel.
+- **Insight charts from the grid**: turn selected ranges or visible rows into bar, line, area, pie, donut, scatter, bubble, radar, radial, histogram, box plot, treemap, gauge, funnel, and combo charts, then download charts as PNG.
 - **Debuggable by design**: diagnostics and repro snapshots let users export the grid state, sampled rows, recent actions, and a React repro JSON instead of sending vague bug reports.
 - **Productivity tools without glue code**: saved views, command palette, change review, validation, undo/redo, fill handle, row add/delete, and toolbar panels are first-class.
 - **Real data-grid depth**: column resize/reorder/pin/hide, filters, advanced filters, grouping, pivoting, tree data, master/detail, formulas, summaries, server-side callbacks, and transactions.
@@ -25,6 +26,7 @@ Most grid libraries make teams choose between a lightweight table and a heavywei
 | Area | What GridNexa Includes |
 | --- | --- |
 | Data import | Excel `.xlsx/.xls`, CSV, TSV, TXT, JSON, auto-detected column types |
+| Charts | Bar, line, area, pie, donut, scatter, bubble, radar, radial, histogram, box plot, treemap, gauge, funnel, combo charts with PNG download |
 | Clipboard | Copy, paste from Excel, paste ranges, append overflow rows, Clipboard API fallback |
 | Editing | Inline editors, bulk edit, fill handle, formulas, undo/redo, change review |
 | Search/filter | Quick filter, find, find & replace, column filters, set filters, advanced filters |
@@ -136,6 +138,31 @@ import "@gridnexa/react/index.css";
 `importData` adds a toolbar file picker for `.xlsx`, `.xls`, `.csv`, `.tsv`, `.txt`, and `.json`. Excel workbooks import the first worksheet. CSV/TSV/text imports use the first row as headers. JSON import accepts either an array of row objects or `{ rows: [...] }`.
 
 GridNexa auto-detects imported column types and configures practical defaults for text, number, date, and set filters. Clipboard paste accepts Excel ranges, TSV, CSV, and plain text; pasted ranges update selected cells and can append overflow rows. `bulkEdit` updates the selected range or selected rows in the active column. `findReplace` replaces the current match or all matching editable cells.
+
+## Insight Charts
+
+```tsx
+<GridNexa
+  columns={columns}
+  rows={rows}
+  enableRangeSelection
+  charts={{
+    enabled: true,
+    defaultType: "bar",
+    types: ["bar", "line", "area", "pie", "donut", "scatter", "bubble", "radar", "radialBar", "histogram", "boxPlot", "treemap", "gauge", "funnel", "combo"],
+    source: "selection",
+    maxRows: 200,
+  }}
+/>
+```
+
+You can also enable charts from the toolbar:
+
+```tsx
+<GridNexa columns={columns} rows={rows} toolbar={{ charts: true }} />
+```
+
+Charts use the selected range first when available, then fall back to visible rows. GridNexa auto-detects category and numeric value columns, lets users override both, shows recognizable chart-type icons, and supports bar, line, area, pie, donut, scatter, bubble, radar/polar, radial, histogram, box plot, treemap, gauge, funnel, and combination charts. Users can download the rendered chart as a PNG from the chart panel.
 
 ## Toolbar, Header Tools, Footer, And Icons
 

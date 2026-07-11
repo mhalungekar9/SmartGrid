@@ -1,98 +1,103 @@
 {
-  "name": "@gridnexa/react",
-  "version": "0.1.13",
-  "description": "Feature-rich React data grid and React table with Excel import, clipboard paste, editing, filtering, pivoting, diagnostics, and TypeScript APIs.",
-  "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    },
-    "./index.css": "./dist/index.css",
-    "./dist/index.css": "./dist/index.css"
-  },
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "sideEffects": [
-    "*.css"
-  ],
-  "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
-    "dev": "tsup src/index.ts --watch",
-    "clean": "rimraf dist"
-  },
-  "keywords": [
-    "gridnexa",
-    "react-grid",
-    "react-data-grid",
-    "react-table",
-    "react-datagrid",
-    "react-data-table",
-    "data-grid",
-    "data-table",
-    "datagrid",
-    "grid",
-    "table",
-    "ag-grid-alternative",
-    "mui-data-grid-alternative",
-    "tanstack-table-alternative",
-    "enterprise-grid",
-    "excel-grid",
-    "spreadsheet",
-    "xlsx",
-    "excel-import",
-    "csv-import",
-    "json-import",
-    "clipboard",
-    "copy-paste",
-    "bulk-edit",
-    "find-replace",
-    "pivot-table",
-    "tree-grid",
-    "virtual-scroll",
-    "filtering",
-    "sorting",
-    "editable-grid",
-    "csv-export",
-    "excel-export",
-    "typescript"
-  ],
-  "homepage": "https://www.gridnexa.in/",
-  "bugs": {
-    "url": "https://www.gridnexa.in/help"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mhalungekar9/SmartGrid.git",
-    "directory": "packages/react"
-  },
-  "author": "Sachin M",
-  "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
-  "peerDependencies": {
-    "react": ">=19",
-    "react-dom": ">=19"
-  },
-  "dependencies": {
-    "@gridnexa/core": "workspace:^",
-    "@radix-ui/react-dropdown-menu": "^2.1.19",
-    "@radix-ui/react-popover": "^1.1.18",
-    "lucide-react": "^1.23.0",
-    "xlsx": "^0.18.5"
-  },
-  "devDependencies": {
-    "@types/react": "^19.1.0",
-    "@types/react-dom": "^19.1.0",
-    "rimraf": "^6.0.1",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.0"
-  }
+    "name":  "@gridnexa/react",
+    "version":  "0.1.14",
+    "description":  "Feature-rich React data grid and React table with Excel import, clipboard paste, editing, filtering, pivoting, diagnostics, and TypeScript APIs.",
+    "type":  "module",
+    "main":  "./dist/index.js",
+    "module":  "./dist/index.js",
+    "types":  "./dist/index.d.ts",
+    "exports":  {
+                    ".":  {
+                              "types":  "./dist/index.d.ts",
+                              "import":  "./dist/index.js",
+                              "require":  "./dist/index.cjs"
+                          },
+                    "./index.css":  "./dist/index.css",
+                    "./dist/index.css":  "./dist/index.css"
+                },
+    "files":  [
+                  "dist",
+                  "README.md"
+              ],
+    "sideEffects":  [
+                        "*.css"
+                    ],
+    "scripts":  {
+                    "build":  "tsup src/index.ts --format esm,cjs --dts",
+                    "dev":  "tsup src/index.ts --watch",
+                    "clean":  "rimraf dist"
+                },
+    "keywords":  [
+                     "gridnexa",
+                     "react-grid",
+                     "react-data-grid",
+                     "react-table",
+                     "react-datagrid",
+                     "react-data-table",
+                     "data-grid",
+                     "data-table",
+                     "datagrid",
+                     "grid",
+                     "table",
+                     "ag-grid-alternative",
+                     "mui-data-grid-alternative",
+                     "tanstack-table-alternative",
+                     "enterprise-grid",
+                     "excel-grid",
+                     "spreadsheet",
+                     "xlsx",
+                     "excel-import",
+                     "csv-import",
+                     "json-import",
+                     "clipboard",
+                     "copy-paste",
+                     "bulk-edit",
+                     "find-replace",
+                     "charts",
+                     "react-charts",
+                     "data-visualization",
+                     "dashboard-grid",
+                     "pivot-table",
+                     "tree-grid",
+                     "virtual-scroll",
+                     "filtering",
+                     "sorting",
+                     "editable-grid",
+                     "csv-export",
+                     "excel-export",
+                     "typescript"
+                 ],
+    "homepage":  "https://www.gridnexa.in/",
+    "bugs":  {
+                 "url":  "https://www.gridnexa.in/help"
+             },
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/mhalungekar9/SmartGrid.git",
+                       "directory":  "packages/react"
+                   },
+    "author":  "Sachin M",
+    "license":  "MIT",
+    "publishConfig":  {
+                          "access":  "public"
+                      },
+    "peerDependencies":  {
+                             "react":  "\u003e=19",
+                             "react-dom":  "\u003e=19"
+                         },
+    "dependencies":  {
+                         "@gridnexa/core":  "workspace:^",
+                         "@radix-ui/react-dropdown-menu":  "^2.1.19",
+                         "@radix-ui/react-popover":  "^1.1.18",
+                         "lucide-react":  "^1.23.0",
+                         "recharts":  "^3.9.2",
+                         "xlsx":  "^0.18.5"
+                     },
+    "devDependencies":  {
+                            "@types/react":  "^19.1.0",
+                            "@types/react-dom":  "^19.1.0",
+                            "rimraf":  "^6.0.1",
+                            "tsup":  "^8.5.1",
+                            "typescript":  "^5.9.0"
+                        }
 }

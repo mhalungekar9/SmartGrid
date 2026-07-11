@@ -229,6 +229,169 @@
   white-space: nowrap;
 }
 
+.sg-chart-panel {
+  width: min(980px, calc(100vw - 32px));
+  max-width: min(980px, calc(100vw - 32px));
+}
+
+.sg-product-panel-header span {
+  display: block;
+  margin-top: 2px;
+  color: var(--gnx-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.sg-chart-canvas {
+  min-height: 340px;
+  padding: 12px;
+  border: 1px solid var(--gnx-border);
+  border-radius: 10px;
+  background: var(--gnx-panel-strong);
+}
+
+.sg-chart-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  gap: 8px;
+}
+
+.sg-chart-type-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--gnx-border);
+  border-radius: 8px;
+  background: var(--gnx-panel-strong);
+  color: var(--gnx-text);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.sg-chart-type-button:hover,
+.sg-chart-type-button--active {
+  border-color: color-mix(in srgb, var(--gnx-primary) 62%, var(--gnx-border));
+  background: var(--gnx-row-hover);
+  color: var(--gnx-primary);
+}
+
+.sg-chart-icon {
+  position: relative;
+  display: inline-block;
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  color: currentColor;
+}
+
+.sg-chart-icon::before,
+.sg-chart-icon::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  opacity: 0.86;
+}
+
+.sg-chart-icon--bar::before,
+.sg-chart-icon--histogram::before,
+.sg-chart-icon--boxPlot::before,
+.sg-chart-icon--combo::before {
+  inset: auto 4px 4px;
+  height: 12px;
+  border: 0;
+  border-radius: 2px;
+  background: linear-gradient(90deg, currentColor 0 25%, transparent 25% 38%, currentColor 38% 62%, transparent 62% 74%, currentColor 74%);
+}
+
+.sg-chart-icon--boxPlot::after {
+  inset: 2px 5px;
+  border: 0;
+  background:
+    linear-gradient(currentColor, currentColor) 10px 0 / 2px 100% no-repeat,
+    linear-gradient(currentColor, currentColor) 5px 3px / 12px 2px no-repeat,
+    linear-gradient(currentColor, currentColor) 5px 17px / 12px 2px no-repeat,
+    linear-gradient(currentColor, currentColor) 3px 7px / 16px 9px no-repeat;
+  opacity: 0.86;
+}
+
+.sg-chart-icon--line::before,
+.sg-chart-icon--area::before,
+.sg-chart-icon--combo::after {
+  inset: 5px 3px;
+  border: 0;
+  border-bottom: 2px solid currentColor;
+  border-left: 2px solid currentColor;
+  border-radius: 0;
+  transform: skew(-24deg) rotate(-8deg);
+}
+
+.sg-chart-icon--area::after {
+  inset: 10px 3px 4px;
+  border: 0;
+  border-radius: 3px;
+  background: currentColor;
+  opacity: 0.28;
+}
+
+.sg-chart-icon--pie::before,
+.sg-chart-icon--donut::before,
+.sg-chart-icon--radialBar::before,
+.sg-chart-icon--gauge::before {
+  border-radius: 50%;
+  border-width: 3px;
+}
+
+.sg-chart-icon--donut::after,
+.sg-chart-icon--radialBar::after {
+  inset: 8px;
+  border-radius: 50%;
+  background: var(--gnx-panel-strong);
+  border: 0;
+  opacity: 1;
+}
+
+.sg-chart-icon--scatter::before,
+.sg-chart-icon--bubble::before {
+  inset: 2px;
+  border: 0;
+  background:
+    radial-gradient(circle at 30% 68%, currentColor 0 2px, transparent 3px),
+    radial-gradient(circle at 56% 42%, currentColor 0 2px, transparent 3px),
+    radial-gradient(circle at 76% 26%, currentColor 0 2px, transparent 3px);
+}
+
+.sg-chart-icon--bubble::after {
+  inset: 9px 4px 4px 11px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.42;
+}
+
+.sg-chart-icon--radar::before,
+.sg-chart-icon--treemap::before {
+  transform: rotate(45deg);
+}
+
+.sg-chart-icon--funnel::before {
+  inset: 4px 3px;
+  border: 0;
+  clip-path: polygon(0 0, 100% 0, 63% 48%, 63% 100%, 37% 100%, 37% 48%);
+  background: currentColor;
+}
+
+.sg-chart-canvas .recharts-default-tooltip {
+  border-color: var(--gnx-border) !important;
+  border-radius: 8px;
+  background: var(--gnx-panel) !important;
+  color: var(--gnx-text) !important;
+}
+
 .sg-header {
   align-self: flex-start;
   width: var(--gnx-table-width, var(--gnx-table-min-width, max-content));

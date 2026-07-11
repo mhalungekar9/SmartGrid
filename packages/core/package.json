@@ -1,67 +1,69 @@
 {
-  "name": "@gridnexa/core",
-  "version": "0.1.13",
-  "description": "Shared TypeScript contracts for GridNexa data grids, data tables, Excel-style grids, filters, columns, events, and framework wrappers.",
-  "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
-    }
-  },
-  "files": [
-    "dist",
-    "README.md"
-  ],
-  "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
-    "dev": "tsup src/index.ts --watch",
-    "clean": "rimraf dist"
-  },
-  "keywords": [
-    "gridnexa",
-    "grid",
-    "data-grid",
-    "data-table",
-    "datagrid",
-    "table",
-    "typescript",
-    "grid-types",
-    "table-types",
-    "column-definitions",
-    "filter-model",
-    "enterprise-grid",
-    "excel-grid",
-    "spreadsheet",
-    "excel",
-    "pivot-table",
-    "tree-grid",
-    "react-grid",
-    "angular-grid",
-    "vue-grid",
-    "javascript-grid"
-  ],
-  "homepage": "https://www.gridnexa.in/",
-  "bugs": {
-    "url": "https://www.gridnexa.in/help"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/mhalungekar9/SmartGrid.git",
-    "directory": "packages/core"
-  },
-  "author": "Sachin M",
-  "license": "MIT",
-  "publishConfig": {
-    "access": "public"
-  },
-  "devDependencies": {
-    "rimraf": "^6.1.3",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
-  }
+    "name":  "@gridnexa/core",
+    "version":  "0.1.14",
+    "description":  "Shared TypeScript contracts for GridNexa data grids, data tables, Excel-style grids, filters, columns, events, and framework wrappers.",
+    "type":  "module",
+    "main":  "./dist/index.js",
+    "module":  "./dist/index.js",
+    "types":  "./dist/index.d.ts",
+    "exports":  {
+                    ".":  {
+                              "types":  "./dist/index.d.ts",
+                              "import":  "./dist/index.js",
+                              "require":  "./dist/index.cjs"
+                          }
+                },
+    "files":  [
+                  "dist",
+                  "README.md"
+              ],
+    "scripts":  {
+                    "build":  "tsup src/index.ts --format esm,cjs --dts",
+                    "dev":  "tsup src/index.ts --watch",
+                    "clean":  "rimraf dist"
+                },
+    "keywords":  [
+                     "gridnexa",
+                     "grid",
+                     "data-grid",
+                     "data-table",
+                     "datagrid",
+                     "table",
+                     "typescript",
+                     "grid-types",
+                     "table-types",
+                     "column-definitions",
+                     "filter-model",
+                     "chart-options",
+                     "analytics-grid",
+                     "enterprise-grid",
+                     "excel-grid",
+                     "spreadsheet",
+                     "excel",
+                     "pivot-table",
+                     "tree-grid",
+                     "react-grid",
+                     "angular-grid",
+                     "vue-grid",
+                     "javascript-grid"
+                 ],
+    "homepage":  "https://www.gridnexa.in/",
+    "bugs":  {
+                 "url":  "https://www.gridnexa.in/help"
+             },
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/mhalungekar9/SmartGrid.git",
+                       "directory":  "packages/core"
+                   },
+    "author":  "Sachin M",
+    "license":  "MIT",
+    "publishConfig":  {
+                          "access":  "public"
+                      },
+    "devDependencies":  {
+                            "rimraf":  "^6.1.3",
+                            "tsup":  "^8.5.1",
+                            "typescript":  "^5.9.3"
+                        }
 }

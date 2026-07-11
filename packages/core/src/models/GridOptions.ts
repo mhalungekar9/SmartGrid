@@ -62,6 +62,32 @@ export type GridNexaTheme = "light" | "dark" | "system";
 export type GridNexaDensity = "compact" | "standard" | "comfortable";
 export type GridNexaRowReorderPosition = "left" | "right";
 export type GridNexaPreset = "basic" | "admin" | "spreadsheet" | "analytics";
+export type GridNexaChartType =
+  | "bar"
+  | "line"
+  | "area"
+  | "pie"
+  | "donut"
+  | "scatter"
+  | "bubble"
+  | "radar"
+  | "radialBar"
+  | "histogram"
+  | "boxPlot"
+  | "treemap"
+  | "gauge"
+  | "funnel"
+  | "combo";
+export type GridNexaChartsOptions =
+  | boolean
+  | Partial<{
+      enabled: boolean;
+      toolbarButton: boolean;
+      types: GridNexaChartType[];
+      source: "selection" | "visibleRows";
+      defaultType: GridNexaChartType;
+      maxRows: number;
+    }>;
 export type GridNexaToolbarOptions =
   | boolean
   | Partial<{
@@ -82,6 +108,7 @@ export type GridNexaToolbarOptions =
       copyPaste: boolean;
       bulkEdit: boolean;
       findReplace: boolean;
+      charts: boolean;
       prevNextPage: boolean;
       saveAll: boolean;
       addRow: boolean;
@@ -407,6 +434,7 @@ export interface GridOptions<T = unknown> {
   changeReview?: GridNexaChangeReviewOptions;
   validation?: GridNexaValidationOptions;
   diagnostics?: GridNexaDiagnosticsOptions;
+  charts?: GridNexaChartsOptions;
   sidePanel?: GridNexaSidePanelOptions;
   fillWidth?: GridNexaFillWidthOptions;
   stateStorage?: GridNexaStateStorageOptions;
