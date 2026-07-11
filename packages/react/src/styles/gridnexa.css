@@ -403,6 +403,128 @@
   opacity: 0.5;
 }
 
+.sg-trust-panel {
+  gap: 12px;
+}
+
+.sg-trust-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.sg-trust-summary span,
+.sg-trust-card,
+.sg-trust-timeline li {
+  border: 1px solid var(--gnx-border);
+  border-radius: 10px;
+  background: var(--gnx-panel-strong);
+}
+
+.sg-trust-summary span {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  color: var(--gnx-muted);
+  font-size: 0.78rem;
+}
+
+.sg-trust-summary strong {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--gnx-heading);
+  font-size: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sg-trust-score strong {
+  color: #22c55e;
+  font-size: 1.25rem;
+}
+
+.sg-trust-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+}
+
+.sg-trust-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  color: var(--gnx-muted);
+  font-size: 0.82rem;
+}
+
+.sg-trust-card strong {
+  color: var(--gnx-heading);
+}
+
+.sg-trust-card code {
+  overflow: hidden;
+  padding: 6px 8px;
+  border: 1px solid var(--gnx-border);
+  border-radius: 8px;
+  background: var(--gnx-bg);
+  color: var(--gnx-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sg-trust-warning {
+  color: #f59e0b;
+  font-weight: 800;
+}
+
+.sg-trust-list,
+.sg-trust-timeline {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sg-trust-list li {
+  padding-left: 10px;
+  border-left: 2px solid var(--gnx-primary);
+}
+
+.sg-trust-timeline {
+  max-height: 170px;
+  overflow: auto;
+}
+
+.sg-trust-timeline li {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.8fr) minmax(130px, 1.4fr) auto;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+  padding: 8px 10px;
+}
+
+.sg-trust-timeline strong,
+.sg-trust-timeline span,
+.sg-trust-timeline time {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sg-trust-timeline strong {
+  color: var(--gnx-primary);
+}
+
+.sg-trust-timeline time {
+  color: var(--gnx-muted);
+  font-size: 0.78rem;
+}
+
 .sg-chart-panel {
   width: min(980px, calc(100vw - 32px));
   max-width: min(980px, calc(100vw - 32px));

@@ -9,6 +9,7 @@ A polished showcase for GridNexa React. Each page pairs a live grid with copyabl
 - State persistence and saved views with `localStorage`
 - Built-in loading, error, and empty overlays
 - Data Health profiling for missing values, duplicates, invalid cells, outliers, and quality scores
+- Trust Mode for active-cell source, quality evidence, impact preview, history, and rollback
 - Sorting and filtering
 - Pagination and selection
 - Column resizing, pinning, aligned header drag/reorder, and templates

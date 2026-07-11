@@ -26,6 +26,7 @@ import { Aggregates } from "../pages/Aggregates";
 import { VirtualScrolling } from "../pages/VirtualScrolling";
 import { RemoteData } from "../pages/RemoteData";
 import { DataHealth } from "../pages/DataHealth";
+import { TrustMode } from "../pages/TrustMode";
 import { Export } from "../pages/Export";
 import { Theme } from "../pages/Theme";
 import { StylingConfiguration } from "../pages/StylingConfiguration";
@@ -129,6 +130,14 @@ export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
         component: DataHealth,
         description: "Profile missing values, duplicates, invalid cells, outliers, top values, and quality scores.",
         tags: ["data quality", "health", "duplicates", "missing", "invalid", "outliers", "profiling"],
+      },
+      {
+        path: "/docs/trust-mode",
+        label: "Trust Mode",
+        icon: "bi-shield-check",
+        component: TrustMode,
+        description: "Inspect active-cell source, quality, downstream impact, edit history, and rollback.",
+        tags: ["trust", "audit", "lineage", "quality", "rollback", "impact"],
       },
       { path: "/docs/export", label: "Export", icon: "bi-download", component: Export },
       {

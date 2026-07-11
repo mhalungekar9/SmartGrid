@@ -49,6 +49,7 @@ export function FeaturePage({ config }: FeaturePageProps) {
         toolbar={toolbar}
         sidePanel={config.sidePanel}
         dataHealth={config.dataHealth}
+        trustMode={config.trustMode}
         validation={config.validation}
         fillWidth={config.fillWidth}
         pageSize={config.pageSize}

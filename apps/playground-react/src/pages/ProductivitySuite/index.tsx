@@ -43,6 +43,7 @@ const code = `<GridNexa
   }}
   diagnostics
   dataHealth
+  trustMode
 />`;
 
 const capabilities = [
@@ -52,6 +53,7 @@ const capabilities = [
   ["bi-lightning-charge", "Validation", "Invalid cells are highlighted and Save All can be blocked."],
   ["bi-lightning-charge", "Diagnostics", "Developers can inspect runtime counts while integrating."],
   ["bi-lightning-charge", "Data health", "Users can profile missing values, duplicates, invalid cells, and outliers."],
+  ["bi-lightning-charge", "Trust mode", "Users can inspect source, quality, impact, history, and rollback for the active cell."],
 ];
 
 export function ProductivitySuite() {
@@ -96,6 +98,7 @@ export function ProductivitySuite() {
             validation={{ blockSave: true, rules: { name: { required: true }, score: { type: "number", min: 70, max: 100 } } }}
             diagnostics
             dataHealth
+            trustMode
             createRow={() => ({ id: Date.now(), name: "New workflow", owner: "Operations", status: "Review", score: 0 })}
           />
         </DemoCard>

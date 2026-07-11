@@ -3,11 +3,11 @@
 Framework-neutral TypeScript contracts for GridNexa data grid, data table, Excel grid, and framework wrapper packages.
 
 [![npm](https://img.shields.io/npm/v/@gridnexa/core?color=2563eb)](https://www.npmjs.com/package/@gridnexa/core)
-[![license](https://img.shields.io/npm/l/@gridnexa/core)](https://github.com/mhalungekar9/SmartGrid)
+[![license](https://img.shields.io/npm/l/@gridnexa/core)](https://github.com/mhalungekar9/gridnexa)
 [![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
 [![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
 
-`@gridnexa/core` contains the shared models used by the React, Angular, Vue, and JavaScript packages. Most applications should install a framework package directly; install core when you need shared types for library wrappers, backend contracts, data-quality tooling, server-side grid operations, AI action plans, or cross-framework tooling.
+`@gridnexa/core` contains the shared models used by the React, Angular, Vue, and JavaScript packages. Most applications should install a framework package directly; install core when you need shared types for library wrappers, backend contracts, data-quality and trust tooling, server-side grid operations, AI action plans, or cross-framework tooling.
 
 ## Why This Package Exists
 
@@ -19,7 +19,7 @@ Use it when you want:
 - Server-side operation models for filtering, sorting, pagination, grouping, pivoting, tree data, and transactions.
 - Toolbar contracts for import data, copy/paste, bulk edit, find/replace, filters, exports, and row actions.
 - Chart contracts for selected-range or visible-row insight charts.
-- Diagnostics, Data Health, and repro snapshot contracts for developer support and data-quality flows.
+- Diagnostics, Data Health, Trust Mode, and repro snapshot contracts for developer support, data-quality, and active-cell trust flows.
 - A stable base for React, Angular, Vue, and framework-free JavaScript wrappers.
 
 ## Quick Links
@@ -27,7 +27,7 @@ Use it when you want:
 - Website: https://www.gridnexa.in/
 - Docs and playground: https://www.gridnexa.in/docs/basic-grid
 - Help: https://www.gridnexa.in/help
-- Repository: https://github.com/mhalungekar9/SmartGrid
+- Repository: https://github.com/mhalungekar9/gridnexa
 
 ## Install
 
@@ -69,6 +69,7 @@ npm install @gridnexa/javascript
 - `GridNexaAiOptions`
 - `GridNexaReproSnapshot`
 - `GridNexaDataHealthOptions`
+- `GridNexaTrustModeOptions`
 - `GridNexaChartsOptions`
 - `GridNexaChartType`
 
@@ -113,6 +114,7 @@ Core includes the typed contracts used by all framework packages:
 - `validation` describes fast cell validation rules and save blocking.
 - `diagnostics` describes developer-facing runtime diagnostics, action recording, and one-click repro snapshot export/import.
 - `dataHealth` describes opt-in column profiling for missing values, duplicates, invalid cells, numeric outliers, quality scores, and issue-focused filtering.
+- `trustMode` describes opt-in active-cell trust inspection for source, validation, data-quality evidence, impact preview, tracked edits, and rollback.
 - `charts` describes built-in insight chart behavior for bar, line, area, pie, donut, scatter, bubble, radar, radial, histogram, box plot, treemap, gauge, funnel, and combo charts.
 - `icons` provides global icon replacement, while `column.icons` can override icons for a specific column.
 - `toolbar` enables or hides quick filter, find, find/replace, filters, advanced filter, columns, import data, copy/paste, bulk edit, charts, exports, add/delete rows, undo/redo, fill, and save-all tools.

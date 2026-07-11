@@ -110,6 +110,7 @@ export type GridNexaToolbarOptions =
       findReplace: boolean;
       charts: boolean;
       dataHealth: boolean;
+      trustMode: boolean;
       prevNextPage: boolean;
       saveAll: boolean;
       addRow: boolean;
@@ -231,6 +232,17 @@ export type GridNexaDataHealthOptions =
       toolbarButton: boolean;
       duplicateThreshold: number;
       outlierIqrMultiplier: number;
+    }>;
+export type GridNexaTrustModeOptions =
+  | boolean
+  | Partial<{
+      enabled: boolean;
+      showPanel: boolean;
+      toolbarButton: boolean;
+      trackEdits: boolean;
+      allowRollback: boolean;
+      showImpact: boolean;
+      maxEvents: number;
     }>;
 export interface GridNexaIconSet {
   sortAsc?: unknown;
@@ -445,6 +457,7 @@ export interface GridOptions<T = unknown> {
   validation?: GridNexaValidationOptions;
   diagnostics?: GridNexaDiagnosticsOptions;
   dataHealth?: GridNexaDataHealthOptions;
+  trustMode?: GridNexaTrustModeOptions;
   charts?: GridNexaChartsOptions;
   sidePanel?: GridNexaSidePanelOptions;
   fillWidth?: GridNexaFillWidthOptions;

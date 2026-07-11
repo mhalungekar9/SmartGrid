@@ -54,6 +54,7 @@ import type {
   GridNexaValidationOptions,
   GridNexaDiagnosticsOptions,
   GridNexaDataHealthOptions,
+  GridNexaTrustModeOptions,
   GridNexaReproSnapshot,
   GridNexaChartType,
   GridNexaChartsOptions,
@@ -331,6 +332,7 @@ export interface GridNexaExtendedProps<T>
   validation?: GridNexaValidationOptions;
   diagnostics?: GridNexaDiagnosticsOptions;
   dataHealth?: GridNexaDataHealthOptions;
+  trustMode?: GridNexaTrustModeOptions;
   charts?: GridNexaChartsOptions;
   loading?: boolean;
   error?: ReactNode;
@@ -810,6 +812,19 @@ type DataHealthColumnProfile = {
   issueRowIndexes: Record<DataHealthIssueKind, Set<number>>;
 };
 
+type TrustModeEvent = {
+  id: string;
+  type: "edit" | "paste" | "bulkEdit" | "fill" | "import" | "rollback";
+  rowId: string | number;
+  rowIndex: number;
+  columnId: string;
+  columnHeader: string;
+  oldValue: unknown;
+  newValue: unknown;
+  source: string;
+  timestamp: number;
+};
+
 function readPersistedGridState(key: string): PersistedGridState | null {
   if (!key || typeof window === "undefined") {
     return null;
@@ -916,6 +931,40 @@ function resolveDataHealthOptions(value?: GridNexaDataHealthOptions) {
     toolbarButton: value.toolbarButton ?? defaults.toolbarButton,
     duplicateThreshold: value.duplicateThreshold ?? defaults.duplicateThreshold,
     outlierIqrMultiplier: value.outlierIqrMultiplier ?? defaults.outlierIqrMultiplier,
+  };
+}
+
+function resolveTrustModeOptions(value?: GridNexaTrustModeOptions) {
+  const defaults = {
+    enabled: false,
+    showPanel: false,
+    toolbarButton: true,
+    trackEdits: true,
+    allowRollback: true,
+    showImpact: true,
+    maxEvents: 80,
+  };
+
+  if (!value) {
+    return defaults;
+  }
+
+  if (value === true) {
+    return {
+      ...defaults,
+      enabled: true,
+    };
+  }
+
+  return {
+    ...defaults,
+    enabled: value.enabled ?? true,
+    showPanel: value.showPanel ?? defaults.showPanel,
+    toolbarButton: value.toolbarButton ?? defaults.toolbarButton,
+    trackEdits: value.trackEdits ?? defaults.trackEdits,
+    allowRollback: value.allowRollback ?? defaults.allowRollback,
+    showImpact: value.showImpact ?? defaults.showImpact,
+    maxEvents: value.maxEvents ?? defaults.maxEvents,
   };
 }
 
@@ -1948,6 +1997,7 @@ export function GridNexa<T>({
   validation,
   diagnostics,
   dataHealth,
+  trustMode,
   charts,
   loading = false,
   error,
@@ -2220,6 +2270,8 @@ export function GridNexa<T>({
   const diagnosticsEnabled = diagnosticsOptions.enabled;
   const dataHealthOptions = resolveDataHealthOptions(dataHealth);
   const dataHealthEnabled = dataHealthOptions.enabled;
+  const trustModeOptions = resolveTrustModeOptions(trustMode);
+  const trustModeEnabled = trustModeOptions.enabled;
   const chartsOptions = resolveChartsOptions(charts);
   const chartsEnabled =
     chartsOptions.enabled ||
@@ -2241,6 +2293,9 @@ export function GridNexa<T>({
   const [dataHealthOpen, setDataHealthOpen] = useState(
     dataHealthEnabled ? dataHealthOptions.showPanel === true : false,
   );
+  const [trustModeOpen, setTrustModeOpen] = useState(
+    trustModeEnabled ? trustModeOptions.showPanel === true : false,
+  );
   const [activeDataHealthFilter, setActiveDataHealthFilter] = useState<{
     columnId: string;
     issueKind: DataHealthIssueKind;
@@ -2258,6 +2313,8 @@ export function GridNexa<T>({
   const [changeLog, setChangeLog] = useState<ChangeReviewEntry[]>([]);
   const [diagnosticEvents, setDiagnosticEvents] = useState<DiagnosticEvent[]>([]);
   const diagnosticEventsRef = useRef<DiagnosticEvent[]>([]);
+  const [trustEvents, setTrustEvents] = useState<TrustModeEvent[]>([]);
+  const trustEventsRef = useRef<TrustModeEvent[]>([]);
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [advancedFilterPanelOpen, setAdvancedFilterPanelOpen] =
     useState(false);
@@ -3213,6 +3270,26 @@ export function GridNexa<T>({
               return nextId;
             })()
           : rowIndex));
+  const recordTrustEvent = (
+    entry: Omit<TrustModeEvent, "id" | "timestamp">,
+  ) => {
+    if (!trustModeEnabled || !trustModeOptions.trackEdits || pivotResult.active) {
+      return;
+    }
+
+    const nextEvent: TrustModeEvent = {
+      ...entry,
+      id: `${Date.now()}-${trustEventsRef.current.length}`,
+      timestamp: Date.now(),
+    };
+    const nextEvents = [
+      nextEvent,
+      ...trustEventsRef.current,
+    ].slice(0, Math.max(1, trustModeOptions.maxEvents));
+
+    trustEventsRef.current = nextEvents;
+    setTrustEvents(nextEvents);
+  };
   const visibleSelectedRowIds = useMemo(
     () => tableRows.map(getRowSelectionId),
     [getRowId, pivotResult.active, tableRows],
@@ -3550,6 +3627,7 @@ export function GridNexa<T>({
     }
 
     let updateCount = 0;
+    const bulkTrustEvents: Array<Omit<TrustModeEvent, "id" | "timestamp">> = [];
 
     replaceGridRows((currentRows) => {
       const nextRows = [...currentRows];
@@ -3568,16 +3646,29 @@ export function GridNexa<T>({
           return;
         }
 
+        const oldValue = nextRows[originalIndex][column.field];
+        const newValue = parsePastedValue(bulkEditValue, oldValue);
         nextRows[originalIndex] = {
           ...nextRows[originalIndex],
-          [column.field]: parsePastedValue(bulkEditValue, nextRows[originalIndex][column.field]),
+          [column.field]: newValue,
         };
+        bulkTrustEvents.push({
+          type: "bulkEdit",
+          rowId: getRowSelectionId(row, rowIndex),
+          rowIndex,
+          columnId: column.id,
+          columnHeader: column.headerName,
+          oldValue,
+          newValue,
+          source: "Bulk edit",
+        });
         updateCount += 1;
       });
 
       return nextRows;
     }, "bulkEdit");
     appendChangeLog({ type: "bulkEdit", label: `Bulk edited ${updateCount} cells` });
+    bulkTrustEvents.forEach(recordTrustEvent);
   };
 
   const displayRows = useMemo<DisplayRow<T>[]>(() => {
@@ -4310,6 +4401,8 @@ export function GridNexa<T>({
       });
     }
 
+    const pasteTrustEvents: Array<Omit<TrustModeEvent, "id" | "timestamp">> = [];
+
     replaceGridRows((currentRows) => {
       const nextRows = [...currentRows];
       const updates = new Map<number, Record<string, unknown>>();
@@ -4339,9 +4432,20 @@ export function GridNexa<T>({
 
         const currentValue = nextRows[originalIndex][column.field];
         const existingUpdate = updates.get(originalIndex) ?? {};
+        const nextValue = parsePastedValue(rawValue, currentValue);
 
-        existingUpdate[column.field] = parsePastedValue(rawValue, currentValue);
+        existingUpdate[column.field] = nextValue;
         updates.set(originalIndex, existingUpdate);
+        pasteTrustEvents.push({
+          type: "paste",
+          rowId: getRowSelectionId(nextRows[originalIndex], viewRowIndex),
+          rowIndex: viewRowIndex,
+          columnId: column.id,
+          columnHeader: column.headerName,
+          oldValue: currentValue,
+          newValue: nextValue,
+          source: "Clipboard paste",
+        });
       }
 
       updates.forEach((update, index) => {
@@ -4354,6 +4458,7 @@ export function GridNexa<T>({
       return nextRows;
     }, "paste");
     appendChangeLog({ type: "bulkEdit", label: `Pasted ${targetRows.length} cells` });
+    pasteTrustEvents.forEach(recordTrustEvent);
     onPaste?.({ text });
   };
 
@@ -4521,6 +4626,16 @@ export function GridNexa<T>({
     appendChangeLog({
       type: "edit",
       label: `${column.headerName} row ${editingCell.rowIndex + 1}: ${String(row[column.field] ?? "")} -> ${String(parsedValue ?? "")}`,
+    });
+    recordTrustEvent({
+      type: "edit",
+      rowId: getRowSelectionId(row, editingCell.rowIndex),
+      rowIndex: editingCell.rowIndex,
+      columnId: column.id,
+      columnHeader: column.headerName,
+      oldValue: row[column.field],
+      newValue: parsedValue,
+      source: "Inline edit",
     });
     onCellEditStop?.({
       row,
@@ -4885,6 +5000,7 @@ export function GridNexa<T>({
           findReplace: false,
           charts: false,
           dataHealth: false,
+          trustMode: false,
           prevNextPage: false,
           saveAll: false,
           addRow: false,
@@ -4912,6 +5028,7 @@ export function GridNexa<T>({
           findReplace: true,
           charts: false,
           dataHealth: false,
+          trustMode: false,
           prevNextPage: true,
           saveAll: Boolean(onSaveAll),
           addRow: false,
@@ -4935,6 +5052,9 @@ export function GridNexa<T>({
     dataHealth:
       toolbarOptionsBase.dataHealth ||
       (dataHealthEnabled && dataHealthOptions.toolbarButton),
+    trustMode:
+      toolbarOptionsBase.trustMode ||
+      (trustModeEnabled && trustModeOptions.toolbarButton),
   };
   const toolbarVisible =
     toolbar !== false && Object.values(toolbarOptions).some(Boolean);
@@ -5098,6 +5218,162 @@ export function GridNexa<T>({
       profile.outlierCount,
     0,
   );
+  const activeTrustCell = useMemo(() => {
+    if (!activeCell || pivotResult.active) {
+      return null;
+    }
+
+    const row = tableRows[activeCell.rowIndex];
+    const column = tableColumns[activeCell.columnIndex];
+
+    if (!row || !column) {
+      return null;
+    }
+
+    return {
+      row,
+      rowIndex: activeCell.rowIndex,
+      rowId: getRowSelectionId(row, activeCell.rowIndex),
+      column,
+      columnIndex: activeCell.columnIndex,
+      value: getColumnValue(row, column),
+    };
+  }, [activeCell, pivotResult.active, tableColumns, tableRows]);
+  const activeTrustEvents = useMemo(() => {
+    if (!activeTrustCell) {
+      return [] as TrustModeEvent[];
+    }
+
+    return trustEvents.filter(
+      (entry) =>
+        entry.columnId === activeTrustCell.column.id &&
+        (entry.rowId === activeTrustCell.rowId ||
+          entry.rowIndex === activeTrustCell.rowIndex),
+    );
+  }, [activeTrustCell, trustEvents]);
+  const activeTrustHealthProfile = activeTrustCell
+    ? dataHealthProfiles.find((profile) => profile.column.id === activeTrustCell.column.id)
+    : undefined;
+  const activeTrustValidation =
+    activeTrustCell &&
+    validationResult.get(`${activeTrustCell.rowIndex}:${activeTrustCell.columnIndex}`);
+  const activeTrustIssueCount = activeTrustHealthProfile
+    ? activeTrustHealthProfile.missingCount +
+      activeTrustHealthProfile.duplicateCount +
+      activeTrustHealthProfile.invalidCount +
+      activeTrustHealthProfile.outlierCount
+    : 0;
+  const activeTrustScore = activeTrustCell
+    ? Math.max(
+        0,
+        Math.min(
+          100,
+          Math.round(
+            100 -
+              (activeTrustValidation ? 35 : 0) -
+              Math.min(25, activeTrustIssueCount * 3) -
+              Math.min(20, activeTrustEvents.length * 4),
+          ),
+        ),
+      )
+    : 0;
+  const activeTrustSource = activeTrustEvents[0]?.source ?? "Initial rows prop";
+  const activeTrustImpacts = useMemo(() => {
+    if (!activeTrustCell || !trustModeOptions.showImpact) {
+      return [] as string[];
+    }
+
+    const impacts = new Set<string>();
+    const columnField = String(activeTrustCell.column.field);
+
+    if (filterModel[activeTrustCell.column.id]) {
+      impacts.add("Active filter on this column");
+    }
+
+    if (summaryOptions.footer || summaryOptions.selectedRange) {
+      const numericCount = tableRows.filter((row) =>
+        Number.isFinite(Number(getColumnValue(row, activeTrustCell.column))),
+      ).length;
+
+      if (numericCount) {
+        impacts.add("Summary totals and selected-range metrics");
+      }
+    }
+
+    if (chartsEnabled && Number.isFinite(Number(activeTrustCell.value))) {
+      impacts.add("Insight charts using visible numeric columns");
+    }
+
+    if (dataHealthEnabled) {
+      impacts.add("Data Health quality score");
+    }
+
+    tableColumns.forEach((column) => {
+      const hasFormulaReference = tableRows.some((row) => {
+        const rawValue = getRawColumnValue(row, column);
+
+        return (
+          typeof rawValue === "string" &&
+          rawValue.trim().startsWith("=") &&
+          rawValue.toLowerCase().includes(columnField.toLowerCase())
+        );
+      });
+
+      if (hasFormulaReference && column.id !== activeTrustCell.column.id) {
+        impacts.add(`Formula column: ${column.headerName}`);
+      }
+    });
+
+    return Array.from(impacts).slice(0, 5);
+  }, [
+    activeTrustCell,
+    chartsEnabled,
+    dataHealthEnabled,
+    filterModel,
+    summaryOptions.footer,
+    summaryOptions.selectedRange,
+    tableColumns,
+    tableRows,
+    trustModeOptions.showImpact,
+  ]);
+  const rollbackActiveTrustCell = () => {
+    if (!activeTrustCell || !trustModeOptions.allowRollback) {
+      return;
+    }
+
+    const latestEvent = activeTrustEvents[0];
+
+    if (!latestEvent) {
+      return;
+    }
+
+    const originalIndex = findRowIndex(activeTrustCell.row);
+
+    if (originalIndex < 0) {
+      return;
+    }
+
+    replaceGridRows((currentRows) =>
+      currentRows.map((entry, index) =>
+        index === originalIndex
+          ? {
+              ...entry,
+              [activeTrustCell.column.field]: latestEvent.oldValue,
+            }
+          : entry,
+      ),
+    "undo");
+    recordTrustEvent({
+      type: "rollback",
+      rowId: activeTrustCell.rowId,
+      rowIndex: activeTrustCell.rowIndex,
+      columnId: activeTrustCell.column.id,
+      columnHeader: activeTrustCell.column.headerName,
+      oldValue: activeTrustCell.value,
+      newValue: latestEvent.oldValue,
+      source: "Trust rollback",
+    });
+  };
   const activeColumn = activeCell ? tableColumns[activeCell.columnIndex] : null;
   const activeCellLabel =
     activeCell && activeColumn
@@ -5605,6 +5881,9 @@ export default function GridNexaRepro() {
       : []),
     ...(dataHealthEnabled
       ? [{ id: "data-health", label: "Open data health", run: () => { setDataHealthOpen(true); setCommandPaletteOpen(false); } }]
+      : []),
+    ...(trustModeEnabled
+      ? [{ id: "trust-mode", label: "Open trust mode", run: () => { setTrustModeOpen(true); setCommandPaletteOpen(false); } }]
       : []),
     { id: "review-changes", label: "Review changes", run: () => { setChangeReviewOpen(true); setCommandPaletteOpen(false); } },
     ...(diagnosticsEnabled
@@ -7489,6 +7768,16 @@ export default function GridNexaRepro() {
               </button>
             ) : null}
 
+            {toolbarOptions.trustMode ? (
+              <button
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                type="button"
+                onClick={() => setTrustModeOpen((current) => !current)}
+              >
+                Trust mode {activeTrustEvents.length ? `(${activeTrustEvents.length})` : ""}
+              </button>
+            ) : null}
+
             {false ? (
               <div className="sg-pager">
                 <button
@@ -8380,6 +8669,115 @@ export default function GridNexaRepro() {
               </>
             ) : (
               <span className="sg-panel-muted">No data to profile yet.</span>
+            )}
+          </div>
+        ) : null}
+
+        {trustModeOpen ? (
+          <div className="sg-product-panel sg-trust-panel" role="dialog" aria-label="Trust mode">
+            <div className="sg-product-panel-header">
+              <div>
+                <strong>Trust mode</strong>
+                <span>
+                  {activeTrustCell
+                    ? `${activeTrustCell.column.headerName} row ${activeTrustCell.rowIndex + 1}`
+                    : "Select a cell to inspect source, quality, and impact"}
+                </span>
+              </div>
+              <button
+                type="button"
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                onClick={() => setTrustModeOpen(false)}
+              >
+                Done
+              </button>
+            </div>
+            {activeTrustCell ? (
+              <>
+                <div className="sg-trust-summary">
+                  <span className="sg-trust-score">
+                    <strong>{activeTrustScore}</strong>
+                    Trust score
+                  </span>
+                  <span>
+                    <strong>{activeTrustSource}</strong>
+                    Source
+                  </span>
+                  <span>
+                    <strong>{activeTrustEvents.length}</strong>
+                    Cell changes
+                  </span>
+                  <span>
+                    <strong>{activeTrustValidation ? "Needs fix" : "Valid"}</strong>
+                    Validation
+                  </span>
+                </div>
+                <div className="sg-trust-grid">
+                  <section className="sg-trust-card">
+                    <strong>Current value</strong>
+                    <code>{String(activeTrustCell.value ?? "(blank)")}</code>
+                    {activeTrustValidation ? (
+                      <span className="sg-trust-warning">{activeTrustValidation}</span>
+                    ) : (
+                      <span>No validation issue on the active cell.</span>
+                    )}
+                  </section>
+                  <section className="sg-trust-card">
+                    <strong>Column quality</strong>
+                    <span>
+                      {activeTrustHealthProfile
+                        ? `${activeTrustHealthProfile.score} score, ${activeTrustIssueCount} issue markers`
+                        : "Data Health is not enabled for this grid."}
+                    </span>
+                    {activeTrustHealthProfile ? (
+                      <span>
+                        {activeTrustHealthProfile.completeness}% complete, {activeTrustHealthProfile.uniqueCount} unique values
+                      </span>
+                    ) : null}
+                  </section>
+                  <section className="sg-trust-card">
+                    <strong>Impact preview</strong>
+                    {activeTrustImpacts.length ? (
+                      <ul className="sg-trust-list">
+                        {activeTrustImpacts.map((impact) => (
+                          <li key={impact}>{impact}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <span>No obvious downstream grid impact detected.</span>
+                    )}
+                  </section>
+                  <section className="sg-trust-card">
+                    <strong>Recovery</strong>
+                    <span>
+                      {activeTrustEvents[0]
+                        ? `Last value: ${String(activeTrustEvents[0].oldValue ?? "(blank)")}`
+                        : "No tracked edit is available for this cell yet."}
+                    </span>
+                    <button
+                      type="button"
+                      className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                      onClick={rollbackActiveTrustCell}
+                      disabled={!trustModeOptions.allowRollback || !activeTrustEvents.length}
+                    >
+                      Roll back cell
+                    </button>
+                  </section>
+                </div>
+                <ol className="sg-trust-timeline">
+                  {activeTrustEvents.slice(0, 5).map((entry) => (
+                    <li key={entry.id}>
+                      <strong>{entry.source}</strong>
+                      <span>
+                        {`${String(entry.oldValue ?? "(blank)")} -> ${String(entry.newValue ?? "(blank)")}`}
+                      </span>
+                      <time>{new Date(entry.timestamp).toLocaleTimeString()}</time>
+                    </li>
+                  ))}
+                </ol>
+              </>
+            ) : (
+              <span className="sg-panel-muted">Click a body cell to inspect trust evidence.</span>
             )}
           </div>
         ) : null}

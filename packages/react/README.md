@@ -1,13 +1,13 @@
 # GridNexa React Data Grid | React Table | Excel Grid
 
-Feature-rich React data grid for teams that need more than a table: Excel import, copy/paste, inline editing, filters, pivoting, diagnostics, Data Health profiling, saved views, and TypeScript-first APIs.
+Feature-rich React data grid for teams that need more than a table: Excel import, copy/paste, inline editing, filters, pivoting, diagnostics, Data Health profiling, Trust Mode, saved views, and TypeScript-first APIs.
 
 [![npm](https://img.shields.io/npm/v/@gridnexa/react?color=0ea5e9)](https://www.npmjs.com/package/@gridnexa/react)
-[![license](https://img.shields.io/npm/l/@gridnexa/react)](https://github.com/mhalungekar9/SmartGrid)
+[![license](https://img.shields.io/npm/l/@gridnexa/react)](https://github.com/mhalungekar9/gridnexa)
 [![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
 [![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
 
-GridNexa gives React teams a polished grid foundation for data-heavy products: sorting, filtering, editing, formulas, grouping, pivoting, tree data, selection, import/export, styling hooks, diagnostics, Data Health, and safe AI-generated grid actions.
+GridNexa gives React teams a polished grid foundation for data-heavy products: sorting, filtering, editing, formulas, grouping, pivoting, tree data, selection, import/export, styling hooks, diagnostics, Data Health, Trust Mode, and safe AI-generated grid actions.
 
 ## Why Developers Choose GridNexa
 
@@ -17,6 +17,7 @@ Most grid libraries make teams choose between a lightweight table and a heavywei
 - **Insight charts from the grid**: turn selected ranges or visible rows into bar, line, area, pie, donut, scatter, bubble, radar, radial, histogram, box plot, treemap, gauge, funnel, and combo charts, then download charts as PNG.
 - **Debuggable by design**: diagnostics and repro snapshots let users export the grid state, sampled rows, recent actions, and a React repro JSON instead of sending vague bug reports.
 - **Data Health built in**: profile visible columns for missing values, duplicates, invalid cells, numeric outliers, completeness, top values, and quality scores.
+- **Trust Mode for active cells**: inspect source, validation status, Data Health signals, downstream impact, edit history, and rollback for the value the user is looking at.
 - **Productivity tools without glue code**: saved views, command palette, change review, validation, undo/redo, fill handle, row add/delete, and toolbar panels are first-class.
 - **Real data-grid depth**: column resize/reorder/pin/hide, filters, advanced filters, grouping, pivoting, tree data, master/detail, formulas, summaries, server-side callbacks, and transactions.
 - **Design-system friendly**: CSS variables, stable class names, custom icons, class callbacks, themes, density, and `unstyled` mode.
@@ -34,6 +35,7 @@ Most grid libraries make teams choose between a lightweight table and a heavywei
 | Layout | Resize, reorder, pin/freeze, hide/show, fill width, flex columns, merged headers |
 | Analytics | Grouping, aggregation, pivoting, summaries, tree data, master/detail |
 | Data quality | Data Health panel, missing values, duplicates, invalid cells, outliers, top values, quality scores |
+| Trust and audit | Trust Mode panel, active-cell source, quality evidence, impact preview, edit timeline, rollback |
 | Developer tools | Diagnostics panel, repro JSON export/import, command palette, typed API |
 | Styling | Themes, CSS variables, stable classes, custom icons, Bootstrap/Tailwind-friendly |
 
@@ -42,7 +44,7 @@ Most grid libraries make teams choose between a lightweight table and a heavywei
 - Website: https://www.gridnexa.in/
 - Docs and playground: https://www.gridnexa.in/docs/basic-grid
 - Help: https://www.gridnexa.in/help
-- Repository: https://github.com/mhalungekar9/SmartGrid
+- Repository: https://github.com/mhalungekar9/gridnexa
 
 ## Install
 
@@ -300,6 +302,7 @@ Copy this:
     rowSampleSize: 50,
   }}
   dataHealth
+  trustMode
 />
 ```
 
@@ -311,6 +314,7 @@ What this solves:
 - `validation` highlights invalid cells and can block Save All.
 - `diagnostics` exposes runtime counts, records recent grid actions, and can export/import a repro snapshot with sanitized columns, sampled rows, current grid state, change review entries, and a React example.
 - `dataHealth` profiles visible data for missing values, duplicates, invalid cells, outliers, top values, completeness, and per-column quality scores.
+- `trustMode` lets users inspect the active cell's source, validation state, Data Health score, likely downstream impact, edit history, and latest-value rollback.
 
 When to use:
 
@@ -348,6 +352,7 @@ export default function EmployeesGrid() {
       validation={{ rules: { name: { required: true } } }}
       diagnostics
       dataHealth
+      trustMode
     />
   );
 }
@@ -374,6 +379,27 @@ export default function EmployeesGrid() {
 Data Health helps users trust and clean data without leaving the grid. It reports missing values, duplicate values, validation failures, numeric outliers, top values, completeness, and a quality score for each visible column.
 
 Clicking an issue filters the grid to affected rows, focuses the first matching cell, and keeps the panel open. Once the issue is fixed, GridNexa automatically clears the temporary issue filter and restores the previous view. Users can also clear the issue filter or click Done to return to the original data.
+
+## Trust Mode
+
+```tsx
+<GridNexa
+  columns={columns}
+  rows={rows}
+  getRowId={(row) => row.id}
+  toolbar={{ trustMode: true, dataHealth: true, bulkEdit: true }}
+  trustMode={{ showPanel: true }}
+  dataHealth
+  validation={{
+    rules: {
+      name: { required: true },
+      score: { type: "number", min: 70, max: 100 },
+    },
+  }}
+/>
+```
+
+Trust Mode gives users active-cell confidence without leaving the grid. It shows the value source, validation status, Data Health evidence, likely impact on filters/summaries/charts/formulas, recent edit timeline, and a rollback action for the latest tracked cell edit.
 
 ## Column And Range Summaries
 

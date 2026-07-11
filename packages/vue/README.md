@@ -3,7 +3,7 @@
 Vue data grid and Vue table for product teams that need Excel-like editing, filtering, formulas, grouping, pivoting, export, typed columns, and theme-ready styling.
 
 [![npm](https://img.shields.io/npm/v/@gridnexa/vue?color=42b883)](https://www.npmjs.com/package/@gridnexa/vue)
-[![license](https://img.shields.io/npm/l/@gridnexa/vue)](https://github.com/mhalungekar9/SmartGrid)
+[![license](https://img.shields.io/npm/l/@gridnexa/vue)](https://github.com/mhalungekar9/gridnexa)
 [![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
 [![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
 
@@ -33,7 +33,7 @@ GridNexa for Vue is a native Vue package for dashboards, admin products, reporti
 - Website: https://www.gridnexa.in/
 - Docs and playground: https://www.gridnexa.in/docs/basic-grid
 - Help: https://www.gridnexa.in/help
-- Repository: https://github.com/mhalungekar9/SmartGrid
+- Repository: https://github.com/mhalungekar9/gridnexa
 
 ## Install
 
@@ -185,9 +185,9 @@ Built-in loading, error, and empty overlays appear inside the grid viewport with
 
 ## Feature Parity Note
 
-React is the reference package and currently has the fullest productivity layer: saved views UI, command palette, change review, validation UI, diagnostics panel, and Data Health panel.
+React is the reference package and currently has the fullest productivity layer: saved views UI, command palette, change review, validation UI, diagnostics panel, Data Health panel, and Trust Mode panel.
 
-The Vue package supports the shared core grid surface used in the playground: presets, overlays, sorting, filtering, editing, formulas, selection, range fill, undo/redo, column tools, grouping, pivoting, tree data, master/detail, export, AI actions, and server-side operation events. React-only productivity panels such as Data Health are planned for parity work before those docs are promoted for Vue.
+The Vue package supports the shared core grid surface used in the playground: presets, overlays, sorting, filtering, editing, formulas, selection, range fill, undo/redo, column tools, grouping, pivoting, tree data, master/detail, export, AI actions, and server-side operation events. React-only productivity panels such as Data Health and Trust Mode are planned for parity work before those docs are promoted for Vue.
 
 ## Column And Range Summaries
 

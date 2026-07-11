@@ -1,6 +1,6 @@
 {
     "name":  "@gridnexa/javascript",
-    "version":  "0.1.15",
+    "version":  "0.1.16",
     "description":  "Framework-free JavaScript data grid and TypeScript table with Excel-like editing, filtering, formulas, grouping, pivoting, and export.",
     "type":  "module",
     "main":  "./dist/index.js",
@@ -58,7 +58,7 @@
              },
     "repository":  {
                        "type":  "git",
-                       "url":  "git+https://github.com/mhalungekar9/SmartGrid.git",
+                       "url":  "git+https://github.com/mhalungekar9/gridnexa.git",
                        "directory":  "packages/javascript"
                    },
     "author":  "Sachin M",

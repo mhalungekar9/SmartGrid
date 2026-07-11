@@ -1,4 +1,4 @@
-import type { AdvancedFilterModel, ColumnFilterModel, Column, GridNexaDataHealthOptions, GridNexaFillWidthOptions, GridNexaSidePanelOptions, GridNexaToolbarOptions, GridNexaValidationOptions, MergedHeader, PivotAggregation } from "@gridnexa/react";
+import type { AdvancedFilterModel, ColumnFilterModel, Column, GridNexaDataHealthOptions, GridNexaFillWidthOptions, GridNexaSidePanelOptions, GridNexaToolbarOptions, GridNexaTrustModeOptions, GridNexaValidationOptions, MergedHeader, PivotAggregation } from "@gridnexa/react";
 import { compactEmployeeColumns, employeeColumns, employees, formulaEmployeeColumns, readonlyEmployeeColumns, type Employee } from "../data/employees";
 import { treeColumns, treeRows } from "../data/treeData";
 
@@ -22,6 +22,7 @@ export interface FeatureConfig {
   toolbar?: GridNexaToolbarOptions;
   sidePanel?: GridNexaSidePanelOptions;
   dataHealth?: GridNexaDataHealthOptions;
+  trustMode?: GridNexaTrustModeOptions;
   validation?: GridNexaValidationOptions;
   fillWidth?: GridNexaFillWidthOptions;
   height?: number | string;
@@ -53,6 +54,11 @@ const dataHealthRows: Employee[] = [
   { ...employees[6], id: 7, name: "Priya Rao", department: "Product", city: "Paris", score: 82 },
   { ...employees[7], id: 8, name: "Kenji Sato", department: "Operations", city: "Tokyo", score: 94 },
 ];
+
+const trustModeRows: Employee[] = dataHealthRows.map((row) => ({
+  ...row,
+  adjustedScore: "=score * 1.05",
+}));
 
 export const featureConfigs = {
   basicGrid: {
@@ -701,6 +707,61 @@ const rows = [
 
 // The panel reports missing values, duplicate values, invalid cells,
 // numeric outliers, top values, and a per-column quality score.`,
+  },
+  trustMode: {
+    title: "Trust Mode",
+    subtitle: "Source, quality, impact, and rollback",
+    overview: "Inspect the active cell like a product audit trail: where the value came from, whether validation trusts it, what it can affect, and how to roll back the latest edit.",
+    notes: ["active cell evidence", "edit history", "quality signals", "impact preview", "cell rollback"],
+    details: [
+      "Enable trustMode to add a Trust mode toolbar action and command palette entry.",
+      "The panel combines edit lineage, validation, Data Health, formulas, filters, summaries, and charts into one compact trust view.",
+      "Edit, paste, or bulk edit a cell, then use Trust mode to inspect and roll back the latest tracked value.",
+    ],
+    rows: trustModeRows,
+    columns: employeeColumns.filter((column) => ["name", "department", "city", "score", "adjustedScore"].includes(column.id)),
+    toolbar: {
+      quickFilter: true,
+      filters: true,
+      bulkEdit: true,
+      copyPaste: true,
+      dataHealth: true,
+      trustMode: true,
+    },
+    dataHealth: true,
+    trustMode: {
+      showPanel: true,
+    },
+    validation: {
+      rules: {
+        name: { required: true },
+        city: { required: true },
+        score: { type: "number", min: 70, max: 100 },
+      },
+    },
+    code: `<GridNexa
+  columns={columns}
+  rows={rows}
+  getRowId={(row) => row.id}
+  toolbar={{
+    trustMode: true,
+    dataHealth: true,
+    filters: true,
+    bulkEdit: true
+  }}
+  trustMode={{ showPanel: true }}
+  dataHealth
+  validation={{
+    rules: {
+      name: { required: true },
+      city: { required: true },
+      score: { type: "number", min: 70, max: 100 }
+    }
+  }}
+/>
+
+// Select a cell, edit it, then open Trust mode to review source,
+// quality evidence, impact, history, and rollback.`,
   },
   export: {
     title: "Export",
