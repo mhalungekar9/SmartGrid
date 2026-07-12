@@ -1,13 +1,13 @@
 # GridNexa React Data Grid | React Table | Excel Grid
 
-Feature-rich React data grid for teams that need more than a table: Excel import, copy/paste, inline editing, filters, pivoting, diagnostics, Data Health profiling, Trust Mode, saved views, and TypeScript-first APIs.
+Feature-rich React data grid for teams that need more than a table: Excel import, copy/paste, inline editing, filters, pivoting, diagnostics, Data Health profiling, Trust Mode, Dashboard Generator, saved views, and TypeScript-first APIs.
 
 [![npm](https://img.shields.io/npm/v/@gridnexa/react?color=0ea5e9)](https://www.npmjs.com/package/@gridnexa/react)
 [![license](https://img.shields.io/npm/l/@gridnexa/react)](https://github.com/mhalungekar9/gridnexa)
 [![types](https://img.shields.io/badge/TypeScript-ready-3178c6)](https://www.typescriptlang.org/)
 [![website](https://img.shields.io/badge/website-gridnexa.in-2563eb)](https://www.gridnexa.in/)
 
-GridNexa gives React teams a polished grid foundation for data-heavy products: sorting, filtering, editing, formulas, grouping, pivoting, tree data, selection, import/export, styling hooks, diagnostics, Data Health, Trust Mode, and safe AI-generated grid actions.
+GridNexa gives React teams a polished grid foundation for data-heavy products: sorting, filtering, editing, formulas, grouping, pivoting, tree data, selection, import/export, styling hooks, diagnostics, Data Health, Trust Mode, Dashboard Generator, and safe AI-generated grid actions.
 
 ## Why Developers Choose GridNexa
 
@@ -15,6 +15,7 @@ Most grid libraries make teams choose between a lightweight table and a heavywei
 
 - **Excel-style workflows built in**: import `.xlsx`, `.xls`, `.csv`, `.tsv`, `.txt`, and `.json`; copy/paste ranges from Excel; bulk edit; find and replace; export CSV and Excel.
 - **Insight charts from the grid**: turn selected ranges or visible rows into bar, line, area, pie, donut, scatter, bubble, radar, radial, histogram, box plot, treemap, gauge, funnel, and combo charts, then download charts as PNG.
+- **Dashboard Generator**: turn the current visible grid view into KPI cards, inferred chart summaries, configured dashboard charts, and generated insight notes.
 - **Debuggable by design**: diagnostics and repro snapshots let users export the grid state, sampled rows, recent actions, and a React repro JSON instead of sending vague bug reports.
 - **Data Health built in**: profile visible columns for missing values, duplicates, invalid cells, numeric outliers, completeness, top values, and quality scores.
 - **Trust Mode for active cells**: inspect source, validation status, Data Health signals, downstream impact, edit history, and rollback for the value the user is looking at.
@@ -29,6 +30,7 @@ Most grid libraries make teams choose between a lightweight table and a heavywei
 | --- | --- |
 | Data import | Excel `.xlsx/.xls`, CSV, TSV, TXT, JSON, auto-detected column types |
 | Charts | Bar, line, area, pie, donut, scatter, bubble, radar, radial, histogram, box plot, treemap, gauge, funnel, combo charts with PNG download |
+| Dashboard | Generated KPI cards, dimension distribution, measure comparison, configured dashboard charts, and insight notes |
 | Clipboard | Copy, paste from Excel, paste ranges, append overflow rows, Clipboard API fallback |
 | Editing | Inline editors, bulk edit, fill handle, formulas, undo/redo, change review |
 | Search/filter | Quick filter, find, find & replace, column filters, set filters, advanced filters |
@@ -402,6 +404,44 @@ Clicking an issue filters the grid to affected rows, focuses the first matching 
 
 Trust Mode gives users active-cell confidence without leaving the grid. It shows the value source, validation status, Data Health evidence, likely impact on filters/summaries/charts/formulas, recent edit timeline, and a rollback action for the latest tracked cell edit.
 
+## Dashboard Generator
+
+```tsx
+<GridNexa
+  columns={columns}
+  rows={rows}
+  getRowId={(row) => row.id}
+  toolbar={{ dashboard: true, charts: true, filters: true }}
+  dashboard={{ showPanel: true, maxCards: 4, maxRows: 500 }}
+/>
+```
+
+Dashboard Generator scans the current visible rows and columns to infer dimensions and measures. It generates KPI cards, a top-segment distribution, a measure comparison chart, and concise insight notes that update as users filter, edit, or replace rows.
+
+Use `dashboard.charts` when you want exact dashboard charts instead of the default inferred pair:
+
+```tsx
+<GridNexa
+  columns={columns}
+  rows={rows}
+  getRowId={(row) => row.id}
+  preset="analytics"
+  dashboard={{
+    showPanel: true,
+    maxCards: 4,
+    maxRows: 500,
+    charts: [
+      { type: "bar", category: "region", value: "revenue", title: "Revenue by region" },
+      { type: "line", category: "month", value: "revenue", title: "Revenue trend" },
+      { type: "pie", category: "product", value: "deals", title: "Deals by product" }
+    ]
+  }}
+  toolbar={{ dashboard: true, filters: true, quickFilter: true }}
+/>
+```
+
+Configured dashboard charts group the current visible rows by `category` and sum the numeric `value` column. `category` and `value` can reference a column id, field, or header name. Supported dashboard chart types are `bar`, `line`, `area`, `pie`, and `donut`. The separate `charts` prop still controls the interactive Insight Charts panel.
+
 ## Collaboration And Accessibility
 
 ```tsx
@@ -556,6 +596,7 @@ Use Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS through `classNam
 - Row grouping, aggregation, pivoting, tree data, master/detail, and transactions
 - Data Health profiling for missing values, duplicates, invalid cells, outliers, top values, and quality scores
 - Trust Mode for active-cell source, quality, impact, history, and rollback
+- Dashboard Generator for KPI cards, inferred summaries, configured dashboard charts, and generated insight notes from visible rows
 - Collaboration provider hooks, realtime cell patches, presence badges, cell locks, versioned conflict handling, and keyboard-first accessibility
 - Server-side operation callbacks for sorting, filtering, selection, pagination, grouping, pivoting, tree data, and transactions
 

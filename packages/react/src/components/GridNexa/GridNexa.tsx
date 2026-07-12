@@ -61,6 +61,8 @@ import type {
   GridNexaReproSnapshot,
   GridNexaChartType,
   GridNexaChartsOptions,
+  GridNexaDashboardChart,
+  GridNexaDashboardOptions,
   GridNexaAiRequest,
   GridNexaCommandAction,
   GridNexaCommandPlan,
@@ -338,6 +340,7 @@ export interface GridNexaExtendedProps<T>
   trustMode?: GridNexaTrustModeOptions;
   collaboration?: GridNexaCollaborationOptions;
   charts?: GridNexaChartsOptions;
+  dashboard?: GridNexaDashboardOptions;
   loading?: boolean;
   error?: ReactNode;
   emptyState?: ReactNode;
@@ -1052,6 +1055,38 @@ function resolveChartsOptions(value?: GridNexaChartsOptions) {
     source: value.source ?? defaults.source,
     defaultType: value.defaultType ?? defaults.defaultType,
     maxRows: value.maxRows ?? defaults.maxRows,
+  };
+}
+
+function resolveDashboardOptions(value?: GridNexaDashboardOptions) {
+  const defaults = {
+    enabled: false,
+    showPanel: false,
+    toolbarButton: true,
+    maxRows: 500,
+    maxCards: 4,
+    charts: [] as GridNexaDashboardChart[],
+  };
+
+  if (!value) {
+    return defaults;
+  }
+
+  if (value === true) {
+    return {
+      ...defaults,
+      enabled: true,
+    };
+  }
+
+  return {
+    ...defaults,
+    enabled: value.enabled ?? true,
+    showPanel: value.showPanel ?? defaults.showPanel,
+    toolbarButton: value.toolbarButton ?? defaults.toolbarButton,
+    maxRows: value.maxRows ?? defaults.maxRows,
+    maxCards: value.maxCards ?? defaults.maxCards,
+    charts: value.charts ?? defaults.charts,
   };
 }
 
@@ -2039,6 +2074,7 @@ export function GridNexa<T>({
   trustMode,
   collaboration,
   charts,
+  dashboard,
   loading = false,
   error,
   emptyState,
@@ -2318,6 +2354,10 @@ export function GridNexa<T>({
   const chartsEnabled =
     chartsOptions.enabled ||
     (typeof toolbarProp === "object" && toolbarProp.charts === true);
+  const dashboardOptions = resolveDashboardOptions(dashboard);
+  const dashboardEnabled =
+    dashboardOptions.enabled ||
+    (typeof toolbarProp === "object" && toolbarProp.dashboard === true);
   const changeReviewToolbarVisible =
     typeof changeReview === "object" ? changeReview.showToolbarButton !== false : true;
   const [savedViews, setSavedViews] = useState<SavedGridView[]>(() =>
@@ -2347,6 +2387,9 @@ export function GridNexa<T>({
     filter: ColumnFilterModel | null;
   } | null>(null);
   const [chartsOpen, setChartsOpen] = useState(false);
+  const [dashboardOpen, setDashboardOpen] = useState(
+    dashboardEnabled ? dashboardOptions.showPanel === true : false,
+  );
   const [chartType, setChartType] = useState<GridNexaChartType>(
     chartsOptions.defaultType,
   );
@@ -4460,6 +4503,176 @@ export function GridNexa<T>({
     "#fb7185",
     "#84cc16",
   ];
+  const dashboardRows = useMemo(
+    () => tableRows.slice(0, Math.max(1, dashboardOptions.maxRows)),
+    [dashboardOptions.maxRows, tableRows],
+  );
+  const dashboardNumericColumns = useMemo(
+    () =>
+      tableColumns.filter((column) =>
+        dashboardRows.some((row) =>
+          Number.isFinite(Number(getColumnValue(row, column))),
+        ),
+      ),
+    [dashboardRows, tableColumns],
+  );
+  const dashboardCategoryColumns = useMemo(
+    () =>
+      tableColumns.filter(
+        (column) =>
+          !dashboardNumericColumns.some((entry) => entry.id === column.id) &&
+          dashboardRows.some((row) => String(getColumnValue(row, column) ?? "").trim()),
+      ),
+    [dashboardNumericColumns, dashboardRows, tableColumns],
+  );
+  const dashboardCards = useMemo(() => {
+    const cards = dashboardNumericColumns.slice(0, dashboardOptions.maxCards).map((column) => {
+      const values = dashboardRows
+        .map((row) => Number(getColumnValue(row, column)))
+        .filter(Number.isFinite);
+      const sum = values.reduce((total, value) => total + value, 0);
+      const average = values.length ? sum / values.length : 0;
+
+      return {
+        id: column.id,
+        label: column.headerName,
+        value: formatNumber(sum),
+        detail: `${values.length} values | avg ${formatNumber(average)}`,
+      };
+    });
+
+    return [
+      {
+        id: "rows",
+        label: "Rows in view",
+        value: dashboardRows.length.toLocaleString(),
+        detail: `${tableRows.length.toLocaleString()} rendered after filters`,
+      },
+      ...cards,
+    ].slice(0, Math.max(1, dashboardOptions.maxCards));
+  }, [dashboardNumericColumns, dashboardOptions.maxCards, dashboardRows, tableRows.length]);
+  const dashboardCategoryColumn = dashboardCategoryColumns[0] ?? tableColumns[0];
+  const dashboardValueColumn = dashboardNumericColumns[0];
+  const dashboardDistributionRows = useMemo(() => {
+    if (!dashboardCategoryColumn) {
+      return [];
+    }
+
+    const buckets = new Map<string, number>();
+
+    dashboardRows.forEach((row) => {
+      const value = String(getColumnValue(row, dashboardCategoryColumn) ?? "Blank").trim() || "Blank";
+      buckets.set(value, (buckets.get(value) ?? 0) + 1);
+    });
+
+    return Array.from(buckets.entries())
+      .sort((left, right) => right[1] - left[1])
+      .slice(0, 8)
+      .map(([category, value]) => ({ category, value }));
+  }, [dashboardCategoryColumn, dashboardRows]);
+  const dashboardComparisonRows = useMemo(() => {
+    if (!dashboardCategoryColumn || !dashboardValueColumn) {
+      return [];
+    }
+
+    const buckets = new Map<string, { total: number; count: number }>();
+
+    dashboardRows.forEach((row) => {
+      const category = String(getColumnValue(row, dashboardCategoryColumn) ?? "Blank").trim() || "Blank";
+      const value = Number(getColumnValue(row, dashboardValueColumn));
+
+      if (!Number.isFinite(value)) {
+        return;
+      }
+
+      const bucket = buckets.get(category) ?? { total: 0, count: 0 };
+      bucket.total += value;
+      bucket.count += 1;
+      buckets.set(category, bucket);
+    });
+
+    return Array.from(buckets.entries())
+      .sort((left, right) => right[1].total - left[1].total)
+      .slice(0, 8)
+      .map(([category, entry]) => ({
+        category,
+        value: entry.total,
+        average: entry.count ? entry.total / entry.count : 0,
+      }));
+  }, [dashboardCategoryColumn, dashboardRows, dashboardValueColumn]);
+  const dashboardConfiguredCharts = useMemo(() => {
+    const findColumn = (key: string) =>
+      tableColumns.find((column) => {
+        const field = "field" in column ? String(column.field ?? "") : "";
+
+        return column.id === key || field === key || column.headerName === key;
+      });
+
+    return dashboardOptions.charts
+      .map((chart, index) => {
+        const categoryColumn = findColumn(chart.category);
+        const valueColumn = findColumn(chart.value);
+
+        if (!categoryColumn || !valueColumn) {
+          return null;
+        }
+
+        const buckets = new Map<string, { total: number; count: number }>();
+
+        dashboardRows.forEach((row) => {
+          const category = String(getColumnValue(row, categoryColumn) ?? "Blank").trim() || "Blank";
+          const value = Number(getColumnValue(row, valueColumn));
+
+          if (!Number.isFinite(value)) {
+            return;
+          }
+
+          const bucket = buckets.get(category) ?? { total: 0, count: 0 };
+          bucket.total += value;
+          bucket.count += 1;
+          buckets.set(category, bucket);
+        });
+
+        return {
+          id: `${chart.type}-${categoryColumn.id}-${valueColumn.id}-${index}`,
+          type: chart.type,
+          title: chart.title ?? `${valueColumn.headerName} by ${categoryColumn.headerName}`,
+          categoryLabel: categoryColumn.headerName,
+          valueLabel: valueColumn.headerName,
+          rows: Array.from(buckets.entries())
+            .sort((left, right) => right[1].total - left[1].total)
+            .slice(0, 8)
+            .map(([category, entry]) => ({
+              category,
+              value: entry.total,
+              average: entry.count ? entry.total / entry.count : 0,
+            })),
+        };
+      })
+      .filter((chart): chart is NonNullable<typeof chart> => Boolean(chart));
+  }, [dashboardOptions.charts, dashboardRows, tableColumns]);
+  const dashboardInsights = useMemo(() => {
+    const insights: string[] = [];
+
+    if (dashboardValueColumn && dashboardComparisonRows[0]) {
+      insights.push(
+        `${dashboardComparisonRows[0].category} leads ${dashboardValueColumn.headerName} with ${formatNumber(dashboardComparisonRows[0].value)}.`,
+      );
+    }
+
+    if (dashboardDistributionRows[0] && dashboardCategoryColumn) {
+      insights.push(
+        `${dashboardDistributionRows[0].category} is the largest ${dashboardCategoryColumn.headerName} segment (${dashboardDistributionRows[0].value} rows).`,
+      );
+    }
+
+    return insights;
+  }, [
+    dashboardCategoryColumn,
+    dashboardComparisonRows,
+    dashboardDistributionRows,
+    dashboardValueColumn,
+  ]);
 
   useEffect(() => {
     if (!chartsOptions.types.includes(chartType)) {
@@ -5298,6 +5511,7 @@ export function GridNexa<T>({
           bulkEdit: false,
           findReplace: false,
           charts: false,
+          dashboard: false,
           dataHealth: false,
           trustMode: false,
           prevNextPage: false,
@@ -5326,6 +5540,7 @@ export function GridNexa<T>({
           bulkEdit: true,
           findReplace: true,
           charts: false,
+          dashboard: false,
           dataHealth: false,
           trustMode: false,
           prevNextPage: true,
@@ -5348,6 +5563,9 @@ export function GridNexa<T>({
     charts:
       toolbarOptionsBase.charts ||
       (chartsEnabled && chartsOptions.toolbarButton),
+    dashboard:
+      toolbarOptionsBase.dashboard ||
+      (dashboardEnabled && dashboardOptions.toolbarButton),
     dataHealth:
       toolbarOptionsBase.dataHealth ||
       (dataHealthEnabled && dataHealthOptions.toolbarButton),
@@ -6177,6 +6395,9 @@ export default function GridNexaRepro() {
     { id: "find-replace", label: "Open find and replace", run: () => { setFindReplaceOpen(true); setCommandPaletteOpen(false); } },
     ...(chartsEnabled
       ? [{ id: "charts", label: "Open insight charts", run: () => { setChartsOpen(true); setCommandPaletteOpen(false); } }]
+      : []),
+    ...(dashboardEnabled
+      ? [{ id: "dashboard", label: "Generate dashboard", run: () => { setDashboardOpen(true); setCommandPaletteOpen(false); } }]
       : []),
     ...(dataHealthEnabled
       ? [{ id: "data-health", label: "Open data health", run: () => { setDataHealthOpen(true); setCommandPaletteOpen(false); } }]
@@ -8057,6 +8278,16 @@ export default function GridNexaRepro() {
               </button>
             ) : null}
 
+            {toolbarOptions.dashboard ? (
+              <button
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                type="button"
+                onClick={() => setDashboardOpen((current) => !current)}
+              >
+                Dashboard
+              </button>
+            ) : null}
+
             {toolbarOptions.dataHealth ? (
               <button
                 className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
@@ -8722,6 +8953,151 @@ export default function GridNexaRepro() {
               >
                 Apply
               </button>
+            </div>
+          </div>
+        ) : null}
+
+        {dashboardOpen ? (
+          <div className="sg-product-panel sg-dashboard-panel" role="dialog" aria-label="Generated dashboard">
+            <div className="sg-product-panel-header">
+              <div>
+                <strong>Generated dashboard</strong>
+                <span>
+                  {dashboardRows.length} rows, {dashboardNumericColumns.length} measures, {dashboardCategoryColumns.length} dimensions
+                </span>
+              </div>
+              <button
+                type="button"
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                onClick={() => setDashboardOpen(false)}
+              >
+                Done
+              </button>
+            </div>
+            <div className="sg-dashboard-kpis">
+              {dashboardCards.map((card) => (
+                <span key={card.id}>
+                  <strong>{card.value}</strong>
+                  {card.label}
+                  <small>{card.detail}</small>
+                </span>
+              ))}
+            </div>
+            <div className="sg-dashboard-grid">
+              {dashboardConfiguredCharts.length ? (
+                dashboardConfiguredCharts.map((chart) => (
+                  <section className="sg-dashboard-card" key={chart.id}>
+                    <div className="sg-dashboard-card-header">
+                      <strong>{chart.title}</strong>
+                      <span>{chart.valueLabel} by {chart.categoryLabel}</span>
+                    </div>
+                    <div className="sg-dashboard-chart">
+                      {chart.rows.length ? (
+                        <ResponsiveContainer width="100%" height={220}>
+                          {chart.type === "pie" || chart.type === "donut" ? (
+                            <PieChart>
+                              <Tooltip />
+                              <Legend />
+                              <Pie
+                                data={chart.rows}
+                                dataKey="value"
+                                nameKey="category"
+                                innerRadius={chart.type === "donut" ? 58 : 0}
+                                outerRadius={82}
+                              >
+                                {chart.rows.map((entry, index) => (
+                                  <Cell key={entry.category} fill={chartColors[index % chartColors.length]} />
+                                ))}
+                              </Pie>
+                            </PieChart>
+                          ) : chart.type === "line" ? (
+                            <LineChart data={chart.rows}>
+                              <CartesianGrid stroke={theme === "dark" ? "rgba(148,163,184,.2)" : "#dbe3ef"} />
+                              <XAxis dataKey="category" tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
+                              <YAxis tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
+                              <Tooltip />
+                              <Legend />
+                              <Line type="monotone" dataKey="value" name={chart.valueLabel} stroke="#34d399" strokeWidth={2} dot={{ r: 3 }} />
+                            </LineChart>
+                          ) : chart.type === "area" ? (
+                            <AreaChart data={chart.rows}>
+                              <CartesianGrid stroke={theme === "dark" ? "rgba(148,163,184,.2)" : "#dbe3ef"} />
+                              <XAxis dataKey="category" tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
+                              <YAxis tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
+                              <Tooltip />
+                              <Area type="monotone" dataKey="value" name={chart.valueLabel} stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.25} />
+                            </AreaChart>
+                          ) : (
+                            <BarChart data={chart.rows}>
+                              <CartesianGrid stroke={theme === "dark" ? "rgba(148,163,184,.2)" : "#dbe3ef"} />
+                              <XAxis dataKey="category" tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
+                              <YAxis tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
+                              <Tooltip />
+                              <Bar dataKey="value" name={chart.valueLabel} fill="#60a5fa" radius={[6, 6, 0, 0]} />
+                            </BarChart>
+                          )}
+                        </ResponsiveContainer>
+                      ) : (
+                        <span className="sg-panel-muted">No values available for this chart.</span>
+                      )}
+                    </div>
+                  </section>
+                ))
+              ) : (
+                <>
+                  <section className="sg-dashboard-card">
+                    <div className="sg-dashboard-card-header">
+                      <strong>{dashboardCategoryColumn?.headerName ?? "Distribution"}</strong>
+                      <span>Top segments</span>
+                    </div>
+                    <div className="sg-dashboard-chart">
+                      {dashboardDistributionRows.length ? (
+                        <ResponsiveContainer width="100%" height={220}>
+                          <BarChart data={dashboardDistributionRows}>
+                            <CartesianGrid stroke={theme === "dark" ? "rgba(148,163,184,.2)" : "#dbe3ef"} />
+                            <XAxis dataKey="category" tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
+                            <YAxis tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
+                            <Tooltip />
+                            <Bar dataKey="value" fill="#60a5fa" radius={[6, 6, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <span className="sg-panel-muted">No category column available.</span>
+                      )}
+                    </div>
+                  </section>
+                  <section className="sg-dashboard-card">
+                    <div className="sg-dashboard-card-header">
+                      <strong>{dashboardValueColumn?.headerName ?? "Measure"}</strong>
+                      <span>By {dashboardCategoryColumn?.headerName ?? "category"}</span>
+                    </div>
+                    <div className="sg-dashboard-chart">
+                      {dashboardComparisonRows.length ? (
+                        <ResponsiveContainer width="100%" height={220}>
+                          <LineChart data={dashboardComparisonRows}>
+                            <CartesianGrid stroke={theme === "dark" ? "rgba(148,163,184,.2)" : "#dbe3ef"} />
+                            <XAxis dataKey="category" tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
+                            <YAxis tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
+                            <Tooltip />
+                            <Legend />
+                            <Line type="monotone" dataKey="value" stroke="#34d399" strokeWidth={2} dot={{ r: 3 }} />
+                            <Line type="monotone" dataKey="average" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <span className="sg-panel-muted">No numeric measure available.</span>
+                      )}
+                    </div>
+                  </section>
+                </>
+              )}
+            </div>
+            <div className="sg-dashboard-insights">
+              {dashboardInsights.length ? (
+                dashboardInsights.map((insight) => <span key={insight}>{insight}</span>)
+              ) : (
+                <span>No dashboard insights generated yet.</span>
+              )}
             </div>
           </div>
         ) : null}

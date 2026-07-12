@@ -44,6 +44,7 @@ const code = `<GridNexa
   diagnostics
   dataHealth
   trustMode
+  dashboard
 />`;
 
 const capabilities = [
@@ -54,6 +55,7 @@ const capabilities = [
   ["bi-lightning-charge", "Diagnostics", "Developers can inspect runtime counts while integrating."],
   ["bi-lightning-charge", "Data health", "Users can profile missing values, duplicates, invalid cells, and outliers."],
   ["bi-lightning-charge", "Trust mode", "Users can inspect source, quality, impact, history, and rollback for the active cell."],
+  ["bi-lightning-charge", "Dashboard generator", "Users can generate KPI cards, charts, and insight notes from visible rows."],
 ];
 
 export function ProductivitySuite() {
@@ -99,6 +101,7 @@ export function ProductivitySuite() {
             diagnostics
             dataHealth
             trustMode
+            dashboard
             createRow={() => ({ id: Date.now(), name: "New workflow", owner: "Operations", status: "Review", score: 0 })}
           />
         </DemoCard>

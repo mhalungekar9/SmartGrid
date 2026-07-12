@@ -1,6 +1,6 @@
 {
     "name":  "@gridnexa/javascript",
-    "version":  "0.1.17",
+    "version":  "0.1.18",
     "description":  "Framework-free JavaScript data grid and TypeScript table with Excel-like editing, filtering, formulas, grouping, pivoting, and export.",
     "type":  "module",
     "main":  "./dist/index.js",

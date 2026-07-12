@@ -17,6 +17,7 @@ import { Templates } from "../pages/Templates";
 import { Editing } from "../pages/Editing";
 import { DataImportClipboard } from "../pages/DataImportClipboard";
 import { Charts } from "../pages/Charts";
+import { DashboardGenerator } from "../pages/DashboardGenerator";
 import { AICommand } from "../pages/AICommand";
 import { AIProviders } from "../pages/AIProviders";
 import { Formulas } from "../pages/Formulas";
@@ -115,6 +116,14 @@ export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
         component: Charts,
         description: "Create bar, line, area, pie, donut, scatter, bubble, polar, statistical, box plot, hierarchical, funnel, and combo charts from grid data.",
         tags: ["charts", "insights", "bar chart", "line chart", "area chart", "pie chart", "donut", "scatter", "bubble", "radar", "polar", "histogram", "box plot", "treemap", "funnel", "combo chart", "analytics"],
+      },
+      {
+        path: "/docs/dashboard-generator",
+        label: "Dashboard Generator",
+        icon: "bi-columns-gap",
+        component: DashboardGenerator,
+        description: "Generate KPI cards, chart suggestions, and insights from the current visible grid data.",
+        tags: ["dashboard", "generator", "kpi", "charts", "analytics", "insights", "reporting"],
       },
       { path: "/docs/ai-command", label: "AI Command", icon: "bi-stars", component: AICommand },
       { path: "/docs/ai-providers", label: "AI Providers", icon: "bi-cpu", component: AIProviders },

@@ -88,6 +88,22 @@ export type GridNexaChartsOptions =
       defaultType: GridNexaChartType;
       maxRows: number;
     }>;
+export type GridNexaDashboardChart = {
+  type: Extract<GridNexaChartType, "bar" | "line" | "area" | "pie" | "donut">;
+  category: string;
+  value: string;
+  title?: string;
+};
+export type GridNexaDashboardOptions =
+  | boolean
+  | Partial<{
+      enabled: boolean;
+      showPanel: boolean;
+      toolbarButton: boolean;
+      maxRows: number;
+      maxCards: number;
+      charts: GridNexaDashboardChart[];
+    }>;
 export type GridNexaToolbarOptions =
   | boolean
   | Partial<{
@@ -109,6 +125,7 @@ export type GridNexaToolbarOptions =
       bulkEdit: boolean;
       findReplace: boolean;
       charts: boolean;
+      dashboard: boolean;
       dataHealth: boolean;
       trustMode: boolean;
       prevNextPage: boolean;
@@ -493,6 +510,7 @@ export interface GridOptions<T = unknown> {
   trustMode?: GridNexaTrustModeOptions;
   collaboration?: GridNexaCollaborationOptions;
   charts?: GridNexaChartsOptions;
+  dashboard?: GridNexaDashboardOptions;
   sidePanel?: GridNexaSidePanelOptions;
   fillWidth?: GridNexaFillWidthOptions;
   stateStorage?: GridNexaStateStorageOptions;

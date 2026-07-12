@@ -1,6 +1,6 @@
 {
     "name":  "@gridnexa/core",
-    "version":  "0.1.17",
+    "version":  "0.1.18",
     "description":  "Shared TypeScript contracts for GridNexa data grids, data tables, Excel-style grids, filters, columns, events, and framework wrappers.",
     "type":  "module",
     "main":  "./dist/index.js",
