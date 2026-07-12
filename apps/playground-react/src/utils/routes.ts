@@ -27,6 +27,7 @@ import { VirtualScrolling } from "../pages/VirtualScrolling";
 import { RemoteData } from "../pages/RemoteData";
 import { DataHealth } from "../pages/DataHealth";
 import { TrustMode } from "../pages/TrustMode";
+import { Collaboration } from "../pages/Collaboration";
 import { Export } from "../pages/Export";
 import { Theme } from "../pages/Theme";
 import { StylingConfiguration } from "../pages/StylingConfiguration";
@@ -69,8 +70,8 @@ export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
         label: "Productivity Suite",
         icon: "bi-command",
         component: ProductivitySuite,
-        description: "Saved views, command palette, change review, validation, and diagnostics in one workflow.",
-        tags: ["saved views", "command palette", "validation", "diagnostics", "review"],
+        description: "Saved views, command palette, change review, validation, diagnostics, Data Health, Trust Mode, and collaboration hooks in one workflow.",
+        tags: ["saved views", "command palette", "validation", "diagnostics", "review", "data health", "trust mode", "collaboration"],
       },
     ],
   },
@@ -138,6 +139,14 @@ export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
         component: TrustMode,
         description: "Inspect active-cell source, quality, downstream impact, edit history, and rollback.",
         tags: ["trust", "audit", "lineage", "quality", "rollback", "impact"],
+      },
+      {
+        path: "/docs/collaboration",
+        label: "Collaboration",
+        icon: "bi-people",
+        component: Collaboration,
+        description: "Provider-based realtime cell patches, presence badges, cell locks, conflict modes, and keyboard-first accessibility.",
+        tags: ["collaboration", "realtime", "presence", "cell lock", "accessibility", "keyboard", "aria", "multi user"],
       },
       { path: "/docs/export", label: "Export", icon: "bi-download", component: Export },
       {

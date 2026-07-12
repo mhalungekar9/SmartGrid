@@ -36,6 +36,7 @@ Most grid libraries make teams choose between a lightweight table and a heavywei
 | Analytics | Grouping, aggregation, pivoting, summaries, tree data, master/detail |
 | Data quality | Data Health panel, missing values, duplicates, invalid cells, outliers, top values, quality scores |
 | Trust and audit | Trust Mode panel, active-cell source, quality evidence, impact preview, edit timeline, rollback |
+| Collaboration | Provider-based realtime cell patches, presence badges, cell locks, conflict modes |
 | Developer tools | Diagnostics panel, repro JSON export/import, command palette, typed API |
 | Styling | Themes, CSS variables, stable classes, custom icons, Bootstrap/Tailwind-friendly |
 
@@ -401,6 +402,36 @@ Clicking an issue filters the grid to affected rows, focuses the first matching 
 
 Trust Mode gives users active-cell confidence without leaving the grid. It shows the value source, validation status, Data Health evidence, likely impact on filters/summaries/charts/formulas, recent edit timeline, and a rollback action for the latest tracked cell edit.
 
+## Collaboration And Accessibility
+
+```tsx
+const provider = {
+  subscribe(handler) {
+    socket.on("grid-cell-event", handler);
+    return () => socket.off("grid-cell-event", handler);
+  },
+  publish(event) {
+    socket.emit("grid-cell-event", event);
+  },
+};
+
+<GridNexa
+  columns={columns}
+  rows={rows}
+  getRowId={(row) => row.id}
+  collaboration={{
+    user: { id: currentUser.id, name: currentUser.name, color: "#22c55e" },
+    provider,
+    showPresence: true,
+    conflictMode: "cell-lock",
+  }}
+/>
+```
+
+`collaboration` is provider-based so you can use Socket.IO, WebSocket, Supabase Realtime, Firebase, Yjs, or an internal event bus. GridNexa publishes local cell edits, paste updates, bulk edits, lock events, and unlock events. Incoming `cell-change` events patch matching rows by `getRowId`; incoming `cell-lock` and `presence` events show compact user badges on cells.
+
+Accessibility and keyboard support includes `role="grid"`, row groups, `gridcell` semantics, row/column indexes, `aria-activedescendant`, live status announcements, roving active-cell focus, arrow-key navigation, Shift+Arrow range extension, Home/End, Ctrl+Home/Ctrl+End, PageUp/PageDown, Enter/F2 to edit, Escape to cancel/clear selection anchor, and Ctrl/Cmd+C clipboard copy.
+
 ## Column And Range Summaries
 
 Copy this:
@@ -524,6 +555,8 @@ Use Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS through `classNam
 - Column resize, aligned drag reorder, hide/show, pin/freeze, flex/fill-width columns, column menu, configurable side tools, and merged headers
 - Row grouping, aggregation, pivoting, tree data, master/detail, and transactions
 - Data Health profiling for missing values, duplicates, invalid cells, outliers, top values, and quality scores
+- Trust Mode for active-cell source, quality, impact, history, and rollback
+- Collaboration provider hooks, realtime cell patches, presence badges, cell locks, versioned conflict handling, and keyboard-first accessibility
 - Server-side operation callbacks for sorting, filtering, selection, pagination, grouping, pivoting, tree data, and transactions
 
 ## Related Packages

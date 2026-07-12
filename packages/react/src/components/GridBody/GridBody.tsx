@@ -132,6 +132,7 @@ export function GridBody<T>({
     <div
       className="sg-body"
       ref={bodyRef}
+      role="rowgroup"
     >
       <div style={{ height: topSpacerHeight }} />
       {visibleRows.map((row) => (

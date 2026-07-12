@@ -6,7 +6,7 @@ const spotlight = [
   { icon: "bi-command", title: "Command-first UX", text: "Find features quickly from the global search or GridNexa command palette." },
   { icon: "bi-sliders2", title: "Config by intent", text: "Header controls, toolbar tools, side panels, footer content, and presets are split into focused demos." },
   { icon: "bi-window-stack", title: "Real app surfaces", text: "Every demo is built like an external application with package CSS and copy-ready examples." },
-  { icon: "bi-phone", title: "Responsive checks", text: "Mobile, tablet, side-panel, popover, and scroll behavior are documented as product workflows." },
+  { icon: "bi-people", title: "Collaborative grids", text: "Provider-based presence, cell locks, conflict modes, and keyboard accessibility are documented together." },
 ];
 
 export function FeatureIndex() {

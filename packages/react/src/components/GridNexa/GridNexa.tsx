@@ -55,6 +55,9 @@ import type {
   GridNexaDiagnosticsOptions,
   GridNexaDataHealthOptions,
   GridNexaTrustModeOptions,
+  GridNexaCollaborationCellEvent,
+  GridNexaCollaborationOptions,
+  GridNexaCollaborationUser,
   GridNexaReproSnapshot,
   GridNexaChartType,
   GridNexaChartsOptions,
@@ -333,6 +336,7 @@ export interface GridNexaExtendedProps<T>
   diagnostics?: GridNexaDiagnosticsOptions;
   dataHealth?: GridNexaDataHealthOptions;
   trustMode?: GridNexaTrustModeOptions;
+  collaboration?: GridNexaCollaborationOptions;
   charts?: GridNexaChartsOptions;
   loading?: boolean;
   error?: ReactNode;
@@ -965,6 +969,41 @@ function resolveTrustModeOptions(value?: GridNexaTrustModeOptions) {
     allowRollback: value.allowRollback ?? defaults.allowRollback,
     showImpact: value.showImpact ?? defaults.showImpact,
     maxEvents: value.maxEvents ?? defaults.maxEvents,
+  };
+}
+
+function resolveCollaborationOptions(value?: GridNexaCollaborationOptions) {
+  const anonymousUser: GridNexaCollaborationUser = {
+    id: "local",
+    name: "You",
+    color: "#60a5fa",
+  };
+  const defaults = {
+    enabled: false,
+    user: anonymousUser,
+    provider: undefined,
+    showPresence: true,
+    conflictMode: "last-write-wins" as const,
+  };
+
+  if (!value) {
+    return defaults;
+  }
+
+  if (value === true) {
+    return {
+      ...defaults,
+      enabled: true,
+    };
+  }
+
+  return {
+    ...defaults,
+    enabled: value.enabled ?? true,
+    user: value.user ?? anonymousUser,
+    provider: value.provider,
+    showPresence: value.showPresence ?? defaults.showPresence,
+    conflictMode: value.conflictMode ?? defaults.conflictMode,
   };
 }
 
@@ -1998,6 +2037,7 @@ export function GridNexa<T>({
   diagnostics,
   dataHealth,
   trustMode,
+  collaboration,
   charts,
   loading = false,
   error,
@@ -2272,6 +2312,8 @@ export function GridNexa<T>({
   const dataHealthEnabled = dataHealthOptions.enabled;
   const trustModeOptions = resolveTrustModeOptions(trustMode);
   const trustModeEnabled = trustModeOptions.enabled;
+  const collaborationOptions = resolveCollaborationOptions(collaboration);
+  const collaborationEnabled = collaborationOptions.enabled;
   const chartsOptions = resolveChartsOptions(charts);
   const chartsEnabled =
     chartsOptions.enabled ||
@@ -2315,6 +2357,11 @@ export function GridNexa<T>({
   const diagnosticEventsRef = useRef<DiagnosticEvent[]>([]);
   const [trustEvents, setTrustEvents] = useState<TrustModeEvent[]>([]);
   const trustEventsRef = useRef<TrustModeEvent[]>([]);
+  const [collaborationCells, setCollaborationCells] = useState<
+    Record<string, { user: GridNexaCollaborationUser; locked: boolean; timestamp: number }>
+  >({});
+  const [collaborationVersions, setCollaborationVersions] = useState<Record<string, number>>({});
+  const [accessibilityMessage, setAccessibilityMessage] = useState("");
   const [filterPanelOpen, setFilterPanelOpen] = useState(false);
   const [advancedFilterPanelOpen, setAdvancedFilterPanelOpen] =
     useState(false);
@@ -3270,6 +3317,179 @@ export function GridNexa<T>({
               return nextId;
             })()
           : rowIndex));
+  const getCollaborationCellKey = (rowId: string | number, columnId: string) =>
+    `${String(rowId)}::${columnId}`;
+  const getCellId = (rowIndex: number, columnIndex: number) =>
+    `gridnexa-cell-${rowIndex}-${columnIndex}`;
+  const publishCollaborationEvent = (
+    event: Omit<GridNexaCollaborationCellEvent, "user" | "timestamp">,
+  ) => {
+    if (!collaborationEnabled || !collaborationOptions.provider?.publish) {
+      return;
+    }
+
+    void collaborationOptions.provider.publish({
+      ...event,
+      version: event.version ?? Date.now(),
+      user: collaborationOptions.user,
+      timestamp: Date.now(),
+    });
+  };
+  const unlockCollaborationCell = (row: T, rowIndex: number, column: Column<T>) => {
+    if (!collaborationEnabled || collaborationOptions.conflictMode !== "cell-lock") {
+      return;
+    }
+
+    const rowId = getRowSelectionId(row, rowIndex);
+    const event: GridNexaCollaborationCellEvent = {
+      type: "cell-unlock",
+      user: collaborationOptions.user,
+      rowId,
+      rowIndex,
+      columnId: column.id,
+      field: String(column.field),
+      timestamp: Date.now(),
+    };
+
+    setCollaborationCells((current) => {
+      const next = { ...current };
+      delete next[getCollaborationCellKey(rowId, column.id)];
+      return next;
+    });
+    void collaborationOptions.provider?.unlockCell?.(event);
+    publishCollaborationEvent({
+      type: "cell-unlock",
+      rowId,
+      rowIndex,
+      columnId: column.id,
+      field: String(column.field),
+    });
+  };
+  const findRowIndexByCollaborationId = (rowId: string | number) =>
+    gridRowsRef.current.findIndex((row, index) =>
+      Object.is(getRowSelectionId(row, index), rowId) ||
+      String(getRowSelectionId(row, index)) === String(rowId),
+    );
+  const isOwnCollaborationEvent = (event: GridNexaCollaborationCellEvent) =>
+    String(event.user.id) === String(collaborationOptions.user.id);
+  const isCellLockedByOtherUser = (rowIndex: number, columnId: string) => {
+    if (!collaborationEnabled || collaborationOptions.conflictMode !== "cell-lock") {
+      return false;
+    }
+
+    const row = tableRows[rowIndex];
+
+    if (!row) {
+      return false;
+    }
+
+    const rowId = getRowSelectionId(row, rowIndex);
+    const cell = collaborationCells[getCollaborationCellKey(rowId, columnId)];
+
+    return Boolean(cell?.locked && String(cell.user.id) !== String(collaborationOptions.user.id));
+  };
+  const getCollaborationPresence = (rowIndex: number, columnId: string) => {
+    if (!collaborationEnabled || !collaborationOptions.showPresence) {
+      return null;
+    }
+
+    const row = tableRows[rowIndex];
+
+    if (!row) {
+      return null;
+    }
+
+    const rowId = getRowSelectionId(row, rowIndex);
+    const cell = collaborationCells[getCollaborationCellKey(rowId, columnId)];
+
+    if (!cell || String(cell.user.id) === String(collaborationOptions.user.id)) {
+      return null;
+    }
+
+    return {
+      name: cell.user.name,
+      color: cell.user.color,
+      locked: cell.locked,
+    };
+  };
+  useEffect(() => {
+    if (!collaborationEnabled || !collaborationOptions.provider?.subscribe) {
+      return;
+    }
+
+    const unsubscribe = collaborationOptions.provider.subscribe((event) => {
+      if (isOwnCollaborationEvent(event)) {
+        return;
+      }
+
+      const key = getCollaborationCellKey(event.rowId, event.columnId);
+
+      if (event.type === "cell-lock" || event.type === "presence") {
+        setCollaborationCells((current) => ({
+          ...current,
+          [key]: {
+            user: event.user,
+            locked: event.type === "cell-lock",
+            timestamp: event.timestamp ?? Date.now(),
+          },
+        }));
+        setAccessibilityMessage(`${event.user.name} ${event.type === "cell-lock" ? "is editing" : "is viewing"} ${event.columnId}`);
+        return;
+      }
+
+      if (event.type === "cell-unlock") {
+        setCollaborationCells((current) => {
+          const next = { ...current };
+          delete next[key];
+          return next;
+        });
+        return;
+      }
+
+      if (event.type === "cell-change" && event.field) {
+        if (
+          collaborationOptions.conflictMode === "versioned" &&
+          event.version != null &&
+          event.version <= (collaborationVersions[key] ?? 0)
+        ) {
+          return;
+        }
+
+        replaceGridRows((currentRows) => {
+          const rowIndex = findRowIndexByCollaborationId(event.rowId);
+
+          if (rowIndex < 0) {
+            return currentRows;
+          }
+
+          return currentRows.map((row, index) =>
+            index === rowIndex
+              ? {
+                  ...row,
+                  [event.field as keyof T]: event.value,
+                }
+              : row,
+          );
+        }, "transaction");
+        if (event.version != null) {
+          setCollaborationVersions((current) => ({
+            ...current,
+            [key]: event.version ?? current[key] ?? 0,
+          }));
+        }
+        setAccessibilityMessage(`${event.user.name} updated ${event.columnId}`);
+      }
+    });
+
+    return typeof unsubscribe === "function" ? unsubscribe : undefined;
+  }, [
+    collaborationEnabled,
+    collaborationOptions.provider,
+    collaborationOptions.user.id,
+    collaborationOptions.conflictMode,
+    collaborationVersions,
+    getRowId,
+  ]);
   const recordTrustEvent = (
     entry: Omit<TrustModeEvent, "id" | "timestamp">,
   ) => {
@@ -3661,6 +3881,14 @@ export function GridNexa<T>({
           oldValue,
           newValue,
           source: "Bulk edit",
+        });
+        publishCollaborationEvent({
+          type: "cell-change",
+          rowId: getRowSelectionId(row, rowIndex),
+          rowIndex,
+          columnId: column.id,
+          field: String(column.field),
+          value: newValue,
         });
         updateCount += 1;
       });
@@ -4446,6 +4674,14 @@ export function GridNexa<T>({
           newValue: nextValue,
           source: "Clipboard paste",
         });
+        publishCollaborationEvent({
+          type: "cell-change",
+          rowId: getRowSelectionId(nextRows[originalIndex], viewRowIndex),
+          rowIndex: viewRowIndex,
+          columnId: column.id,
+          field: String(column.field),
+          value: nextValue,
+        });
       }
 
       updates.forEach((update, index) => {
@@ -4598,6 +4834,7 @@ export function GridNexa<T>({
         oldValue: row[column.field],
         newValue: parsedValue,
       });
+      unlockCollaborationCell(row, editingCell.rowIndex, column);
       setEditingCell(null);
       return;
     }
@@ -4637,6 +4874,15 @@ export function GridNexa<T>({
       newValue: parsedValue,
       source: "Inline edit",
     });
+    publishCollaborationEvent({
+      type: "cell-change",
+      rowId: getRowSelectionId(row, editingCell.rowIndex),
+      rowIndex: editingCell.rowIndex,
+      columnId: column.id,
+      field: String(column.field),
+      value: parsedValue,
+    });
+    unlockCollaborationCell(row, editingCell.rowIndex, column);
     onCellEditStop?.({
       row,
       rowIndex: editingCell.rowIndex,
@@ -4656,6 +4902,46 @@ export function GridNexa<T>({
       return;
     }
 
+    if (isCellLockedByOtherUser(rowIndex, columnId)) {
+      const presence = getCollaborationPresence(rowIndex, columnId);
+      setAccessibilityMessage(
+        presence
+          ? `${presence.name} is editing this cell`
+          : "This cell is locked by another user",
+      );
+      return;
+    }
+
+    if (collaborationEnabled && collaborationOptions.conflictMode === "cell-lock") {
+      const rowId = getRowSelectionId(row, rowIndex);
+      const event: GridNexaCollaborationCellEvent = {
+        type: "cell-lock",
+        user: collaborationOptions.user,
+        rowId,
+        rowIndex,
+        columnId,
+        field: String(column.field),
+        timestamp: Date.now(),
+      };
+
+      setCollaborationCells((current) => ({
+        ...current,
+        [getCollaborationCellKey(rowId, columnId)]: {
+          user: collaborationOptions.user,
+          locked: true,
+          timestamp: event.timestamp ?? Date.now(),
+        },
+      }));
+      void collaborationOptions.provider?.lockCell?.(event);
+      publishCollaborationEvent({
+        type: "cell-lock",
+        rowId,
+        rowIndex,
+        columnId,
+        field: String(column.field),
+      });
+    }
+
     setEditingCell({
       rowIndex,
       columnId,
@@ -4667,6 +4953,19 @@ export function GridNexa<T>({
       column,
       value,
     });
+  };
+
+  const cancelCellEdit = () => {
+    if (editingCell) {
+      const row = tableRows[editingCell.rowIndex];
+      const column = columns.find((entry) => entry.id === editingCell.columnId);
+
+      if (row && column) {
+        unlockCollaborationCell(row, editingCell.rowIndex, column);
+      }
+    }
+
+    setEditingCell(null);
   };
 
   const handleSort = (columnId: string) => {
@@ -7595,6 +7894,9 @@ export default function GridNexaRepro() {
         pasteSelection,
         fillSelection,
         findMatch,
+        getCellId,
+        getCollaborationPresence,
+        isCellLockedByOtherUser,
         openCellContextMenu,
         draggedRowIndex,
         dropTargetRowIndex,
@@ -7606,7 +7908,7 @@ export default function GridNexaRepro() {
           );
         },
         commitCellEdit,
-        cancelCellEdit: () => setEditingCell(null),
+        cancelCellEdit,
       }}
     >
       <div
@@ -7615,6 +7917,9 @@ export default function GridNexaRepro() {
         data-gnx-density={density}
         onClick={closeCellContextMenu}
       >
+        <div className="sg-visually-hidden" aria-live="polite">
+          {accessibilityMessage}
+        </div>
         {diagnosticsEnabled && diagnosticsOptions.exportRepro ? (
           <input
             ref={reproFileInputRef}

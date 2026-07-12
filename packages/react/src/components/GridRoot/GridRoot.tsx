@@ -10,8 +10,6 @@ export function GridRoot({ children, rootRef }: GridRootProps) {
   const {
     rows,
     columns,
-    selectedRowIndex,
-    onRowSelect,
     startCellEdit,
     activeCell,
     selectionAnchor,
@@ -19,6 +17,7 @@ export function GridRoot({ children, rootRef }: GridRootProps) {
     copySelection,
     pasteSelection,
     moveActiveCell,
+    getCellId,
     classNames,
     tableMinWidth,
     tableWidth,
@@ -78,29 +77,71 @@ export function GridRoot({ children, rootRef }: GridRootProps) {
       return;
     }
 
+    if ((event.ctrlKey || event.metaKey) && event.key === "Home") {
+      event.preventDefault();
+      moveActiveCell(-rows.length, -columns.length, event.shiftKey);
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key === "End") {
+      event.preventDefault();
+      moveActiveCell(rows.length, columns.length, event.shiftKey);
+      return;
+    }
+
     if (event.key === "Home") {
       event.preventDefault();
-      onRowSelect(0);
+      moveActiveCell(0, -columns.length, event.shiftKey);
       return;
     }
 
     if (event.key === "End") {
       event.preventDefault();
-      onRowSelect(rows.length - 1);
+      moveActiveCell(0, columns.length, event.shiftKey);
+      return;
+    }
+
+    if (event.key === "PageDown") {
+      event.preventDefault();
+      moveActiveCell(10, 0, event.shiftKey);
+      return;
+    }
+
+    if (event.key === "PageUp") {
+      event.preventDefault();
+      moveActiveCell(-10, 0, event.shiftKey);
       return;
     }
 
     if (
       (event.key === "Enter" || event.key === "F2") &&
-      selectedRowIndex != null
+      activeCell
     ) {
       event.preventDefault();
 
-      if (firstEditableColumn) {
-        const currentRow = rows[selectedRowIndex];
-        const value = String(currentRow[firstEditableColumn.field] ?? "");
+      const activeColumn = columns[activeCell.columnIndex] ?? firstEditableColumn;
 
-        startCellEdit(selectedRowIndex, firstEditableColumn.id, value);
+      if (activeColumn?.editable !== false) {
+        const currentRow = rows[activeCell.rowIndex];
+        const value = String(currentRow?.[activeColumn.field] ?? "");
+
+        startCellEdit(activeCell.rowIndex, activeColumn.id, value);
+      }
+      return;
+    }
+
+    if (
+      activeCell &&
+      event.key.length === 1 &&
+      !event.ctrlKey &&
+      !event.metaKey &&
+      !event.altKey
+    ) {
+      const activeColumn = columns[activeCell.columnIndex];
+
+      if (activeColumn?.editable !== false) {
+        event.preventDefault();
+        startCellEdit(activeCell.rowIndex, activeColumn.id, event.key);
       }
     }
 
@@ -139,6 +180,13 @@ export function GridRoot({ children, rootRef }: GridRootProps) {
         } as React.CSSProperties
       }
       tabIndex={0}
+      role="grid"
+      aria-label="GridNexa data grid"
+      aria-rowcount={rows.length + 1}
+      aria-colcount={columns.length}
+      aria-activedescendant={
+        activeCell ? getCellId(activeCell.rowIndex, activeCell.columnIndex) : undefined
+      }
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}
     >

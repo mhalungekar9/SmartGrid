@@ -49,6 +49,9 @@ export function GridCell<T>({
     activeCell,
     selectionAnchor,
     findMatch,
+    getCellId,
+    getCollaborationPresence,
+    isCellLockedByOtherUser,
     setActiveCell,
     setSelectionAnchor,
     openCellContextMenu,
@@ -71,6 +74,8 @@ export function GridCell<T>({
     findMatch?.rowIndex === rowIndex && findMatch.columnIndex === columnIndex;
   const isSelected =
     selectedRowIndex === rowIndex || selectedRowIds.has(getRowSelectionId(row, rowIndex));
+  const collaborationPresence = getCollaborationPresence(rowIndex, column.id);
+  const lockedByOtherUser = isCellLockedByOtherUser(rowIndex, column.id);
   const rangeStartRow = Math.min(
     activeCell?.rowIndex ?? rowIndex,
     selectionAnchor?.rowIndex ?? rowIndex,
@@ -171,6 +176,10 @@ export function GridCell<T>({
           getCellClassName({ value, row, rowIndex, column, columnIndex, selected: isSelected }),
         )}
         data-gnx-pinned={pinnedSide}
+        role="gridcell"
+        aria-rowindex={rowIndex + 2}
+        aria-colindex={columnIndex + 1}
+        aria-selected={isActiveCell || isSelected}
         style={columnStyle}
       >
         {editorType === "largeText" ? (
@@ -268,10 +277,18 @@ export function GridCell<T>({
         getCellClassName({ value, row, rowIndex, column, columnIndex, selected: isSelected }),
       )}
       data-gnx-pinned={pinnedSide}
+      data-gnx-collaboration-lock={lockedByOtherUser ? "true" : undefined}
       data-text-overflow={textDisplay.overflow ?? "ellipsis"}
+      id={getCellId(rowIndex, columnIndex)}
+      role="gridcell"
+      aria-colindex={columnIndex + 1}
+      aria-rowindex={rowIndex + 2}
+      aria-selected={isActiveCell || isSelected}
+      aria-readonly={column.editable === false || lockedByOtherUser}
+      aria-describedby={collaborationPresence ? `${getCellId(rowIndex, columnIndex)}-presence` : undefined}
       title={tooltipText}
       style={columnStyle}
-      tabIndex={column.editable ? 0 : -1}
+      tabIndex={isActiveCell ? 0 : -1}
       onClick={(event) => {
         if (event.shiftKey && activeCell) {
           setSelectionAnchor(rowIndex, columnIndex);
@@ -284,7 +301,7 @@ export function GridCell<T>({
       }}
       onDoubleClick={() => {
         emitCellDoubleClick(rowIndex, columnIndex);
-        if (column.editable) {
+        if (column.editable && !lockedByOtherUser) {
           startCellEdit(rowIndex, column.id, String(rawValue ?? ""));
         }
       }}
@@ -295,7 +312,7 @@ export function GridCell<T>({
         openCellContextMenu(rowIndex, columnIndex, event.clientX, event.clientY);
       }}
       onKeyDown={(event) => {
-        if (column.editable && (event.key === "Enter" || event.key === "F2")) {
+        if (column.editable && !lockedByOtherUser && (event.key === "Enter" || event.key === "F2")) {
           event.preventDefault();
           startCellEdit(rowIndex, column.id, String(rawValue ?? ""));
         }
@@ -304,6 +321,16 @@ export function GridCell<T>({
       {leadingAction}
       {detailAction}
       <span className="sg-cell-value">{renderedValue}</span>
+      {collaborationPresence ? (
+        <span
+          id={`${getCellId(rowIndex, columnIndex)}-presence`}
+          className="sg-collab-presence"
+          style={{ backgroundColor: collaborationPresence.color }}
+          title={`${collaborationPresence.name}${collaborationPresence.locked ? " is editing" : " is viewing"}`}
+        >
+          {collaborationPresence.name.slice(0, 2).toUpperCase()}
+        </span>
+      ) : null}
       {trailingAction}
     </div>
   );

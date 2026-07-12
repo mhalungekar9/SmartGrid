@@ -87,6 +87,12 @@ export interface GridContextValue<T> {
   pasteSelection: (text: string) => void;
   fillSelection: () => void;
   findMatch: { rowIndex: number; columnIndex: number } | null;
+  getCellId: (rowIndex: number, columnIndex: number) => string;
+  getCollaborationPresence: (
+    rowIndex: number,
+    columnId: string,
+  ) => { name: string; color?: string; locked?: boolean } | null;
+  isCellLockedByOtherUser: (rowIndex: number, columnId: string) => boolean;
   openCellContextMenu: (
     rowIndex: number,
     columnIndex: number,

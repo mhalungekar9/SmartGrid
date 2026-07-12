@@ -108,10 +108,11 @@ export function GridHeader<T>({
     .filter(Boolean) as Array<MergedHeader & { gridColumn: string }>;
 
   return (
-    <div className={cx("sg-header", classNames.header)}>
+    <div className={cx("sg-header", classNames.header)} role="rowgroup">
       {mergedHeaderCells.length ? (
         <div
           className={cx("sg-merged-header-row", classNames.mergedHeaderRow)}
+          role="row"
           style={{ gridTemplateColumns: columnTemplate }}
         >
           {mergedHeaderCells.map((mergedHeader) => (
@@ -129,6 +130,7 @@ export function GridHeader<T>({
       ) : null}
       <div
         className={cx("sg-column-header-row", classNames.headerRow)}
+        role="row"
         style={{ gridTemplateColumns: columnTemplate }}
       >
         {checkboxSelection ? (

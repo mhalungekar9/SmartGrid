@@ -20,6 +20,7 @@ Use it when you want:
 - Toolbar contracts for import data, copy/paste, bulk edit, find/replace, filters, exports, and row actions.
 - Chart contracts for selected-range or visible-row insight charts.
 - Diagnostics, Data Health, Trust Mode, and repro snapshot contracts for developer support, data-quality, and active-cell trust flows.
+- Realtime collaboration contracts for provider-based cell changes, cell locks, presence, and conflict modes.
 - A stable base for React, Angular, Vue, and framework-free JavaScript wrappers.
 
 ## Quick Links
@@ -70,6 +71,9 @@ npm install @gridnexa/javascript
 - `GridNexaReproSnapshot`
 - `GridNexaDataHealthOptions`
 - `GridNexaTrustModeOptions`
+- `GridNexaCollaborationOptions`
+- `GridNexaCollaborationProvider`
+- `GridNexaCollaborationCellEvent`
 - `GridNexaChartsOptions`
 - `GridNexaChartType`
 
@@ -115,6 +119,7 @@ Core includes the typed contracts used by all framework packages:
 - `diagnostics` describes developer-facing runtime diagnostics, action recording, and one-click repro snapshot export/import.
 - `dataHealth` describes opt-in column profiling for missing values, duplicates, invalid cells, numeric outliers, quality scores, and issue-focused filtering.
 - `trustMode` describes opt-in active-cell trust inspection for source, validation, data-quality evidence, impact preview, tracked edits, and rollback.
+- `collaboration` describes provider-based realtime editing with user presence, cell-change events, cell locks, and conflict modes: `cell-lock`, `last-write-wins`, or `versioned`.
 - `charts` describes built-in insight chart behavior for bar, line, area, pie, donut, scatter, bubble, radar, radial, histogram, box plot, treemap, gauge, funnel, and combo charts.
 - `icons` provides global icon replacement, while `column.icons` can override icons for a specific column.
 - `toolbar` enables or hides quick filter, find, find/replace, filters, advanced filter, columns, import data, copy/paste, bulk edit, charts, exports, add/delete rows, undo/redo, fill, and save-all tools.

@@ -46,6 +46,28 @@ import "@gridnexa/react/index.css";
   diagnostics
 />;`;
 
+const collaborationSetup = `const provider = {
+  subscribe(handler) {
+    socket.on("grid-cell-event", handler);
+    return () => socket.off("grid-cell-event", handler);
+  },
+  publish(event) {
+    socket.emit("grid-cell-event", event);
+  }
+};
+
+<GridNexa
+  columns={columns}
+  rows={rows}
+  getRowId={(row) => row.id}
+  collaboration={{
+    user: { id: user.id, name: user.name, color: "#22c55e" },
+    provider,
+    showPresence: true,
+    conflictMode: "cell-lock"
+  }}
+/>;`;
+
 const productivityNextSetup = `"use client";
 
 import { GridNexa } from "@gridnexa/react";
@@ -81,6 +103,7 @@ const productivityChecklist = [
   "Keep validation rules synchronous and lightweight; run expensive checks in your save flow.",
   "Turn on toolbar save and row actions when changeReview is part of the workflow.",
   "Use diagnostics while integrating, then keep recorder/export options for support-heavy screens.",
+  "Use collaboration.provider when realtime edits, presence, or cell locks come from your backend.",
 ];
 
 export function DeveloperSetup() {
@@ -113,6 +136,10 @@ export function DeveloperSetup() {
         <article className="setup-card setup-card--wide">
           <span className="eyebrow">Productivity suite for Next.js</span>
           <CodeViewer code={productivityNextSetup} />
+        </article>
+        <article className="setup-card setup-card--wide">
+          <span className="eyebrow">Realtime collaboration</span>
+          <CodeViewer code={collaborationSetup} />
         </article>
         <article className="setup-card">
           <span className="eyebrow">External app checklist</span>

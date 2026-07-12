@@ -244,6 +244,39 @@ export type GridNexaTrustModeOptions =
       showImpact: boolean;
       maxEvents: number;
     }>;
+export type GridNexaCollaborationUser = {
+  id: string | number;
+  name: string;
+  color?: string;
+};
+export type GridNexaCollaborationCellEvent = {
+  type: "cell-change" | "cell-lock" | "cell-unlock" | "presence";
+  user: GridNexaCollaborationUser;
+  rowId: string | number;
+  rowIndex?: number;
+  columnId: string;
+  field?: string;
+  value?: unknown;
+  version?: number;
+  timestamp?: number;
+};
+export type GridNexaCollaborationProvider = {
+  subscribe?: (
+    handler: (event: GridNexaCollaborationCellEvent) => void,
+  ) => void | (() => void);
+  publish?: (event: GridNexaCollaborationCellEvent) => void | Promise<void>;
+  lockCell?: (event: GridNexaCollaborationCellEvent) => boolean | Promise<boolean>;
+  unlockCell?: (event: GridNexaCollaborationCellEvent) => void | Promise<void>;
+};
+export type GridNexaCollaborationOptions =
+  | boolean
+  | Partial<{
+      enabled: boolean;
+      user: GridNexaCollaborationUser;
+      provider: GridNexaCollaborationProvider;
+      showPresence: boolean;
+      conflictMode: "cell-lock" | "last-write-wins" | "versioned";
+    }>;
 export interface GridNexaIconSet {
   sortAsc?: unknown;
   sortDesc?: unknown;
@@ -458,6 +491,7 @@ export interface GridOptions<T = unknown> {
   diagnostics?: GridNexaDiagnosticsOptions;
   dataHealth?: GridNexaDataHealthOptions;
   trustMode?: GridNexaTrustModeOptions;
+  collaboration?: GridNexaCollaborationOptions;
   charts?: GridNexaChartsOptions;
   sidePanel?: GridNexaSidePanelOptions;
   fillWidth?: GridNexaFillWidthOptions;
