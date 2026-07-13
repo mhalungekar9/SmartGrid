@@ -29,7 +29,29 @@ export type GridNexaColumnToolOptions =
 export interface GridNexaTextDisplayOptions {
   overflow?: "ellipsis" | "wrap" | "clip";
   showTooltip?: boolean;
+  lineClamp?: number;
+  minWidth?: number;
 }
+
+export type GridNexaColumnStyleValue = string | number | undefined;
+export type GridNexaColumnStyleObject = Partial<{
+  fontFamily: GridNexaColumnStyleValue;
+  fontSize: GridNexaColumnStyleValue;
+  fontWeight: GridNexaColumnStyleValue;
+  lineHeight: GridNexaColumnStyleValue;
+  color: GridNexaColumnStyleValue;
+  background: GridNexaColumnStyleValue;
+  backgroundColor: GridNexaColumnStyleValue;
+  borderColor: GridNexaColumnStyleValue;
+  padding: GridNexaColumnStyleValue;
+  paddingInline: GridNexaColumnStyleValue;
+  paddingBlock: GridNexaColumnStyleValue;
+  textAlign: "left" | "center" | "right";
+  textTransform: "none" | "uppercase" | "lowercase" | "capitalize";
+  letterSpacing: GridNexaColumnStyleValue;
+  iconSize: GridNexaColumnStyleValue;
+  height: GridNexaColumnStyleValue;
+}>;
 
 export type ColumnEditorKind =
   | "text"
@@ -84,6 +106,12 @@ export interface Column<T = unknown> {
   headerClassName?:
     | GridNexaClassName
     | ((params: { column: Column<T> }) => GridNexaClassName);
+
+  headerStyle?: GridNexaColumnStyleObject;
+
+  cellStyle?:
+    | GridNexaColumnStyleObject
+    | ((params: { value: unknown; row: T; rowIndex: number; column: Column<T> }) => GridNexaColumnStyleObject);
 
   width?: number;
 

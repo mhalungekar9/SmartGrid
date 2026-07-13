@@ -1,6 +1,6 @@
 import type { Column } from "@gridnexa/core";
 import type { ColumnFilterModel } from "@gridnexa/core";
-import { createElement, type ComponentType, type ReactNode } from "react";
+import { createElement, type ComponentType, type CSSProperties, type ReactNode } from "react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Popover from "@radix-ui/react-popover";
 import {
@@ -31,6 +31,29 @@ function renderIcon(icon: unknown, fallback: ReactNode) {
   }
 
   return icon as ReactNode;
+}
+
+function toCssValue(value: string | number | undefined) {
+  return typeof value === "number" ? `${value}px` : value;
+}
+
+function getHeaderStyle<T>(column: Column<T>, layoutStyle: CSSProperties): CSSProperties {
+  const headerStyle = (column as Column<T> & { headerStyle?: Record<string, string | number | undefined> }).headerStyle;
+
+  if (!headerStyle) {
+    return layoutStyle;
+  }
+
+  const next: CSSProperties = { ...layoutStyle };
+  const { iconSize, ...style } = headerStyle;
+
+  Object.assign(next, style);
+
+  if (iconSize !== undefined) {
+    (next as Record<string, string>)["--gnx-header-icon-size"] = toCssValue(iconSize) ?? "";
+  }
+
+  return next;
 }
 
 interface Props<T> {
@@ -123,6 +146,7 @@ export function GridHeaderCell<T>({
         ? "Clear sort"
         : "Sort ascending";
   const columnStyle = getColumnStyle(column.id);
+  const headerStyle = getHeaderStyle(column, columnStyle);
   const pinnedSide =
     column.pinned ??
     (columnStyle.left !== undefined
@@ -155,7 +179,7 @@ export function GridHeaderCell<T>({
           : "none"
       }
       data-gnx-pinned={pinnedSide}
-      style={columnStyle}
+      style={headerStyle}
       onDragStart={(event) => {
         if (!tools.menu) {
           event.preventDefault();

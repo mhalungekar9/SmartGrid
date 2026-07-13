@@ -173,7 +173,14 @@ export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
   {
     title: "Design",
     items: [
-      { path: "/docs/theme", label: "Theme", icon: "bi-palette", component: Theme },
+      {
+        path: "/docs/theme",
+        label: "Theme",
+        icon: "bi-palette",
+        component: Theme,
+        description: "Compare built-in themes and learn styling tokens, density, column header styles, cell styles, text display, and responsive setup.",
+        tags: ["theme", "themes", "styling", "tokens", "density", "responsive", "headers", "cells", "ellipsis", "wrap", "high contrast", "enterprise", "minimal"],
+      },
       { path: "/docs/grid-configuration", label: "Grid Config", icon: "bi-sliders", component: GridConfiguration },
       { path: "/docs/styling-configuration", label: "Styling Config", icon: "bi-brush", component: StylingConfiguration },
     ],

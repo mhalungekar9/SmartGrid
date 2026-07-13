@@ -258,6 +258,8 @@ Keep provider keys on your backend. GridNexa accepts safe action plans from Open
 
 Use `className`, `classNames`, `getRowClassName`, `getCellClassName`, `getHeaderClassName`, and column-level `className`, `cellClassName`, and `headerClassName` to connect Bootstrap, utility classes, CSS Modules, SCSS, Less, or plain CSS.
 
+Built-in themes include `modern-light`, `modern-dark`, `compact`, `minimal`, `enterprise`, `high-contrast`, plus compatible `light`, `dark`, and `system` values. Shared theme tokens power colors, typography, spacing, selected rows, focus states, headers, cells, toolbars, panels, and responsive layouts. Columns can use `headerStyle`, `cellStyle`, and `textDisplay` for targeted header/cell styling and `ellipsis`, `clip`, or `wrap` text behavior.
+
 GridNexa injects baseline runtime styles automatically. For the closest match to the playground and to keep bundlers aware of the stylesheet, import the package CSS once in your app entry:
 
 ```ts

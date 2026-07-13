@@ -11,7 +11,14 @@ const styledColumns: Column<Employee>[] = [
     sortable: true,
     filter: "text",
     headerClassName: "text-primary fw-bold",
+    headerStyle: {
+      fontSize: 13,
+      fontWeight: 900,
+      textTransform: "uppercase",
+      iconSize: 14,
+    },
     cellClassName: "fw-semibold",
+    textDisplay: { overflow: "ellipsis", showTooltip: true },
   },
   {
     id: "department",
@@ -25,6 +32,9 @@ const styledColumns: Column<Employee>[] = [
         : row.department === "Finance"
           ? "gnx-cell-accent gnx-cell-accent--green"
           : undefined,
+    cellStyle: ({ row }) => ({
+      fontWeight: row.department === "Engineering" ? 800 : 500,
+    }),
   },
   {
     id: "city",
@@ -50,6 +60,10 @@ const styledColumns: Column<Employee>[] = [
     pinned: "right",
     cellClassName: ({ value }) =>
       Number(value) >= 90 ? "gnx-score-hot" : "gnx-score-normal",
+    cellStyle: ({ value }) => ({
+      color: Number(value) >= 90 ? "var(--gnx-reviewed)" : "var(--gnx-text)",
+      fontWeight: Number(value) >= 90 ? 900 : 700,
+    }),
   },
 ];
 
@@ -71,8 +85,15 @@ const columns: Column<Employee>[] = [
     field: "name",
     headerName: "Name",
     width: 230,
+    headerStyle: {
+      fontSize: 13,
+      fontWeight: 900,
+      textTransform: "uppercase",
+      iconSize: 14,
+    },
     headerClassName: "text-primary fw-bold",
     cellClassName: "fw-semibold",
+    textDisplay: { overflow: "ellipsis", showTooltip: true },
   },
   {
     id: "department",
@@ -85,6 +106,9 @@ const columns: Column<Employee>[] = [
         : row.department === "Finance"
           ? "gnx-cell-accent gnx-cell-accent--green"
           : undefined,
+    cellStyle: ({ row }) => ({
+      fontWeight: row.department === "Engineering" ? 800 : 500,
+    }),
   },
   {
     id: "score",
@@ -94,6 +118,10 @@ const columns: Column<Employee>[] = [
     pinned: "right",
     cellClassName: ({ value }) =>
       Number(value) >= 90 ? "gnx-score-hot" : "gnx-score-normal",
+    cellStyle: ({ value }) => ({
+      color: Number(value) >= 90 ? "var(--gnx-reviewed)" : "var(--gnx-text)",
+      fontWeight: Number(value) >= 90 ? 900 : 700,
+    }),
   },
 ];
 
@@ -105,6 +133,17 @@ export function GridNexaStylingExample() {
       getRowId={(row) => row.id}
       theme="light"
       density="standard"
+      styling={{
+        tokens: {
+          primaryColor: "#1d4ed8",
+          selectedBackground: "#dbeafe",
+          rowHeight: 40,
+          headerHeight: 42,
+          cellPaddingInline: 12
+        },
+        headerCell: { fontSize: 12, fontWeight: 900 },
+        selectedRow: { background: "#dbeafe", color: "#0f172a" }
+      }}
       className="orders-grid shadow-lg rounded-3"
       classNames={{
         toolbar: "border rounded-3 bg-white",
@@ -143,6 +182,9 @@ export function StylingConfiguration() {
       details={[
         "Use className for the outer shell and classNames for common slots such as toolbar, inputs, buttons, rows, cells, panels, and status bar.",
         "Use column.headerClassName, column.cellClassName, or column.className for column-owned styling.",
+        "Use styling.tokens for global design tokens such as primary color, selected rows, header height, row height, and spacing.",
+        "Use column.headerStyle and column.cellStyle for typed per-column visual overrides without writing CSS selectors.",
+        "Use textDisplay globally or per column for ellipsis, clip, wrap, tooltips, line clamping, and responsive text behavior.",
         "Use getRowClassName, getCellClassName, and getHeaderClassName for data-aware styling rules.",
         "Use theme, density, CSS variables, or unstyled mode depending on how much control your design system needs.",
       ]}
@@ -157,6 +199,17 @@ export function StylingConfiguration() {
         checkboxSelection
         theme="light"
         density="standard"
+        styling={{
+          tokens: {
+            primaryColor: "#1d4ed8",
+            selectedBackground: "#dbeafe",
+            rowHeight: 40,
+            headerHeight: 42,
+            cellPaddingInline: 12,
+          },
+          headerCell: { fontSize: 12, fontWeight: 900 },
+          selectedRow: { background: "#dbeafe", color: "#0f172a" },
+        }}
         className="docs-styled-grid shadow-lg rounded-3"
         classNames={{
           toolbar: "docs-styled-toolbar border rounded-3",

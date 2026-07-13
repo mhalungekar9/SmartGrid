@@ -59,6 +59,10 @@ npm install @gridnexa/javascript
 - `GridNexaSidePanelOptions`
 - `GridNexaFillWidthOptions`
 - `GridNexaPreset`
+- `GridNexaTheme`
+- `GridNexaThemeTokens`
+- `GridNexaStylingOptions`
+- `GridNexaStyleObject`
 - `GridNexaStateStorageOptions`
 - `GridNexaColumnToolOptions`
 - `GridNexaIconSet`
@@ -112,6 +116,7 @@ Core includes the typed contracts used by all framework packages:
 - `sidePanel` controls the right-side Columns/Pivot and Filters tools, including disabled state and default active panel.
 - `fillWidth` controls whether visible columns stop at their real total width or stretch to fill remaining container width with `flex` columns or the last visible data column.
 - `preset` provides typed shortcuts for common grid modes such as `basic`, `admin`, `spreadsheet`, and `analytics`.
+- `theme`, `density`, and `styling` provide design-system configuration for built-in themes, token overrides, slot-level styles, row/header/cell dimensions, selected states, focus states, and responsive spacing.
 - `stateStorage` describes saved-view persistence for column, filter, sort, pagination, and side-panel state.
 - `summaries` controls footer and selected-range numeric summaries.
 - `views` describes named saved views and localStorage keys.
@@ -124,7 +129,7 @@ Core includes the typed contracts used by all framework packages:
 - `dashboard` describes opt-in dashboard generation for KPI cards, inferred summaries, configured dashboard charts, and insight notes from visible grid data. `dashboard.charts` accepts chart definitions with `type`, `category`, `value`, and optional `title` so apps can pin exact bar, line, area, pie, or donut charts into the generated dashboard.
 - `collaboration` describes provider-based realtime editing with user presence, cell-change events, cell locks, and conflict modes: `cell-lock`, `last-write-wins`, or `versioned`.
 - `charts` describes built-in insight chart behavior for bar, line, area, pie, donut, scatter, bubble, radar, radial, histogram, box plot, treemap, gauge, funnel, and combo charts.
-- `icons` provides global icon replacement, while `column.icons` can override icons for a specific column.
+- `icons` provides global icon replacement, while `column.icons` can override icons for a specific column. Column definitions can also provide `headerStyle`, `cellStyle`, and `textDisplay` overrides for header typography, alignment, icon sizing, cell color, wrap, clip, ellipsis, and tooltip behavior.
 - `toolbar` enables or hides quick filter, find, find/replace, filters, advanced filter, columns, import data, copy/paste, bulk edit, charts, exports, add/delete rows, undo/redo, fill, and save-all tools.
 
 React consumers should import `@gridnexa/react/index.css` once in the app entry. That exported CSS carries the shared header layout, drag/reorder indicators, pinned-column rules, popovers, scrollbars, and theme variables needed for installed apps to match the playground.

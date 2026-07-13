@@ -58,8 +58,101 @@ export type AdvancedFilterModel =
 export type AdvancedFilter<T = unknown> = (row: T) => boolean;
 export type ExternalFilter<T = unknown> = (row: T) => boolean;
 export type PivotAggregation = "sum" | "avg" | "count" | "min" | "max";
-export type GridNexaTheme = "light" | "dark" | "system";
+export type GridNexaTheme =
+  | "light"
+  | "modern-light"
+  | "dark"
+  | "modern-dark"
+  | "compact"
+  | "minimal"
+  | "enterprise"
+  | "high-contrast"
+  | "system";
 export type GridNexaDensity = "compact" | "standard" | "comfortable";
+export type GridNexaTextAlign = "left" | "center" | "right";
+export type GridNexaTextTransform = "none" | "uppercase" | "lowercase" | "capitalize";
+export type GridNexaStyleValue = string | number | undefined;
+export type GridNexaStyleObject = Partial<{
+  fontFamily: GridNexaStyleValue;
+  fontSize: GridNexaStyleValue;
+  fontWeight: GridNexaStyleValue;
+  lineHeight: GridNexaStyleValue;
+  color: GridNexaStyleValue;
+  background: GridNexaStyleValue;
+  backgroundColor: GridNexaStyleValue;
+  borderColor: GridNexaStyleValue;
+  borderRadius: GridNexaStyleValue;
+  padding: GridNexaStyleValue;
+  paddingInline: GridNexaStyleValue;
+  paddingBlock: GridNexaStyleValue;
+  textAlign: GridNexaTextAlign;
+  textTransform: GridNexaTextTransform;
+  letterSpacing: GridNexaStyleValue;
+  minWidth: GridNexaStyleValue;
+  maxWidth: GridNexaStyleValue;
+  width: GridNexaStyleValue;
+  height: GridNexaStyleValue;
+}>;
+export type GridNexaThemeTokens = Partial<{
+  fontFamily: string;
+  fontSize: string | number;
+  fontWeight: string | number;
+  headerFontSize: string | number;
+  headerFontWeight: string | number;
+  rowFontSize: string | number;
+  rowFontWeight: string | number;
+  background: string;
+  panelBackground: string;
+  panelStrongBackground: string;
+  textColor: string;
+  mutedTextColor: string;
+  headingColor: string;
+  borderColor: string;
+  primaryColor: string;
+  hoverBackground: string;
+  selectedBackground: string;
+  selectedTextColor: string;
+  focusedCellColor: string;
+  disabledOpacity: string | number;
+  validationErrorColor: string;
+  changedColor: string;
+  reviewedColor: string;
+  headerBackground: string;
+  pinnedBackground: string;
+  alternateRowBackground: string;
+  rowHeight: string | number;
+  headerHeight: string | number;
+  cellPaddingInline: string | number;
+  cellPaddingBlock: string | number;
+  toolbarGap: string | number;
+  borderRadius: string | number;
+  iconSize: string | number;
+  shadow: string;
+}>;
+export type GridNexaStylingOptions = Partial<{
+  tokens: GridNexaThemeTokens;
+  root: GridNexaStyleObject;
+  header: GridNexaStyleObject;
+  headerCell: GridNexaStyleObject;
+  headerLabel: GridNexaStyleObject;
+  row: GridNexaStyleObject;
+  alternateRow: GridNexaStyleObject;
+  selectedRow: GridNexaStyleObject;
+  hoverRow: GridNexaStyleObject;
+  cell: GridNexaStyleObject;
+  focusedCell: GridNexaStyleObject;
+  toolbar: GridNexaStyleObject;
+  footer: GridNexaStyleObject;
+  sidePanel: GridNexaStyleObject;
+  filter: GridNexaStyleObject;
+  menu: GridNexaStyleObject;
+  pagination: GridNexaStyleObject;
+  groupedHeader: GridNexaStyleObject;
+  disabled: GridNexaStyleObject;
+  validationError: GridNexaStyleObject;
+  changedRow: GridNexaStyleObject;
+  reviewedRow: GridNexaStyleObject;
+}>;
 export type GridNexaRowReorderPosition = "left" | "right";
 export type GridNexaPreset = "basic" | "admin" | "spreadsheet" | "analytics";
 export type GridNexaChartType =
@@ -464,6 +557,7 @@ export interface GridOptions<T = unknown> {
   height?: number | string;
   unstyled?: boolean;
   classNames?: GridNexaSlotClassNames;
+  styling?: GridNexaStylingOptions;
   preset?: GridNexaPreset;
   columnTools?: GridNexaColumnToolOptions;
   icons?: GridNexaIconSet;

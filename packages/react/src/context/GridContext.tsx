@@ -22,6 +22,8 @@ export interface GridNexaIconSet {
 export interface GridNexaTextDisplayOptions {
   overflow?: "ellipsis" | "wrap" | "clip";
   showTooltip?: boolean;
+  lineClamp?: number;
+  minWidth?: number;
 }
 
 export interface GridContextValue<T> {

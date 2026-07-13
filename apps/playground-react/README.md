@@ -17,7 +17,7 @@ A polished showcase for GridNexa React. Each page pairs a live grid with copyabl
 - Column resizing, pinning, aligned header drag/reorder, and templates
 - Configurable right-side Columns/Pivot and Filters tools with mobile/tablet examples
 - Editing, formulas, tree grid, grouping, pivoting, export, events, diagnostics, and performance examples
-- Light and dark themes
+- Built-in `modern-light`, `modern-dark`, `compact`, `minimal`, `enterprise`, and `high-contrast` themes with shared styling tokens
 
 ## Dashboard Generator Example
 

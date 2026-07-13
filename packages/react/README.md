@@ -586,6 +586,59 @@ Supported AI actions include quick filter, column filter, advanced filter, sort,
 
 Use Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS through `className`, `classNames`, `getRowClassName`, `getCellClassName`, `getHeaderClassName`, `column.className`, `column.cellClassName`, and `column.headerClassName`.
 
+Built-in themes are `modern-light`, `modern-dark`, `compact`, `minimal`, `enterprise`, `high-contrast`, plus the compatible `light`, `dark`, and `system` values.
+
+```tsx
+<GridNexa
+  columns={[
+    {
+      id: "name",
+      field: "name",
+      headerName: "Employee",
+      headerStyle: {
+        fontSize: 13,
+        fontWeight: 900,
+        color: "#0f172a",
+        textAlign: "left",
+        textTransform: "uppercase",
+        iconSize: 14,
+        height: 42,
+      },
+      cellStyle: ({ row }) => ({
+        fontWeight: row.active ? 700 : 500,
+        color: row.active ? "#0f172a" : "#64748b",
+      }),
+      textDisplay: { overflow: "ellipsis", showTooltip: true },
+    },
+    {
+      id: "notes",
+      field: "notes",
+      headerName: "Notes",
+      minWidth: 220,
+      textDisplay: { overflow: "wrap", lineClamp: 2 },
+    },
+  ]}
+  rows={rows}
+  theme="enterprise"
+  density="compact"
+  styling={{
+    tokens: {
+      fontFamily: "Inter, system-ui, sans-serif",
+      primaryColor: "#1d4ed8",
+      selectedBackground: "#cfe0ff",
+      rowHeight: 38,
+      headerHeight: 42,
+      cellPaddingInline: 10,
+    },
+    headerCell: { fontSize: 12, fontWeight: 900 },
+    selectedRow: { background: "#dbeafe", color: "#0f172a" },
+    focusedCell: { borderColor: "#1d4ed8" },
+  }}
+/>
+```
+
+`textDisplay` supports `ellipsis`, `clip`, and `wrap` globally or per column. Ellipsis can show native tooltips, clip avoids ellipsis, and wrap supports line clamping with responsive row height behavior.
+
 ## Complete Feature List
 
 - Presets, saved views, loading/error/empty overlays, sorting, pagination, quick filter, column filters, external filters, and visual advanced filters

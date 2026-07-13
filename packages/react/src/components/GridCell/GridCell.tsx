@@ -1,5 +1,5 @@
 import type { Column } from "@gridnexa/core";
-import type { ChangeEvent, KeyboardEvent, ReactNode } from "react";
+import type { ChangeEvent, CSSProperties, KeyboardEvent, ReactNode } from "react";
 import "./GridCell.css";
 import { cx, useGridContext } from "../../context/GridContext";
 import { getColumnValue, getRawColumnValue } from "../../utils/cellValue";
@@ -28,6 +28,31 @@ function normalizeSelectOption(
         disabled: option.disabled,
       }
     : { value: String(option), label: String(option), disabled: false };
+}
+
+function getCellStyle<T>(
+  column: Column<T>,
+  row: T,
+  rowIndex: number,
+  value: unknown,
+  layoutStyle: CSSProperties,
+): CSSProperties {
+  const cellStyleConfig = (column as Column<T> & {
+    cellStyle?:
+      | Record<string, string | number | undefined>
+      | ((params: {
+          value: unknown;
+          row: T;
+          rowIndex: number;
+          column: Column<T>;
+        }) => Record<string, string | number | undefined>);
+  }).cellStyle;
+  const cellStyle =
+    typeof cellStyleConfig === "function"
+      ? cellStyleConfig({ value, row, rowIndex, column })
+      : cellStyleConfig;
+
+  return cellStyle ? ({ ...layoutStyle, ...cellStyle } as CSSProperties) : layoutStyle;
 }
 
 export function GridCell<T>({
@@ -119,6 +144,7 @@ export function GridCell<T>({
         )
       : selectOptions;
   const columnStyle = getColumnStyle(column.id);
+  const cellStyle = getCellStyle(column, row, rowIndex, value, columnStyle);
   const pinnedSide =
     column.pinned ??
     (columnStyle.left !== undefined
@@ -127,6 +153,16 @@ export function GridCell<T>({
         ? "right"
         : undefined);
   const textDisplay = getColumnTextDisplay(column);
+  const renderedCellStyle =
+    textDisplay.lineClamp || textDisplay.minWidth
+      ? {
+          ...cellStyle,
+          ...(textDisplay.lineClamp
+            ? { "--gnx-text-line-clamp": textDisplay.lineClamp } as CSSProperties
+            : {}),
+          ...(textDisplay.minWidth ? { minWidth: textDisplay.minWidth } : {}),
+        }
+      : cellStyle;
   const tooltipText =
     textDisplay.overflow === "ellipsis" && textDisplay.showTooltip !== false
       ? String(value ?? "")
@@ -180,7 +216,7 @@ export function GridCell<T>({
         aria-rowindex={rowIndex + 2}
         aria-colindex={columnIndex + 1}
         aria-selected={isActiveCell || isSelected}
-        style={columnStyle}
+        style={renderedCellStyle}
       >
         {editorType === "largeText" ? (
           <textarea {...commonEditorProps} />
@@ -287,7 +323,7 @@ export function GridCell<T>({
       aria-readonly={column.editable === false || lockedByOtherUser}
       aria-describedby={collaborationPresence ? `${getCellId(rowIndex, columnIndex)}-presence` : undefined}
       title={tooltipText}
-      style={columnStyle}
+      style={renderedCellStyle}
       tabIndex={isActiveCell ? 0 : -1}
       onClick={(event) => {
         if (event.shiftKey && activeCell) {

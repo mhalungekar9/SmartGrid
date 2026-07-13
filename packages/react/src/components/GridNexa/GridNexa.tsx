@@ -63,6 +63,8 @@ import type {
   GridNexaChartsOptions,
   GridNexaDashboardChart,
   GridNexaDashboardOptions,
+  GridNexaStylingOptions,
+  GridNexaThemeTokens,
   GridNexaAiRequest,
   GridNexaCommandAction,
   GridNexaCommandPlan,
@@ -1090,6 +1092,119 @@ function resolveDashboardOptions(value?: GridNexaDashboardOptions) {
   };
 }
 
+const tokenVariableMap: Record<keyof GridNexaThemeTokens, string> = {
+  fontFamily: "--gnx-font-family",
+  fontSize: "--gnx-font-size",
+  fontWeight: "--gnx-font-weight",
+  headerFontSize: "--gnx-header-font-size",
+  headerFontWeight: "--gnx-header-font-weight",
+  rowFontSize: "--gnx-row-font-size",
+  rowFontWeight: "--gnx-row-font-weight",
+  background: "--gnx-bg",
+  panelBackground: "--gnx-panel",
+  panelStrongBackground: "--gnx-panel-strong",
+  textColor: "--gnx-text",
+  mutedTextColor: "--gnx-muted",
+  headingColor: "--gnx-heading",
+  borderColor: "--gnx-border",
+  primaryColor: "--gnx-primary",
+  hoverBackground: "--gnx-row-hover",
+  selectedBackground: "--gnx-row-selected",
+  selectedTextColor: "--gnx-row-selected-text",
+  focusedCellColor: "--gnx-focus",
+  disabledOpacity: "--gnx-disabled-opacity",
+  validationErrorColor: "--gnx-error",
+  changedColor: "--gnx-changed",
+  reviewedColor: "--gnx-reviewed",
+  headerBackground: "--gnx-header-bg",
+  pinnedBackground: "--gnx-pinned-bg",
+  alternateRowBackground: "--gnx-row-alt",
+  rowHeight: "--gnx-row-height",
+  headerHeight: "--gnx-header-height",
+  cellPaddingInline: "--gnx-cell-pad",
+  cellPaddingBlock: "--gnx-cell-pad-block",
+  toolbarGap: "--gnx-toolbar-gap",
+  borderRadius: "--gnx-radius",
+  iconSize: "--gnx-icon-size",
+  shadow: "--gnx-shadow",
+};
+
+function toCssValue(value: string | number | undefined) {
+  return typeof value === "number" ? `${value}px` : value;
+}
+
+function appendTokenVariables(
+  target: CSSProperties,
+  tokens?: GridNexaThemeTokens,
+) {
+  if (!tokens) {
+    return;
+  }
+
+  (Object.keys(tokens) as Array<keyof GridNexaThemeTokens>).forEach((key) => {
+    const variableName = tokenVariableMap[key];
+    const value = toCssValue(tokens[key] as string | number | undefined);
+
+    if (variableName && value !== undefined) {
+      (target as Record<string, string>)[variableName] = value;
+    }
+  });
+}
+
+function appendSlotVariables(
+  target: CSSProperties,
+  prefix: string,
+  style?: GridNexaStylingOptions[keyof GridNexaStylingOptions],
+) {
+  if (!style || typeof style !== "object") {
+    return;
+  }
+
+  Object.entries(style).forEach(([key, value]) => {
+    const cssValue = toCssValue(value as string | number | undefined);
+
+    if (cssValue !== undefined) {
+      (target as Record<string, string>)[`--gnx-${prefix}-${key.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)}`] = cssValue;
+    }
+  });
+}
+
+function getShellStyle(
+  height: number | string | undefined,
+  styling: GridNexaStylingOptions | undefined,
+): CSSProperties {
+  const style: CSSProperties = {};
+
+  if (height !== undefined) {
+    style.height = typeof height === "number" ? `${height}px` : height;
+  }
+
+  appendTokenVariables(style, styling?.tokens);
+  appendSlotVariables(style, "root", styling?.root);
+  appendSlotVariables(style, "header", styling?.header);
+  appendSlotVariables(style, "header-cell", styling?.headerCell);
+  appendSlotVariables(style, "header-label", styling?.headerLabel);
+  appendSlotVariables(style, "row", styling?.row);
+  appendSlotVariables(style, "row-alt", styling?.alternateRow);
+  appendSlotVariables(style, "row-selected", styling?.selectedRow);
+  appendSlotVariables(style, "row-hover", styling?.hoverRow);
+  appendSlotVariables(style, "cell", styling?.cell);
+  appendSlotVariables(style, "cell-focus", styling?.focusedCell);
+  appendSlotVariables(style, "toolbar", styling?.toolbar);
+  appendSlotVariables(style, "footer", styling?.footer);
+  appendSlotVariables(style, "side-panel", styling?.sidePanel);
+  appendSlotVariables(style, "filter", styling?.filter);
+  appendSlotVariables(style, "menu", styling?.menu);
+  appendSlotVariables(style, "pagination", styling?.pagination);
+  appendSlotVariables(style, "grouped-header", styling?.groupedHeader);
+  appendSlotVariables(style, "disabled", styling?.disabled);
+  appendSlotVariables(style, "validation-error", styling?.validationError);
+  appendSlotVariables(style, "changed-row", styling?.changedRow);
+  appendSlotVariables(style, "reviewed-row", styling?.reviewedRow);
+
+  return style;
+}
+
 const chartTypeLabels: Record<GridNexaChartType, string> = {
   bar: "Bar",
   line: "Line",
@@ -2036,6 +2151,7 @@ export function GridNexa<T>({
   height,
   unstyled = false,
   classNames = {},
+  styling,
   preset,
   columnTools,
   icons = {},
@@ -3595,7 +3711,9 @@ export function GridNexa<T>({
 
       return next;
     });
-    setSelectedRowIndex(rowIndex);
+    setSelectedRowIndex((current) =>
+      current === rowIndex && selectedRowIds.has(rowId) ? null : rowIndex,
+    );
   };
   const toggleAllRowsSelection = () => {
     setSelectedRowIds((current) => {
@@ -3609,7 +3727,7 @@ export function GridNexa<T>({
 
       return next;
     });
-    setSelectedRowIndex(tableRows.length ? 0 : null);
+    setSelectedRowIndex(allVisibleRowsSelected ? null : tableRows.length ? 0 : null);
   };
   const tableWidths = tableColumns.map((column, index) => {
     const originalIndex = columns.findIndex((entry) => entry.id === column.id);
@@ -7752,12 +7870,27 @@ export default function GridNexaRepro() {
       tick: { fill: "var(--gnx-muted, #94a3b8)", fontSize: 12 },
     };
     const gridStroke = "var(--gnx-border, rgba(148, 163, 184, 0.24))";
+    const chartCursor = {
+      fill: "var(--gnx-chart-cursor, rgba(96, 165, 250, 0.14))",
+      stroke: "var(--gnx-primary, #60a5fa)",
+      strokeOpacity: 0.28,
+    };
+    const activeBar = {
+      fill: "var(--gnx-primary, #60a5fa)",
+      fillOpacity: 0.86,
+      stroke: "var(--gnx-heading, #f8fafc)",
+      strokeOpacity: 0.22,
+    };
+    const tooltipProps = {
+      cursor: chartCursor,
+      wrapperClassName: "sg-chart-tooltip",
+    };
 
     if (chartType === "pie" || chartType === "donut") {
       return (
         <ResponsiveContainer width="100%" height={320}>
           <PieChart>
-            <Tooltip />
+            <Tooltip wrapperClassName="sg-chart-tooltip" />
             <Legend />
             <Pie
               data={chartRows}
@@ -7783,7 +7916,7 @@ export default function GridNexaRepro() {
       return (
         <ResponsiveContainer width="100%" height={320}>
           <FunnelChart>
-            <Tooltip />
+            <Tooltip wrapperClassName="sg-chart-tooltip" />
             <Legend />
             <Funnel
               data={chartRows}
@@ -7842,7 +7975,7 @@ export default function GridNexaRepro() {
             <PolarGrid stroke={gridStroke} />
             <PolarAngleAxis dataKey="category" tick={{ fill: "var(--gnx-muted, #94a3b8)", fontSize: 12 }} />
             <PolarRadiusAxis tick={{ fill: "var(--gnx-muted, #94a3b8)", fontSize: 11 }} />
-            <Tooltip />
+            <Tooltip {...tooltipProps} />
             <Legend />
             <Radar
               name={resolvedChartValueColumn.headerName}
@@ -7882,7 +8015,7 @@ export default function GridNexaRepro() {
           >
             <PolarAngleAxis type="number" domain={[0, "dataMax"]} tick={false} />
             <RadialBar dataKey="value" name={resolvedChartValueColumn.headerName} background />
-            <Tooltip />
+            <Tooltip {...tooltipProps} />
             <Legend />
           </RadialBarChart>
         </ResponsiveContainer>
@@ -7901,7 +8034,7 @@ export default function GridNexaRepro() {
               {...commonAxisProps}
             />
             {chartType === "bubble" ? <ZAxis dataKey="size" range={[80, 520]} /> : null}
-            <Tooltip cursor={{ strokeDasharray: "3 3" }} />
+            <Tooltip cursor={{ stroke: "var(--gnx-primary, #60a5fa)", strokeDasharray: "3 3", strokeOpacity: 0.5 }} wrapperClassName="sg-chart-tooltip" />
             <Legend />
             <Scatter
               name={resolvedChartValueColumn.headerName}
@@ -7920,9 +8053,9 @@ export default function GridNexaRepro() {
             <CartesianGrid stroke={gridStroke} />
             <XAxis dataKey="category" {...commonAxisProps} />
             <YAxis allowDecimals={false} {...commonAxisProps} />
-            <Tooltip />
+            <Tooltip {...tooltipProps} />
             <Legend />
-            <Bar dataKey="value" name="Frequency" fill={chartColors[0]} />
+            <Bar dataKey="value" name="Frequency" fill={chartColors[0]} activeBar={activeBar} />
           </BarChart>
         </ResponsiveContainer>
       );
@@ -7939,6 +8072,8 @@ export default function GridNexaRepro() {
             <XAxis dataKey="category" {...commonAxisProps} />
             <YAxis domain={[min, max]} {...commonAxisProps} />
             <Tooltip
+              cursor={chartCursor}
+              wrapperClassName="sg-chart-tooltip"
               content={({ active, payload }) => {
                 const row = payload?.[0]?.payload;
 
@@ -7959,7 +8094,7 @@ export default function GridNexaRepro() {
               }}
             />
             <Legend />
-            <Bar dataKey="value" name={resolvedChartValueColumn.headerName} fill="transparent" shape={(props: any) => {
+            <Bar dataKey="value" name={resolvedChartValueColumn.headerName} fill="transparent" activeBar={false} shape={(props: any) => {
               const row = props.payload;
               const yScale = props.yAxis?.scale;
 
@@ -8008,9 +8143,9 @@ export default function GridNexaRepro() {
             <CartesianGrid stroke={gridStroke} />
             <XAxis dataKey="category" {...commonAxisProps} />
             <YAxis {...commonAxisProps} />
-            <Tooltip />
+            <Tooltip {...tooltipProps} />
             <Legend />
-            <Bar dataKey="value" name={resolvedChartValueColumn.headerName} fill={chartColors[0]} />
+            <Bar dataKey="value" name={resolvedChartValueColumn.headerName} fill={chartColors[0]} activeBar={activeBar} />
             <Line
               dataKey="average"
               name={`${resolvedChartValueColumn.headerName} average`}
@@ -8045,16 +8180,36 @@ export default function GridNexaRepro() {
           <CartesianGrid stroke={gridStroke} />
           <XAxis dataKey="category" {...commonAxisProps} />
           <YAxis {...commonAxisProps} />
-          <Tooltip />
+          <Tooltip {...tooltipProps} />
           <Legend />
           <SeriesComponent
             dataKey="value"
             name={resolvedChartValueColumn.headerName}
+            {...(chartType === "bar" ? { activeBar } : {})}
             {...seriesProps}
           />
         </ChartComponent>
       </ResponsiveContainer>
     );
+  };
+
+  const shellStyle = getShellStyle(height, styling);
+  const dashboardGridStroke = "var(--gnx-border, rgba(148, 163, 184, 0.24))";
+  const dashboardAxisTick = { fill: "var(--gnx-muted, #94a3b8)", fontSize: 11 };
+  const dashboardChartCursor = {
+    fill: "var(--gnx-chart-cursor, rgba(96, 165, 250, 0.14))",
+    stroke: "var(--gnx-primary, #60a5fa)",
+    strokeOpacity: 0.28,
+  };
+  const dashboardActiveBar = {
+    fill: "var(--gnx-primary, #60a5fa)",
+    fillOpacity: 0.86,
+    stroke: "var(--gnx-heading, #f8fafc)",
+    strokeOpacity: 0.22,
+  };
+  const dashboardTooltipProps = {
+    cursor: dashboardChartCursor,
+    wrapperClassName: "sg-chart-tooltip",
   };
 
   return (
@@ -8136,6 +8291,7 @@ export default function GridNexaRepro() {
         className={cx("sg-shell", mergedClassNames.shell, className)}
         data-gnx-theme={theme}
         data-gnx-density={density}
+        style={shellStyle}
         onClick={closeCellContextMenu}
       >
         <div className="sg-visually-hidden" aria-live="polite">
@@ -8855,19 +9011,19 @@ export default function GridNexaRepro() {
         ) : null}
 
         {findReplaceOpen ? (
-          <div className="sg-product-panel" role="dialog" aria-label="Find and replace">
+          <div className="sg-product-panel sg-find-replace-panel" role="dialog" aria-label="Find and replace">
             <div className="sg-product-panel-header">
               <strong>Find and replace</strong>
               <button
                 type="button"
-                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost sg-find-replace-done", mergedClassNames.button)}
                 onClick={() => setFindReplaceOpen(false)}
               >
                 Done
               </button>
             </div>
-            <div className="sg-diagnostics-grid">
-              <label className="sg-filter">
+            <div className="sg-find-replace-grid">
+              <label className="sg-filter sg-find-replace-field">
                 <span className="sg-filter-label">Find</span>
                 <input
                   className={cx("sg-filter-input", mergedClassNames.input)}
@@ -8876,7 +9032,7 @@ export default function GridNexaRepro() {
                   placeholder="Text to find"
                 />
               </label>
-              <label className="sg-filter">
+              <label className="sg-filter sg-find-replace-field">
                 <span className="sg-filter-label">Replace</span>
                 <input
                   className={cx("sg-filter-input", mergedClassNames.input)}
@@ -8885,31 +9041,33 @@ export default function GridNexaRepro() {
                   placeholder="Replacement"
                 />
               </label>
-              <span>{findMatches.length} matches</span>
+              <span className="sg-find-replace-count">{findMatches.length} matches</span>
               <button
                 type="button"
-                className={cx("sg-toolbar-button sg-toolbar-button--ghost", mergedClassNames.button)}
+                className={cx("sg-toolbar-button sg-toolbar-button--ghost sg-find-replace-next", mergedClassNames.button)}
                 onClick={() => setFindMatchIndex((current) => findMatches.length ? current + 1 : current)}
                 disabled={!findMatches.length}
               >
                 Next
               </button>
-              <button
-                type="button"
-                className={cx("sg-toolbar-button", mergedClassNames.button)}
-                onClick={() => replaceAtMatch(findMatch)}
-                disabled={!findMatch}
-              >
-                Replace
-              </button>
-              <button
-                type="button"
-                className={cx("sg-toolbar-button", mergedClassNames.button)}
-                onClick={replaceAllMatches}
-                disabled={!findMatches.length}
-              >
-                Replace all
-              </button>
+              <div className="sg-find-replace-actions">
+                <button
+                  type="button"
+                  className={cx("sg-toolbar-button sg-find-replace-action", mergedClassNames.button)}
+                  onClick={() => replaceAtMatch(findMatch)}
+                  disabled={!findMatch}
+                >
+                  Replace
+                </button>
+                <button
+                  type="button"
+                  className={cx("sg-toolbar-button sg-find-replace-action", mergedClassNames.button)}
+                  onClick={replaceAllMatches}
+                  disabled={!findMatches.length}
+                >
+                  Replace all
+                </button>
+              </div>
             </div>
           </div>
         ) : null}
@@ -8996,7 +9154,7 @@ export default function GridNexaRepro() {
                         <ResponsiveContainer width="100%" height={220}>
                           {chart.type === "pie" || chart.type === "donut" ? (
                             <PieChart>
-                              <Tooltip />
+                              <Tooltip wrapperClassName="sg-chart-tooltip" />
                               <Legend />
                               <Pie
                                 data={chart.rows}
@@ -9012,28 +9170,28 @@ export default function GridNexaRepro() {
                             </PieChart>
                           ) : chart.type === "line" ? (
                             <LineChart data={chart.rows}>
-                              <CartesianGrid stroke={theme === "dark" ? "rgba(148,163,184,.2)" : "#dbe3ef"} />
-                              <XAxis dataKey="category" tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
-                              <YAxis tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
-                              <Tooltip />
+                              <CartesianGrid stroke={dashboardGridStroke} />
+                              <XAxis dataKey="category" tick={dashboardAxisTick} />
+                              <YAxis tick={dashboardAxisTick} />
+                              <Tooltip {...dashboardTooltipProps} />
                               <Legend />
                               <Line type="monotone" dataKey="value" name={chart.valueLabel} stroke="#34d399" strokeWidth={2} dot={{ r: 3 }} />
                             </LineChart>
                           ) : chart.type === "area" ? (
                             <AreaChart data={chart.rows}>
-                              <CartesianGrid stroke={theme === "dark" ? "rgba(148,163,184,.2)" : "#dbe3ef"} />
-                              <XAxis dataKey="category" tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
-                              <YAxis tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
-                              <Tooltip />
+                              <CartesianGrid stroke={dashboardGridStroke} />
+                              <XAxis dataKey="category" tick={dashboardAxisTick} />
+                              <YAxis tick={dashboardAxisTick} />
+                              <Tooltip {...dashboardTooltipProps} />
                               <Area type="monotone" dataKey="value" name={chart.valueLabel} stroke="#60a5fa" fill="#60a5fa" fillOpacity={0.25} />
                             </AreaChart>
                           ) : (
                             <BarChart data={chart.rows}>
-                              <CartesianGrid stroke={theme === "dark" ? "rgba(148,163,184,.2)" : "#dbe3ef"} />
-                              <XAxis dataKey="category" tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
-                              <YAxis tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
-                              <Tooltip />
-                              <Bar dataKey="value" name={chart.valueLabel} fill="#60a5fa" radius={[6, 6, 0, 0]} />
+                              <CartesianGrid stroke={dashboardGridStroke} />
+                              <XAxis dataKey="category" tick={dashboardAxisTick} />
+                              <YAxis tick={dashboardAxisTick} />
+                              <Tooltip {...dashboardTooltipProps} />
+                              <Bar dataKey="value" name={chart.valueLabel} fill="#60a5fa" radius={[6, 6, 0, 0]} activeBar={dashboardActiveBar} />
                             </BarChart>
                           )}
                         </ResponsiveContainer>
@@ -9054,11 +9212,11 @@ export default function GridNexaRepro() {
                       {dashboardDistributionRows.length ? (
                         <ResponsiveContainer width="100%" height={220}>
                           <BarChart data={dashboardDistributionRows}>
-                            <CartesianGrid stroke={theme === "dark" ? "rgba(148,163,184,.2)" : "#dbe3ef"} />
-                            <XAxis dataKey="category" tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
-                            <YAxis tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
-                            <Tooltip />
-                            <Bar dataKey="value" fill="#60a5fa" radius={[6, 6, 0, 0]} />
+                            <CartesianGrid stroke={dashboardGridStroke} />
+                            <XAxis dataKey="category" tick={dashboardAxisTick} />
+                            <YAxis tick={dashboardAxisTick} />
+                            <Tooltip {...dashboardTooltipProps} />
+                            <Bar dataKey="value" fill="#60a5fa" radius={[6, 6, 0, 0]} activeBar={dashboardActiveBar} />
                           </BarChart>
                         </ResponsiveContainer>
                       ) : (
@@ -9075,10 +9233,10 @@ export default function GridNexaRepro() {
                       {dashboardComparisonRows.length ? (
                         <ResponsiveContainer width="100%" height={220}>
                           <LineChart data={dashboardComparisonRows}>
-                            <CartesianGrid stroke={theme === "dark" ? "rgba(148,163,184,.2)" : "#dbe3ef"} />
-                            <XAxis dataKey="category" tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
-                            <YAxis tick={{ fill: theme === "dark" ? "#9ca3af" : "#64748b", fontSize: 11 }} />
-                            <Tooltip />
+                            <CartesianGrid stroke={dashboardGridStroke} />
+                            <XAxis dataKey="category" tick={dashboardAxisTick} />
+                            <YAxis tick={dashboardAxisTick} />
+                            <Tooltip {...dashboardTooltipProps} />
                             <Legend />
                             <Line type="monotone" dataKey="value" stroke="#34d399" strokeWidth={2} dot={{ r: 3 }} />
                             <Line type="monotone" dataKey="average" stroke="#f59e0b" strokeWidth={2} dot={{ r: 3 }} />

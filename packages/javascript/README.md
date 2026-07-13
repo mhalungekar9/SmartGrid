@@ -247,6 +247,8 @@ The browser sends grid state to your endpoint. Your server can use OpenAI, Azure
 
 Use `className`, `classNames`, `getRowClassName`, `getCellClassName`, `getHeaderClassName`, and column-level class hooks to plug into Bootstrap, Tailwind, CSS Modules, SCSS, Less, or plain CSS.
 
+Built-in themes include `modern-light`, `modern-dark`, `compact`, `minimal`, `enterprise`, `high-contrast`, plus compatible `light`, `dark`, and `system` values. The shared `styling.tokens` contract can override key CSS variables such as `fontFamily`, `primaryColor`, `selectedBackground`, `rowHeight`, `headerHeight`, and `cellPaddingInline`; columns can use `headerStyle`, `cellStyle`, and `textDisplay` for targeted typography, alignment, ellipsis, clip, and wrap behavior.
+
 GridNexa injects runtime styles automatically. For the closest match to the playground and to keep bundlers aware of the stylesheet, import the package CSS once in your app entry:
 
 ```ts
