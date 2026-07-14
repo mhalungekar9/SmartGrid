@@ -1148,6 +1148,204 @@ textarea {
   --gnx-border: rgba(255, 255, 255, 0.08);
 }
 
+.blog-page {
+  display: grid;
+  gap: 18px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.blog-hero,
+.blog-section,
+.blog-footer {
+  border: 1px solid var(--app-border);
+  border-radius: 16px;
+  background: var(--app-panel);
+  box-shadow: var(--app-shadow);
+}
+
+.blog-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(300px, 1.05fr);
+  gap: 22px;
+  align-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--app-primary) 14%, transparent), transparent 44%),
+    var(--app-panel);
+}
+
+.blog-hero h2,
+.blog-section h3,
+.blog-footer h3 {
+  margin: 0;
+  color: var(--app-heading);
+  letter-spacing: 0;
+}
+
+.blog-hero h2 {
+  max-width: 780px;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 1.02;
+}
+
+.blog-hero p,
+.blog-section p,
+.blog-footer p {
+  color: var(--app-muted);
+}
+
+.blog-hero p {
+  max-width: 720px;
+  margin: 14px 0 0;
+  font-size: 1rem;
+}
+
+.blog-section,
+.blog-footer {
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+}
+
+.blog-section h3,
+.blog-footer h3 {
+  font-size: clamp(1.3rem, 2vw, 2rem);
+}
+
+.blog-section p,
+.blog-footer p,
+.blog-section li {
+  max-width: 860px;
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.72;
+}
+
+.blog-section ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+  color: var(--app-muted);
+}
+
+.blog-lede {
+  border-color: color-mix(in srgb, var(--app-primary) 24%, var(--app-border));
+}
+
+.blog-lede p {
+  max-width: 980px;
+  color: var(--app-text);
+  font-size: 1.05rem;
+}
+
+.blog-split {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: center;
+  gap: 20px;
+}
+
+.blog-highlight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+.blog-highlight-grid span {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 10px;
+  background: var(--app-panel-strong);
+  color: var(--app-text);
+  line-height: 1.45;
+}
+
+.blog-highlight-grid i {
+  flex: 0 0 auto;
+  color: var(--app-accent);
+}
+
+.blog-figure {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+
+.blog-figure img {
+  display: block;
+  width: 100%;
+  max-height: 460px;
+  object-fit: contain;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: #07111f;
+}
+
+.blog-figure figcaption {
+  color: var(--app-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.blog-code-block {
+  max-width: 100%;
+  margin: 0;
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: #07111f;
+  color: #dbeafe;
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.blog-code-block code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.blog-cta-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+
+.blog-cta-row a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid color-mix(in srgb, var(--app-primary) 45%, var(--app-border));
+  border-radius: 9px;
+  background: var(--app-primary);
+  color: #ffffff;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.blog-cta-row a + a {
+  background: var(--app-panel-strong);
+  color: var(--app-text);
+  border-color: var(--app-border);
+}
+
+[data-app-theme="light"] .blog-code-block,
+[data-app-theme="light"] .blog-figure img {
+  background: #f8fafc;
+}
+
+[data-app-theme="light"] .blog-code-block {
+  color: #0f172a;
+}
+
 [data-app-theme="light"] .preview-surface {
   background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
 }
@@ -3164,6 +3362,11 @@ body.gridnexa-marketing-page .sg-header-menu-divider {
     grid-template-columns: 1fr;
   }
 
+  .blog-hero,
+  .blog-split {
+    grid-template-columns: 1fr;
+  }
+
   .setup-card--wide {
     grid-column: auto;
   }
@@ -3283,6 +3486,26 @@ body.gridnexa-marketing-page .sg-header-menu-divider {
 
   .showcase-hero h2 {
     font-size: 1.75rem;
+  }
+
+  .blog-hero,
+  .blog-section,
+  .blog-footer {
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .blog-hero h2 {
+    font-size: 2rem;
+  }
+
+  .blog-cta-row,
+  .blog-cta-row a {
+    width: 100%;
+  }
+
+  .blog-cta-row a {
+    justify-content: center;
   }
 
   .hero-panel,

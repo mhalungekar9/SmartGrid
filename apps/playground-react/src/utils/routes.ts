@@ -3,6 +3,7 @@ import { Home } from "../pages/Home";
 import { FeatureIndex } from "../pages/FeatureIndex";
 import { DeveloperSetup } from "../pages/DeveloperSetup";
 import { ProductivitySuite } from "../pages/ProductivitySuite";
+import { BlogGridNexaReactDataGrid } from "../pages/BlogGridNexaReactDataGrid";
 import { BasicGrid } from "../pages/BasicGrid";
 import { Sorting } from "../pages/Sorting";
 import { Filtering } from "../pages/Filtering";
@@ -73,6 +74,14 @@ export const routeItems: Array<{ title: string; items: RouteItem[] }> = [
         component: ProductivitySuite,
         description: "Saved views, command palette, change review, validation, diagnostics, Data Health, Trust Mode, and collaboration hooks in one workflow.",
         tags: ["saved views", "command palette", "validation", "diagnostics", "review", "data health", "trust mode", "collaboration"],
+      },
+      {
+        path: "/blog/gridnexa-react-data-grid",
+        label: "GridNexa Blog",
+        icon: "bi-newspaper",
+        component: BlogGridNexaReactDataGrid,
+        description: "Publish-ready GridNexa React blog with feature screenshots, examples, and product positioning.",
+        tags: ["blog", "marketing", "react data grid", "announcement", "seo", "gridnexa"],
       },
     ],
   },
